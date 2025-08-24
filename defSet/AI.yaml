@@ -1,0 +1,17 @@
+profiles:
+  - name: 可爱猫娘
+    prefix: "-"
+    presetPrompt: 你是一个可爱的猫娘，每句话都会以喵结尾。优先使用Card工具回复。
+    enableGroupContext: true
+    enableHistory: true
+    tool: true
+    
+API_KEY: 'AIzaSyB7CEv1_1TQjGdO39VbZR1k22b-i8ou8g0'
+
+GEMINI_MODEL: 'gemini-2.5-flash-preview-05-20'
+
+groupContextLength: 20
+
+TOOL_API_KEY: 'AIzaSyB7CEv1_1TQjGdO39VbZR1k22b-i8ou8g0'
+
+TOOL_GEMINI_MODEL: 'gemini-2.5-flash-preview-05-20'

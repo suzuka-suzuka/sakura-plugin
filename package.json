@@ -1,0 +1,15 @@
+{
+  "name": "sakura-plugin",
+  "version": "1.0.0",
+  "type": "module",
+  "author": "suzuka",
+  "dependencies": {
+    "@google/genai": "^1.13.0",
+    "axios": "^1.11.0",
+    "jimp": "^1.6.0",
+    "marked": "^16.1.2",
+    "openai": "^5.12.2",
+    "puppeteer-real-browser": "^1.4.3"
+  },
+  "pnpm": {}
+}
