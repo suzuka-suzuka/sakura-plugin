@@ -9,7 +9,7 @@ export function supportGuoba() {
       description: "一个简单插件",
       author: "suzuka",
       authorLink: "https://github.com/suzuka-suzuka",
-      link: 'https://github.com/suzuka-suzuka/sakura-plugin',
+      link: "https://github.com/suzuka-suzuka/sakura-plugin",
       isV3: true,
       isV2: false,
       showInMenu: "auto",
@@ -117,6 +117,20 @@ export function supportGuoba() {
           componentProps: {
             allowAdd: true,
             allowDel: true,
+          },
+        },
+        {
+          field: "EditImage",
+          label: "自定义图片编辑",
+          bottomHelpMessage: "配置自定义图片编辑指令和提示词",
+          component: "GSubForm",
+          required: false,
+          componentProps: {
+            multiple: true,
+            schemas: [
+              { field: "reg", label: "触发词", component: "Input", required: true },
+              { field: "prompt", label: "描述", component: "Input", required: true },
+            ],
           },
         },
         {
