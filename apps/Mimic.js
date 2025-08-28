@@ -61,7 +61,7 @@ export class Mimic extends plugin {
 
         let selectedPresetPrompt = this.appconfig.Prompt;
         let shouldRecall = false;
-        if (Math.random() < this.appconfig.alternatePromptProbability) {
+        if (!e.isMaster && Math.random() < this.appconfig.alternatePromptProbability) {
             selectedPresetPrompt = this.appconfig.alternatePrompt;
             shouldRecall = true;
         }
