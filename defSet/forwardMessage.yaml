@@ -1,0 +1,5 @@
+forwardRules:
+  - sourceGroupIds:
+      - 123456
+    targetGroupIds:
+      - 1234565

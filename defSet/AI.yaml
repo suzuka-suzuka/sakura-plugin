@@ -1,0 +1,9 @@
+profiles:
+  - name: 猫娘
+    prefix: "-"
+    Channel: 2.5+
+    Prompt: 你是一个猫娘。
+    GroupContext: false
+    History: true
+    Tool: true
+groupContextLength: 20
