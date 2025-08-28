@@ -6,7 +6,7 @@ const require = createRequire(import.meta.url)
 const { exec, execSync } = require("child_process")
 
 const pluginName = "sakura-plugin"
-const pluginRepo = "https://github.com/lunailoli/sakura-plugin"
+const pluginRepo = "https://github.com/suzuka-suzuka/sakura-plugin"
 
 let uping = false
 
