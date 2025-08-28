@@ -1,30 +1,24 @@
-import plugin from "../../../lib/plugins/plugin.js"
 import { createRequire } from "module"
 import _ from "lodash"
 import { Restart } from "../../other/restart.js"
-import {} from "../utils/common.js"
 
 const require = createRequire(import.meta.url)
 const { exec, execSync } = require("child_process")
 
 const pluginName = "sakura-plugin"
 const pluginRepo = "https://github.com/lunailoli/sakura-plugin"
-const pluginAliases = ["sakura", "樱花"]
 
 let uping = false
 
 export class Update extends plugin {
   constructor() {
-    const aliasesRegex = pluginAliases.join("|")
-    const reg = `^#?(${aliasesRegex})(插件)?(强制)?更新$`
-
     super({
-      name: `更新${pluginName}`,
+      name: `更新`,
       event: "message",
       priority: 1000,
       rule: [
         {
-          reg: reg,
+          reg: `^#?(sakura|樱花)(插件)?(强制)?(更新|绽放)$`,
           fnc: "update",
         },
       ],
@@ -65,7 +59,7 @@ export class Update extends plugin {
     }
     this.oldCommitId = await this.getcommitId(pluginName)
     uping = true
-    let ret = await this.execSync(command)
+    let ret = await this.execAsync(command)
     uping = false
 
     if (ret.error) {
@@ -125,12 +119,15 @@ export class Update extends plugin {
   }
 
   async getcommitId(plugin = "") {
-    let cm = `git -C ./plugins/${plugin}/ rev-parse --short HEAD`
-
-    let commitId = await execSync(cm, { encoding: "utf-8" })
-    commitId = _.trim(commitId)
-
-    return commitId
+    const cm = `git -C ./plugins/${plugin}/ rev-parse --short HEAD`
+    try {
+      const commitId = execSync(cm, { encoding: "utf-8" })
+      return _.trim(commitId)
+    } catch (error) {
+      logger.error(`获取 ${plugin} commitId 失败:`)
+      logger.error(error)
+      return ""
+    }
   }
 
   async getTime(plugin = "") {
@@ -148,7 +145,11 @@ export class Update extends plugin {
   }
 
   async makeForwardMsg(title, msg, end) {
-    const _bot = this.e.bot ?? Bot
+    const _bot = this.e.bot
+    if (!_bot) {
+      logger.warn("makeForwardMsg: this.e.bot is not available.")
+      return [title, msg, end].filter(Boolean).join("\n\n")
+    }
     let nickname = _bot.nickname
     if (this.e.isGroup) {
       let info =
@@ -240,7 +241,7 @@ export class Update extends plugin {
     await this.reply([errMsg, stdout])
   }
 
-  async execSync(cmd) {
+  async execAsync(cmd) {
     return new Promise((resolve, reject) => {
       exec(cmd, { windowsHide: true }, (error, stdout, stderr) => {
         resolve({ error, stdout, stderr })
