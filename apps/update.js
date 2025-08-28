@@ -50,12 +50,13 @@ export class Update extends plugin {
 
   async runUpdate(isForce) {
     const pluginPath = `./plugins/${pluginName}/`
-    let command = `git -C ${pluginPath} pull --no-rebase`
+    let command
     if (isForce) {
-      command = `git -C ${pluginPath} checkout . && ${command}`
-      this.e.reply("正在执行强制更新操作，请稍等")
+      command = `git -C ${pluginPath} fetch --all && git -C ${pluginPath} reset --hard origin/main && git -C ${pluginPath} clean -fd`
+      this.e.reply("正在执行强制更新操作，将丢弃所有本地修改...")
     } else {
-      this.e.reply("正在执行更新操作，请稍等")
+      command = `git -C ${pluginPath} pull --no-rebase`
+      this.e.reply("正在执行更新操作，请稍等...")
     }
     this.oldCommitId = await this.getcommitId(pluginName)
     uping = true
@@ -85,7 +86,7 @@ export class Update extends plugin {
   }
 
   async getLog(plugin = "") {
-    let cm = `cd ./plugins/${plugin}/ && git log -20 --oneline --pretty=format:"%h||[%cd]  %s" --date=format:"%m-%d %H:%M"`
+    let cm = `git -C ./plugins/${plugin}/ log -20 --oneline --pretty=format:"%h||[%cd]  %s" --date=format:"%m-%d %H:%M"`
 
     let logAll
     try {
@@ -131,7 +132,7 @@ export class Update extends plugin {
   }
 
   async getTime(plugin = "") {
-    let cm = `cd ./plugins/${plugin}/ && git log -1 --oneline --pretty=format:"%cd" --date=format:"%m-%d %H:%M"`
+    let cm = `git -C ./plugins/${plugin}/ log -1 --oneline --pretty=format:"%cd" --date=format:"%m-%d %H:%M"`
 
     let time = ""
     try {
