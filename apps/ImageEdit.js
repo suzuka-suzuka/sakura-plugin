@@ -10,33 +10,51 @@ export class EditImage extends plugin {
       dsc: "使用AI模型修改或生成图片",
       event: "message",
       priority: 1135,
-      rule: [
-        {
-          reg: "^i(.*)$",
-          fnc: "editImageHandler",
-          log: false,
-        },
-        {
-          reg: "^手办化$",
-          fnc: "figureHandler",
-          log: false,
-        },
-      ],
+      rule: [],
     })
+    this.task = Setting.getConfig("EditImage")
+    this.generateRules()
   }
+
+  generateRules() {
+    const rules = [
+      {
+        reg: "^i(.*)$",
+        fnc: "editImageHandler",
+        log: false,
+      },
+    ]
+
+    if (this.task && Array.isArray(this.task)) {
+      for (const task of this.task) {
+        if (task.reg && task.prompt) {
+          rules.push({
+            reg: task.reg,
+            fnc: "dynamicImageHandler",
+            log: false,
+          })
+        }
+      }
+    }
+    this.rule = rules
+  }
+
   get appconfig() {
     return Setting.getConfig("Permission")
   }
-  async figureHandler(e) {
+
+  async dynamicImageHandler(e) {
+    const matchedTask = this.task.find(t => new RegExp(t.reg).test(e.msg))
+    if (!matchedTask) return false
+
     const imageUrls = await getImg(e)
     if (!imageUrls || imageUrls.length === 0) {
-      await this.reply("请上传需要手办化的图片哦~", true, { recallMsg: 10 })
+      const commandName = e.msg.replace(/\^|\$/g, "")
+      await this.reply(`请上传需要${commandName}的图片哦~`, true, { recallMsg: 10 })
       return true
     }
 
-    const promptText =
-      "Please turn this photo into a figure. Behind it, there should be a packaging box with a large clear front window, printed character artwork, the product name, logo, barcode, and a small specs or authenticity panel, with a small price tag sticker on one corner of the box. There is also a computer monitor screen at the back, showing the design sketch of the figure. In front of the box, on a round plastic base, place the figure version of the photo I gave you, and the figure must be three-dimensional. I’d like the PVC material to be clearly represented. It would be even better if the background is indoors."
-
+    const promptText = matchedTask.prompt
     return this._processAndCallAPI(e, promptText, imageUrls)
   }
 

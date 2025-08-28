@@ -1,0 +1,4 @@
+- reg: "^手办化$"
+  prompt: "Please turn this photo into a figure. Behind it, there should be a packaging box with a large clear front window, printed character artwork, the product name, logo, barcode, and a small specs or authenticity panel, with a small price tag sticker on one corner of the box. There is also a computer monitor screen at the back, showing the design sketch of the figure. In front of the box, on a round plastic base, place the figure version of the photo I gave you, and the figure must be three-dimensional. I’d like the PVC material to be clearly represented. It would be even better if the background is indoors."
+- reg: "^毛绒化$"
+  prompt: "Please transform this photo into a plush toy. The plush toy should be the main subject, with soft, fluffy textures and visible stitching. Place it in a cozy indoor setting, like on a bed with soft blankets or in a child's playroom. The lighting should be warm and gentle, highlighting the soft material of the toy."
