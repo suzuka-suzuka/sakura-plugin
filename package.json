@@ -8,7 +8,8 @@
     "axios": "^1.11.0",
     "marked": "^16.1.2",
     "openai": "^5.12.2",
-    "puppeteer-real-browser": "^1.4.3"
+    "puppeteer-real-browser": "^1.4.3",
+    "sharp": "^0.33.4"
   },
   "pnpm": {}
 }
