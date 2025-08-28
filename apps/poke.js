@@ -43,8 +43,10 @@ export class poke extends plugin {
   async sendgif(e) {
     const apiUrl =
       "https://tenor.googleapis.com/v2/search?key=AIzaSyB48anIc9rAPLKYkv-asoF_GtNsZ5_ricg&q=anime&media_filter=gif&random=true&limit=1"
-    const imageBuffer = await getgif(apiUrl)
-    await e.reply(buildStickerMsg(imageBuffer))
+    const imageUrl = await getgif(apiUrl)
+    if (imageUrl) {
+      await e.reply(buildStickerMsg(imageUrl))
+    }
   }
 
   getPokeImagePath(filename) {
@@ -396,20 +398,24 @@ export class poke extends plugin {
                 case 6:
                   e.reply("这样几次挠我痒痒会很困扰的呢。")
                   await common.sleep(500)
-                  e.reply("主人您啊，意外地喜欢恶作剧吧？")
+                  e.reply("您啊，意外地喜欢恶作剧吧？")
                   break
                 case 7:
                   e.reply("戳中宝藏啦！是一张涩图！")
                   const apiUrl = "https://yande.re/post.json?tags=loli+-rating:e+-nipples&limit=500"
-                  const imageBuffer = await yandeimage(apiUrl)
-                  await e.reply(segment.image(imageBuffer))
+                  const imageUrl = await yandeimage(apiUrl)
+                  if (imageUrl) {
+                    await e.reply(segment.image(imageUrl))
+                  }
                   break
                 case 8:
                   e.reply("把嘴张开（抬起脚）")
                   const feet_apiUrl =
                     "https://yande.re/post.json?tags=feet+-rating:e+-nipples&limit=500"
-                  const feet_imageBufferr = await yandeimage(feet_apiUrl)
-                  await e.reply(segment.image(feet_imageBufferr))
+                  const feet_imageUrl = await yandeimage(feet_apiUrl)
+                  if (feet_imageUrl) {
+                    await e.reply(segment.image(feet_imageUrl))
+                  }
                   break
                 case 9:
                   e.reply("在这里无意义地消耗着时间，这……")
@@ -494,7 +500,7 @@ export class poke extends plugin {
                   await common.sleep(500)
                   await e.group.pokeMember(e.operator_id)
                   await common.sleep(500)
-                  e.reply("我也会把主人摸回来的！")
+                  e.reply("我也会把你摸回来的！")
                   break
               }
             } else if (random_type < reply_sp + reply_poke + reply_text) {

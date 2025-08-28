@@ -85,22 +85,23 @@ export class GetImagePlugin extends plugin {
 
         if (imageUrls.length > 0) {
           const imageUrl = _.sample(imageUrls)
-          const imageData = await downloadImage(imageUrl)
+          const sendResult = await e.reply(segment.image(imageUrl))
 
-          if (imageData) {
-            const sendResult = await e.reply(segment.image(imageData))
-            const { success, processedBuffer } = await checkAndFlipImage(imageData, sendResult)
+          if (!sendResult || !sendResult.message_id) {
+            logger.warn(`图片URL发送失败 (${sourceKey}): ${imageUrl}，尝试备用方案...`)
+            await e.reply("图片发送失败，正在尝试备用方案...")
 
-            if (!success) {
-              e.reply("图片发送失败，正在尝试翻转后重发...")
+            const imageData = await downloadImage(imageUrl)
+            if (imageData) {
+              const { processedBuffer } = await checkAndFlipImage(imageData, null)
               const finalSendResult = await e.reply(segment.image(processedBuffer))
               if (!finalSendResult || !finalSendResult.message_id) {
-                await e.reply("图片最终发送失败，请稍后重试。")
+                await e.reply("备用方案也失败了，图片最终发送失败。")
               }
+            } else {
+              logger.error(`图片下载失败 (${sourceKey}): ${imageUrl}，备用方案无法执行。`)
+              await e.reply("图片下载失败，备用方案无法执行。")
             }
-          } else {
-            logger.warn(`[图片下载失败 (${sourceKey}):`, imageUrl)
-            await e.reply("图片下载失败，请稍后重试。")
           }
         } else {
           logger.warn(`没有获取到有效的图片URL (${sourceKey})。`)
@@ -111,7 +112,7 @@ export class GetImagePlugin extends plugin {
       }
     } catch (error) {
       logger.error(`整体处理流程出错 (${sourceKey}):`, error)
-      await e.reply("获取失败，请重试")
+      await e.reply("获取失败，请重试") 
     }
   }
 }

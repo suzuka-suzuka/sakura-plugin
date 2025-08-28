@@ -1,7 +1,6 @@
 import plugin from '../../../lib/plugins/plugin.js';
 import lodash from 'lodash';
 import moment from 'moment';
-import { yandeimage, downloadImage } from '../lib/ImageUtils/ImageUtils.js';
 import Setting from '../lib/setting.js';
 
 const _lastMsgTime = {};
@@ -74,12 +73,26 @@ export class cool extends plugin {
             if (currentTime >= coldThreshold) {
                 logger.info(`检测到群 ${groupId} 已变冷，准备获取并发送图片...`);
 
-                const apiUrl = 'https://yande.re/post.json?tags=loli+-rating:e+-nipples&limit=500';
-                const imageBuffer = await yandeimage(apiUrl);
+                let imageUrl = null;
+                try {
+                    const apiUrl = 'https://yande.re/post.json?tags=loli+-rating:e+-nipples&limit=500';
+                    const response = await fetch(apiUrl);
+                    if (response.ok) {
+                        const posts = await response.json();
+                        if (Array.isArray(posts) && posts.length > 0) {
+                            const post = lodash.sample(posts);
+                            imageUrl = post.file_url;
+                        }
+                    } else {
+                        logger.error(`[cool] yande.re API request failed: ${response.status}`);
+                    }
+                } catch (err) {
+                    logger.error(`[cool] 获取图片链接失败: ${err}`);
+                }
 
-                if (imageBuffer) {
+                if (imageUrl) {
                     try {
-                        let sendResult = await Bot.pickGroup(groupId).sendMsg(segment.image(imageBuffer));
+                        await Bot.pickGroup(groupId).sendMsg(segment.image(imageUrl));
                         _lastMsgTime[groupId] = moment().unix();
                     } catch (error) {
                         logger.error(`发送图片到群 ${groupId} 失败: ${error}`);
@@ -96,7 +109,7 @@ export class cool extends plugin {
                         }
                     }
                 } else {
-                    logger.warn(`未能获取群 ${groupId} 的图片数据，详细请查看 imageUtils 日志。`);
+                    logger.warn(`未能获取群 ${groupId} 的图片数据，API可能无响应或没有返回图片。`);
                     _lastMsgTime[groupId] = moment().unix();
                 }
             }
