@@ -8,6 +8,8 @@ export function supportGuoba() {
       title: "35插件",
       description: "一个简单插件",
       author: "suzuka",
+      authorLink: "https://github.com/suzuka-suzuka",
+      link: 'https://github.com/suzuka-suzuka/sakura-plugin',
       isV3: true,
       isV2: false,
       showInMenu: "auto",
