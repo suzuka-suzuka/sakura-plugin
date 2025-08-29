@@ -434,6 +434,12 @@ export function supportGuoba() {
             multiple: true,
           },
         },
+        {
+          field: "bilicookie.cookie",
+          label: "b站cookie",
+          component: "Input",
+          required: false,
+        },
       ],
 
       getConfigData() {

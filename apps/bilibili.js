@@ -3,7 +3,6 @@ import fs from "fs"
 import path from "path"
 import { Readable } from "stream"
 import { finished } from "stream/promises"
-import { fileURLToPath } from "url"
 import setting from "../lib/setting.js"
 
 const FFMPEG_PATH = "ffmpeg"
@@ -198,7 +197,7 @@ export class bilibili extends plugin {
 
           if (content || hasPictures) {
             const text =
-              (allComments.length > 0 ? "\n" : "") + `${comment.member.uname}: ${content}`
+              (allComments.length > 0 ? "\n\n" : "") + `${comment.member.uname}: ${content}`
             allComments.push(text)
 
             if (hasPictures) {
@@ -208,7 +207,7 @@ export class bilibili extends plugin {
         }
 
         if (allComments.length > 0) {
-          await this.e.reply(["热门评论：\n", ...allComments])
+          await this.e.reply(["热门评论：\n\n", ...allComments])
         }
       }
     } catch (error) {
@@ -224,7 +223,7 @@ export class bilibili extends plugin {
       return 112
     } else if (duration <= 300) {
       return 80
-    } else if (duration <= 600) {
+    } else if (duration <= 480) {
       return 64
     } else {
       return 32
@@ -250,7 +249,6 @@ export class bilibili extends plugin {
         const availableVideos = dash.video
         const availableQns = [...new Set(availableVideos.map(v => v.id))].sort((a, b) => b - a)
         logger.info(`[B站视频解析] 可选画质: ${availableQns.join(", ")}`)
-
         let selectedVideo = availableVideos.find(v => v.id === targetQn)
 
         if (!selectedVideo) {
