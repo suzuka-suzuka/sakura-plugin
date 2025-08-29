@@ -230,7 +230,22 @@ export class bilibili extends plugin {
       const cardElement = await page.$(".container")
 
       if (cardElement) {
-        const img = await cardElement.screenshot({ type: "png" })
+        const boundingBox = await cardElement.boundingBox()
+        if (!boundingBox) {
+          logger.error("[B站截图] 无法获取 .container 元素的边界框，元素可能不可见。")
+          await browser.close()
+          await this.reply("生成B站分享图失败，无法定位截图区域。")
+          return
+        }
+        const img = await page.screenshot({
+          type: "png",
+          clip: {
+            x: boundingBox.x,
+            y: boundingBox.y,
+            width: Math.ceil(boundingBox.width),
+            height: Math.ceil(boundingBox.height),
+          },
+        })
         await browser.close()
         await this.reply(segment.image(img))
       } else {
