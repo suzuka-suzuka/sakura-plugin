@@ -207,16 +207,24 @@ export class bilibili extends plugin {
 
         for (const comment of comments) {
           const commentMessage = []
-          commentMessage.push(segment.image(comment.member.avatar))
           const content = comment.content.message.replace(/\[.*?\]/g, "").trim()
-          if (content) commentMessage.push(content)
-          if (comment.content.pictures && comment.content.pictures.length > 0) {
-            comment.content.pictures.forEach(p => commentMessage.push(segment.image(p.img_src)))
-          }
-          if (commentMessage.length > 1) {
+          const hasPictures = comment.content.pictures && comment.content.pictures.length > 0
+
+          if (content || hasPictures) {
+            let textPart = `${comment.member.uname}:`
+            if (content) {
+              textPart += `\n${content}`
+            }
+            commentMessage.push(segment.image(comment.member.avatar))
+            commentMessage.push(textPart)
+
+            if (hasPictures) {
+              comment.content.pictures.forEach(p => commentMessage.push(segment.image(p.img_src)))
+            }
+
             forwardMsg.push({
               senderId: this.e.bot.uin,
-              senderName: comment.member.uname,
+              senderName: this.e.bot.nickname,
               text: commentMessage,
             })
           }
