@@ -11,6 +11,12 @@ const MAX_VIDEO_DURATION = 600
 
 const TEMP_DIR = path.join(process.cwd(), "data", "bilibili_temp")
 
+const cd = new Map()
+
+if (!fs.existsSync(TEMP_DIR)) {
+  fs.mkdirSync(TEMP_DIR, { recursive: true })
+}
+
 export class bilibili extends plugin {
   constructor() {
     super({
@@ -26,10 +32,6 @@ export class bilibili extends plugin {
         },
       ],
     })
-
-    if (!fs.existsSync(TEMP_DIR)) {
-      fs.mkdirSync(TEMP_DIR, { recursive: true })
-    }
   }
   get appconfig() {
     return setting.getConfig("bilicookie")
@@ -94,12 +96,26 @@ export class bilibili extends plugin {
         return false
       }
 
+      if (this.e.isGroup) {
+        const groupId = this.e.group_id
+        const lastSent = cd.get(groupId)
+        const cooldown = 5 * 60 * 1000
+
+        if (lastSent && Date.now() - lastSent < cooldown) {
+          return false
+        }
+      }
+
       const playUrls = await this.getPlayUrls(bvId, videoInfo.cid, videoInfo.duration)
       if (!playUrls) {
         return false
       }
 
       await this.processAndSendVideo(bvId, playUrls)
+
+      if (this.e.isGroup) {
+        cd.set(this.e.group_id, Date.now())
+      }
     } catch (error) {
       logger.error("[B站视频解析] 处理过程中发生未知错误:", error)
     }
