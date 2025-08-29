@@ -232,7 +232,7 @@ export class bilibili extends plugin {
       if (cardElement) {
         const img = await cardElement.screenshot({ type: "png" })
         await browser.close()
-        await this.reply(img)
+        await this.reply(segment.image(img))
       } else {
         logger.error("[B站截图] 未找到 .container 元素，无法截图")
         await browser.close()
