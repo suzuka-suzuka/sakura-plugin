@@ -26,7 +26,7 @@ export class bilibili extends plugin {
       priority: 1135,
       rule: [
         {
-          reg: /(b23\.tv|bilibili\.com|BV[a-zA-Z0-9]{10})|\[CQ:json,data=.*(bilibili\.com|b23\.tv|哔哩哔哩).*\]/i,
+          reg: /(b23.tv|bilibili.com|BV[a-zA-Z0-9]{10})/i,
           fnc: "handleBiliLink",
           log: false,
         },
@@ -49,22 +49,27 @@ export class bilibili extends plugin {
         logger.info(`[B站视频解析] 直接从消息中匹配到BV号: ${bvId}`)
       } else {
         let url = null
-        if (e.json) {
-          const jsonString = e.json.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec)).replace(/&amp;/g, '&');
-          try {
-            const jsonData = JSON.parse(jsonString)
-            url = jsonData?.meta?.detail_1?.qqdocurl
-          } catch (error) {
-            logger.debug("[B站视频解析] JSON解析失败，尝试从原始JSON字符串中正则匹配URL")
-            const urlMatchInJson = jsonString.match(/"(https?:\/\/?[^"]*(bilibili\.com|b23\.tv)[^"]*)"/i)
-            if (urlMatchInJson && urlMatchInJson[1]) {
-              url = urlMatchInJson[1].replace(/\\/g, "")
+        if (Array.isArray(e.message)) {
+          const jsonMessage = e.message.find(msg => msg.type === "json" && msg.data)
+          if (jsonMessage) {
+            try {
+              const innerJsonData = JSON.parse(jsonMessage.data)
+              const rawUrl = innerJsonData?.meta?.detail_1?.qqdocurl
+              if (rawUrl) {
+                url = rawUrl.replace(/\\/g, "")
+              }
+            } catch (error) {
+              logger.debug("[B站视频解析] 内层JSON解析失败，尝试从原始data字符串中正则匹配URL")
+              const urlMatchInData = jsonMessage.data.match(/"qqdocurl":"(https?:\\{1,2}\/\\{1,2}[^"]+)"/)
+              if (urlMatchInData && urlMatchInData[1]) {
+                url = urlMatchInData[1].replace(/\\/g, "")
+              }
             }
           }
         }
 
         if (!url && e.msg) {
-          const urlMatch = e.msg.match(/(https?:\/\/[^\s]+(b23\.tv|bilibili\.com)[^\s]*)/i)
+          const urlMatch = e.msg.match(/(https?:\/\/[^\s]+(b23.tv|bilibili.com)[^\s]*)/)
           if (urlMatch) {
             url = urlMatch[0]
           }
