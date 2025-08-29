@@ -4,18 +4,13 @@ import path from "path"
 import { Readable } from "stream"
 import { finished } from "stream/promises"
 import { fileURLToPath } from "url"
-import { makeForwardMsg } from "../lib/utils.js"
-
-const BILI_COOKIE =
-  "SESSDATA=cd667ba0%2C1767084586%2C93dc8%2A72CjDPG9xheyYVsVRfX5SHz982_syNAs-4R10YTrg4z971EuBJlCX2crsBlsMhR95UqTMSVlU4XzcwSFZheHMtWnY3OWhFeFlDYzZUVFltWWNpODZVNVFTU2JhQXFfMVVHY0Rta0NxLW0zcEhPMWZNa1dBNFc1OXB6MXpPUnE0T1l6SzlqQWg2NGdBIIEC"
+import setting from "../lib/setting.js"
 
 const FFMPEG_PATH = "ffmpeg"
 
 const MAX_VIDEO_DURATION = 600
 
 const TEMP_DIR = path.join(process.cwd(), "data", "bilibili_temp")
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export class bilibili extends plugin {
   constructor() {
@@ -32,11 +27,12 @@ export class bilibili extends plugin {
       ],
     })
 
-    this.pluginPath = path.join(__dirname, "..")
-
     if (!fs.existsSync(TEMP_DIR)) {
       fs.mkdirSync(TEMP_DIR, { recursive: true })
     }
+  }
+  get appconfig() {
+    return setting.getConfig("blicookie")
   }
 
   async handleBiliLink(e) {
@@ -136,6 +132,7 @@ export class bilibili extends plugin {
   }
 
   async getVideoInfo(bvId) {
+    const BILI_COOKIE = this.appconfig.cookie || ""
     const url = `https://api.bilibili.com/x/web-interface/view?bvid=${bvId}`
     try {
       const response = await fetch(url, {
@@ -159,6 +156,7 @@ export class bilibili extends plugin {
   }
 
   async getComments(aid, count = 5) {
+    const BILI_COOKIE = this.appconfig.cookie || ""
     const url = `https://api.bilibili.com/x/v2/reply/main?type=1&oid=${aid}&mode=3`
     try {
       const response = await fetch(url, { headers: { Cookie: BILI_COOKIE } })
@@ -180,8 +178,6 @@ export class bilibili extends plugin {
 
       const { title, owner, stat, pic, desc } = videoInfo
 
-      const forwardMsg = []
-
       const infoText = [
         `标题：${title}`,
         `UP主：${owner.name}`,
@@ -192,46 +188,29 @@ export class bilibili extends plugin {
         ...(desc ? [`简介：${desc.substring(0, 150)}${desc.length > 150 ? "..." : ""}`] : []),
       ].join("\n")
 
-      forwardMsg.push({
-        senderId: this.e.bot.uin,
-        senderName: this.e.bot.nickname,
-        text: [segment.image(pic), infoText],
-      })
+      await this.e.reply([segment.image(pic), infoText])
 
       if (comments && comments.length > 0) {
-        forwardMsg.push({
-          senderId: this.e.bot.uin,
-          senderName: "热门评论",
-          text: "---",
-        })
-
+        const allComments = []
         for (const comment of comments) {
-          const commentMessage = []
           const content = comment.content.message.replace(/\[.*?\]/g, "").trim()
           const hasPictures = comment.content.pictures && comment.content.pictures.length > 0
 
           if (content || hasPictures) {
-            let textPart = `${comment.member.uname}:`
-            if (content) {
-              textPart += `\n${content}`
-            }
-            commentMessage.push(segment.image(comment.member.avatar))
-            commentMessage.push(textPart)
+            const text =
+              (allComments.length > 0 ? "\n" : "") + `${comment.member.uname}: ${content}`
+            allComments.push(text)
 
             if (hasPictures) {
-              comment.content.pictures.forEach(p => commentMessage.push(segment.image(p.img_src)))
+              comment.content.pictures.forEach(p => allComments.push(segment.image(p.img_src)))
             }
-
-            forwardMsg.push({
-              senderId: this.e.bot.uin,
-              senderName: this.e.bot.nickname,
-              text: commentMessage,
-            })
           }
         }
-      }
 
-      await makeForwardMsg(this.e, forwardMsg)
+        if (allComments.length > 0) {
+          await this.e.reply(["热门评论：", ...allComments])
+        }
+      }
     } catch (error) {
       logger.error("[B站视频解析] 发送视频信息时出错:", error)
       await this.reply("发送B站视频信息失败，请查看后台日志。")
@@ -239,7 +218,9 @@ export class bilibili extends plugin {
   }
 
   autoQuality(duration) {
-    if (duration <= 180) {
+    if (duration <= 120) {
+      return 120
+    } else if (duration <= 180) {
       return 112
     } else if (duration <= 300) {
       return 80
@@ -251,8 +232,8 @@ export class bilibili extends plugin {
   }
 
   async getPlayUrls(bvId, cid, duration) {
+    const BILI_COOKIE = this.appconfig.cookie || ""
     const targetQn = this.autoQuality(duration)
-    logger.info(`[B站视频解析] 根据时长 ${duration}s 自动选择画质代码: ${targetQn}`)
     const url = `https://api.bilibili.com/x/player/playurl?bvid=${bvId}&cid=${cid}&fnval=80`
     try {
       const response = await fetch(url, {
@@ -347,7 +328,7 @@ export class bilibili extends plugin {
     return new Promise((resolve, reject) => {
       const command = `"${FFMPEG_PATH}" -i "${videoPath}" -i "${audioPath}" -c:v copy -c:a copy "${outputPath}" -y`
 
-      exec(command, (error, stdout, stderr) => {
+      exec(command, (error, _, stderr) => {
         if (error) {
           logger.error(`[FFmpeg] 合并失败: ${stderr}`)
           if (stderr.includes("not found") || error.code === 127) {
