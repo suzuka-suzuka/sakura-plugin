@@ -135,7 +135,7 @@ export class bilibili extends plugin {
   }
 
   async getVideoInfo(bvId) {
-    const url = `http://api.bilibili.com/x/web-interface/view?bvid=${bvId}`
+    const url = `https://api.bilibili.com/x/web-interface/view?bvid=${bvId}`
     try {
       const response = await fetch(url, {
         headers: {
@@ -158,7 +158,7 @@ export class bilibili extends plugin {
   }
 
   async getComments(aid, count = 5) {
-    const url = `http://api.bilibili.com/x/v2/reply/main?type=1&oid=${aid}&mode=3`
+    const url = `https://api.bilibili.com/x/v2/reply/main?type=1&oid=${aid}&mode=3`
     try {
       const response = await fetch(url, { headers: { Cookie: BILI_COOKIE } })
       const json = await response.json()
