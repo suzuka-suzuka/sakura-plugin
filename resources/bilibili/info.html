@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{pluResPath}}/bilibili/info.css">
+</head>
+<body>
+    <div class="container" id="container">
+        <div class="video-card">
+            <div class="cover">
+                <img src="{{videoInfo.pic}}" alt="封面">
+            </div>
+            <div class="info">
+                <div class="title">{{videoInfo.title}}</div>
+                <div class="author">
+                    <img class="avatar" src="{{videoInfo.owner.face}}" alt="avatar">
+                    <span>{{videoInfo.owner.name}}</span>
+                </div>
+                <div class="stats">
+                    <span>播放: {{videoInfo.stat.view}}</span>
+                    <span>弹幕: {{videoInfo.stat.danmaku}}</span>
+                    <span>点赞: {{videoInfo.stat.like}}</span>
+                    <span>投币: {{videoInfo.stat.coin}}</span>
+                    <span>收藏: {{videoInfo.stat.favorite}}</span>
+                </div>
+            </div>
+        </div>
+
+        {{if comments.length > 0}}
+        <div class="comments-section">
+            <div class="section-title">--- 热门评论 ---</div>
+            {{each comments item}}
+            <div class="comment-item">
+                <div class="comment-author">
+                    <img class="avatar" src="{{item.avatar}}" alt="avatar">
+                    <div class="author-info">
+                        <span class="uname">{{item.uname}}</span>
+                        <span class="like-count">👍 {{item.like}}</span>
+                    </div>
+                </div>
+                <div class="comment-content">
+                    <p>{{item.content}}</p>
+                    {{if item.pictures.length > 0}}
+                    <div class="comment-images">
+                        {{each item.pictures pic}}
+                        <img src="{{pic}}" alt="comment-pic">
+                        {{/each}}
+                    </div>
+                    {{/if}}
+                </div>
+            </div>
+            {{/each}}
+        </div>
+        {{/if}}
+        <div class="footer">Created by sakura-plugin</div>
+    </div>
+</body>
+</html>
