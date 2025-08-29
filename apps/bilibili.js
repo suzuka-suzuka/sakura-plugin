@@ -50,12 +50,13 @@ export class bilibili extends plugin {
       } else {
         let url = null
         if (e.json) {
+          const jsonString = e.json.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec)).replace(/&amp;/g, '&');
           try {
-            const jsonData = JSON.parse(e.json)
+            const jsonData = JSON.parse(jsonString)
             url = jsonData?.meta?.detail_1?.qqdocurl
           } catch (error) {
             logger.debug("[B站视频解析] JSON解析失败，尝试从原始JSON字符串中正则匹配URL")
-            const urlMatchInJson = e.json.match(/"(https?:\\?\/\\?\/[^"]*bilibili\.com[^"]*)"/)
+            const urlMatchInJson = jsonString.match(/"(https?:\\?\/\\?\/[^"]*(bilibili\.com|b23\.tv)[^"]*)"/)
             if (urlMatchInJson && urlMatchInJson[1]) {
               url = urlMatchInJson[1].replace(/\\/g, "")
             }
