@@ -32,7 +32,7 @@ export class bilibili extends plugin {
     }
   }
   get appconfig() {
-    return setting.getConfig("blicookie")
+    return setting.getConfig("bilicookie")
   }
 
   async handleBiliLink(e) {
