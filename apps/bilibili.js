@@ -26,7 +26,7 @@ export class bilibili extends plugin {
       priority: 1135,
       rule: [
         {
-          reg: /(b23.tv|bilibili.com|BV[a-zA-Z0-9]{10})|\[CQ:json,data=.*(bilibili\.com|b23\.tv).*\]/i,
+          reg: "",
           fnc: "handleBiliLink",
           log: false,
         },
@@ -37,51 +37,80 @@ export class bilibili extends plugin {
     return setting.getConfig("bilicookie")
   }
 
+  async dealUrl(e) {
+    const standaloneBvMatch = e.msg.match(/BV[a-zA-Z0-9]{10}/i)
+    if (standaloneBvMatch) {
+      return standaloneBvMatch[0]
+    }
+
+    let url = null
+    const urllist = ["b23.tv", "b22.tv", "m.bilibili.com", "www.bilibili.com"]
+    const domainReg = new RegExp(urllist.join("|"))
+
+    if (e.json) {
+      const jsonString = e.json
+        .replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec))
+        .replace(/&amp;/g, "&")
+      try {
+        const json = JSON.parse(jsonString)
+        url = json.meta?.detail_1?.qqdocurl || json.meta?.news?.jumpUrl
+      } catch (error) {
+        const urlMatchInJson = jsonString.match(
+          /"(https?:\\?\/\\?\/[^"]*(bilibili\.com|b23\.tv)[^"]*)"/,
+        )
+        if (urlMatchInJson && urlMatchInJson[1]) {
+          url = urlMatchInJson[1].replace(/\\/g, "")
+        }
+      }
+    }
+
+    if (!url && e.msg) {
+      const urlMatch = e.msg.match(/(https?:\/\/[^\s]+)/)
+      if (urlMatch) {
+        url = urlMatch[0]
+      }
+    }
+
+    if (!url || !url.match(domainReg)) {
+      return false
+    }
+
+    const bvReg = /(BV[a-zA-Z0-9]{10})/
+    let bvMatch = url.match(bvReg)
+
+    if (bvMatch) {
+      return bvMatch[0]
+    }
+
+    try {
+      const response = await fetch(url, { method: "GET", redirect: "manual" })
+      if (response.status === 302 || response.status === 301) {
+        const location = response.headers.get("location")
+        if (location) {
+          const finalBvMatch = location.match(bvReg)
+          if (finalBvMatch) {
+            return finalBvMatch[0]
+          }
+        }
+      }
+    } catch (error) {
+      logger.error(`[B站视频解析] 解析短链接 ${url} 失败:`, error)
+      return null
+    }
+
+    return null
+  }
+
   async handleBiliLink(e) {
     this.e = e
 
     try {
-      let bvId = null
-
-      const bvMatch = e.msg.match(/BV([a-zA-Z0-9]{10})/i)
-      if (bvMatch) {
-        bvId = `BV${bvMatch[1]}`
-        logger.info(`[B站视频解析] 直接从消息中匹配到BV号: ${bvId}`)
-      } else {
-        let url = null
-        if (e.json) {
-          const jsonString = e.json.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec)).replace(/&amp;/g, '&');
-          try {
-            const jsonData = JSON.parse(jsonString)
-            url = jsonData?.meta?.detail_1?.qqdocurl
-          } catch (error) {
-            logger.debug("[B站视频解析] JSON解析失败，尝试从原始JSON字符串中正则匹配URL")
-            const urlMatchInJson = jsonString.match(/"(https?:\\?\/\\?\/[^"]*(bilibili\.com|b23\.tv)[^"]*)"/)
-            if (urlMatchInJson && urlMatchInJson[1]) {
-              url = urlMatchInJson[1].replace(/\\/g, "")
-            }
-          }
-        }
-
-        if (!url && e.msg) {
-          const urlMatch = e.msg.match(/(https?:\/\/[^\s]+(b23.tv|bilibili.com)[^\s]*)/)
-          if (urlMatch) {
-            url = urlMatch[0]
-          }
-        }
-
-        if (!url) {
-          return false
-        }
-
-        logger.info(`[B站视频解析] 检测到链接: ${url}`)
-        bvId = await this.getBvIdFromUrl(url)
-      }
+      const bvId = await this.dealUrl(e)
 
       if (!bvId) {
-        logger.warn("[B站视频解析] 未能从链接中提取到有效的BV号")
         return false
       }
+
       logger.info(`[B站视频解析] 成功解析BV号: ${bvId}`)
 
       const videoInfo = await this.getVideoInfo(bvId)
@@ -122,30 +151,6 @@ export class bilibili extends plugin {
     }
 
     return true
-  }
-
-  async getBvIdFromUrl(url) {
-    let bvMatch = url.match(/BV([a-zA-Z0-9]{10})/i)
-    if (bvMatch) {
-      return `BV${bvMatch[1]}`
-    }
-
-    if (url.includes("b23.tv")) {
-      try {
-        const response = await fetch(url, { method: "GET", redirect: "manual" })
-        if (response.status === 302 || response.status === 301) {
-          const location = response.headers.get("location")
-          if (location) {
-            return await this.getBvIdFromUrl(location)
-          }
-        }
-      } catch (error) {
-        logger.error(`[B站视频解析] 解析短链接 ${url} 失败:`, error)
-        return null
-      }
-    }
-
-    return null
   }
 
   async getVideoInfo(bvId) {
