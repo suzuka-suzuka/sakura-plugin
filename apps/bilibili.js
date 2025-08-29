@@ -2,8 +2,6 @@ import { exec } from "child_process"
 import fs from "fs"
 import path from "path"
 import { Readable } from "stream"
-import puppeteer from "puppeteer"
-import template from "art-template"
 import { finished } from "stream/promises"
 import { fileURLToPath } from "url"
 
@@ -159,7 +157,7 @@ export class bilibili extends plugin {
     }
   }
 
-  async getComments(aid, count = 3) {
+  async getComments(aid, count = 5) {
     const url = `http://api.bilibili.com/x/v2/reply/main?type=1&oid=${aid}&mode=3`
     try {
       const response = await fetch(url, { headers: { Cookie: BILI_COOKIE } })
@@ -176,87 +174,40 @@ export class bilibili extends plugin {
   }
 
   async sendVideoInfoCard(videoInfo, comments) {
-    let browser = null
     try {
       const formatNum = num => (num > 10000 ? `${(num / 10000).toFixed(1)}万` : num)
 
-      const processedComments = comments
-        ? comments
-            .map(reply => {
-              const content = reply.content.message.replace(/\[.*?\]/g, "").trim()
-              const pictures = reply.content.pictures
-                ? reply.content.pictures.map(p => p.img_src)
-                : []
-              return {
-                uname: reply.member.uname,
-                avatar: reply.member.avatar,
-                content: content,
-                pictures: pictures,
-                like: formatNum(reply.like),
-              }
-            })
-            .filter(c => c.content || c.pictures.length > 0)
-        : []
+      const { title, owner, stat, bvid } = videoInfo
 
-      const tplPath = path.join(this.pluginPath, "resources", "bilibili", "info.html")
-      const pluResPath = path.join(this.pluginPath, "resources")
+      const msg = [
+        `标题：${title}`,
+        `UP主：${owner.name}`,
+        `播放：${formatNum(stat.view)} | 弹幕：${formatNum(stat.danmaku)}`,
+        `点赞：${formatNum(stat.like)} | 投币：${formatNum(stat.coin)} | 收藏：${formatNum(
+          stat.favorite
+        )}`,
+        `https://www.bilibili.com/video/${bvid}`,
+      ]
 
-      const data = {
-        pluResPath: `file://${pluResPath.replace(/\\/g, "/")}`,
-        videoInfo: {
-          ...videoInfo,
-          stat: {
-            view: formatNum(videoInfo.stat.view),
-            danmaku: formatNum(videoInfo.stat.danmaku),
-            like: formatNum(videoInfo.stat.like),
-            coin: formatNum(videoInfo.stat.coin),
-            favorite: formatNum(videoInfo.stat.favorite),
-          },
-        },
-        comments: processedComments,
-      }
-
-      const html = template(tplPath, data)
-
-      browser = await puppeteer.launch({
-        headless: "new",
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      })
-      const page = await browser.newPage()
-      await page.setContent(html, { waitUntil: "networkidle2" })
-
-      const cssPath = path.join(this.pluginPath, "resources/bilibili/info.css")
-      await page.addStyleTag({ path: cssPath })
-      const cardElement = await page.$(".container")
-
-      if (cardElement) {
-        const boundingBox = await cardElement.boundingBox()
-        if (!boundingBox) {
-          logger.error("[B站截图] 无法获取 .container 元素的边界框，元素可能不可见。")
-          await browser.close()
-          await this.reply("生成B站分享图失败，无法定位截图区域。")
-          return
-        }
-        const img = await page.screenshot({
-          type: "png",
-          clip: {
-            x: boundingBox.x,
-            y: boundingBox.y,
-            width: Math.ceil(boundingBox.width),
-            height: Math.ceil(boundingBox.height),
-          },
+      if (comments && comments.length > 0) {
+        const commentMessages = []
+        comments.forEach(comment => {
+          const content = comment.content.message.replace(/\[.*?\]/g, "").trim()
+          if (content) {
+            commentMessages.push(`${comment.member.uname}：${content}`)
+          }
         })
-        await browser.close()
-        await this.reply(segment.image(img))
-      } else {
-        logger.error("[B站截图] 未找到 .container 元素，无法截图")
-        await browser.close()
-        await this.reply("生成B站分享图失败，未找到 .container 元素。")
+
+        if (commentMessages.length > 0) {
+          msg.push("---热门评论---")
+          msg.push(...commentMessages)
+        }
       }
+
+      await this.reply(msg.join("\n"))
     } catch (error) {
-      logger.error("[B站截图] 生成分享图失败:", error)
-      if (browser) await browser.close()
-      await this.reply(`生成B站分享图失败，请检查后台日志。\n错误: ${error.message}`)
+      logger.error("[B站视频解析] 发送视频信息时出错:", error)
+      await this.reply("发送B站视频信息失败，请查看后台日志。")
     }
   }
 
