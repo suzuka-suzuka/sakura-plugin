@@ -176,62 +176,54 @@ export class bilibili extends plugin {
 
   async sendVideoInfoCard(videoInfo, comments) {
     try {
-      const formatNum = num => (num > 10000 ? `${(num / 10000).toFixed(1)}万` : num);
+      const formatNum = num => (num > 10000 ? `${(num / 10000).toFixed(1)}万` : num)
 
-      const { title, owner, stat, pic, desc } = videoInfo;
+      const { title, owner, stat, pic, desc } = videoInfo
 
-      const forwardMsg = [];
+      const forwardMsg = []
 
-      // 1. 视频信息节点
       const infoText = [
         `标题：${title}`,
         `UP主：${owner.name}`,
         `播放：${formatNum(stat.view)} | 弹幕：${formatNum(stat.danmaku)}`,
         `点赞：${formatNum(stat.like)} | 投币：${formatNum(stat.coin)} | 收藏：${formatNum(
-          stat.favorite
+          stat.favorite,
         )}`,
         ...(desc ? [`简介：${desc.substring(0, 150)}${desc.length > 150 ? "..." : ""}`] : []),
-      ].join("\n");
+      ].join("\n")
 
       forwardMsg.push({
-        user_id: this.e.bot.uin,
-        nickname: this.e.bot.nickname,
-        message: [segment.image(pic), infoText],
-      });
+        senderId: this.e.bot.uin,
+        senderName: this.e.bot.nickname,
+        text: [segment.image(pic), infoText],
+      })
 
-      // 2. 评论节点
       if (comments && comments.length > 0) {
-        // 评论分隔线
         forwardMsg.push({
-          user_id: this.e.bot.uin,
-          nickname: "热门评论",
-          message: "---",
-        });
+          senderId: this.e.bot.uin,
+          senderName: "热门评论",
+          text: "---",
+        })
 
         for (const comment of comments) {
-          const commentMessage = [];
-          // 添加评论者头像
-          commentMessage.push(segment.image(comment.member.avatar));
-          // 添加评论文本
-          const content = comment.content.message.replace(/\[.*?\]/g, "").trim();
-          if (content) commentMessage.push(content);
-          // 添加评论图片 (笔记)
+          const commentMessage = []
+          commentMessage.push(segment.image(comment.member.avatar))
+          const content = comment.content.message.replace(/\[.*?\]/g, "").trim()
+          if (content) commentMessage.push(content)
           if (comment.content.pictures && comment.content.pictures.length > 0) {
-            comment.content.pictures.forEach(p => commentMessage.push(segment.image(p.img_src)));
+            comment.content.pictures.forEach(p => commentMessage.push(segment.image(p.img_src)))
           }
-          // 仅当评论有内容时才添加节点
           if (commentMessage.length > 1) {
             forwardMsg.push({
-              user_id: this.e.bot.uin,
-              nickname: comment.member.uname,
-              message: commentMessage,
-            });
+              senderId: this.e.bot.uin,
+              senderName: comment.member.uname,
+              text: commentMessage,
+            })
           }
         }
       }
 
-      // 3. 发送合并转发消息
- await makeForwardMsg(this.e, forwardMsg);
+      await makeForwardMsg(this.e, forwardMsg)
     } catch (error) {
       logger.error("[B站视频解析] 发送视频信息时出错:", error)
       await this.reply("发送B站视频信息失败，请查看后台日志。")
