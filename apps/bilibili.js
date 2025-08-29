@@ -208,7 +208,7 @@ export class bilibili extends plugin {
         }
 
         if (allComments.length > 0) {
-          await this.e.reply(["热门评论：", ...allComments])
+          await this.e.reply(["热门评论：\n", ...allComments])
         }
       }
     } catch (error) {
@@ -248,11 +248,12 @@ export class bilibili extends plugin {
       if (json.code === 0) {
         const dash = json.data.dash
         const availableVideos = dash.video
+        const availableQns = [...new Set(availableVideos.map(v => v.id))].sort((a, b) => b - a)
+        logger.info(`[B站视频解析] 可选画质: ${availableQns.join(", ")}`)
 
         let selectedVideo = availableVideos.find(v => v.id === targetQn)
 
         if (!selectedVideo) {
-          const availableQns = [...new Set(availableVideos.map(v => v.id))].sort((a, b) => b - a)
           const fallbackQn = availableQns.find(qn => qn <= targetQn)
 
           if (fallbackQn) {
