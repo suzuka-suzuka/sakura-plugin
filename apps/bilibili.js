@@ -4,7 +4,7 @@ import path from "path"
 import { Readable } from "stream"
 import { finished } from "stream/promises"
 
-const BILI_COOKIE = "SESSDATA=xxxxxxxxxxxx;"
+const BILI_COOKIE = "buvid3=C642B912-5524-5C85-DB35-E8786F3B5FEC55480infoc; b_nut=1755593855; _uuid=8A1C56D3-337C-1F22-B49B-378E4D39AB4653228infoc; bmg_af_switch=1; bmg_src_def_domain=i1.hdslb.com; enable_web_push=DISABLE; buvid_fp=f040d38af3cd27f9568a301e2435b2d0; buvid4=7F76E544-B7C3-292A-12B4-146F70B5082156809-025081916-btpHqvv0d6UVqCmxSBn9Dg%3D%3D; DedeUserID=146086607; DedeUserID__ckMd5=446cc222e0fc12e4; theme-tip-show=SHOWED; theme-avatar-tip-show=SHOWED; rpdid=|(um~J~l~~k|0J'u~lllmJmuu; CURRENT_QUALITY=80; CURRENT_FNVAL=2000; b_lsid=87324D7F_198F37003F8; share_source_origin=QQ; bsource=share_source_qqchat; bili_ticket=eyJhbGciOiJIUzI1NiIsImtpZCI6InMwMyIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTY2OTAwNjMsImlhdCI6MTc1NjQzMDgwMywicGx0IjotMX0.hfGy-l0sOI9tVBO8m767gTLC_qvFC39JMciy4JMfO7U; bili_ticket_expires=1756690003; bili_jct=3b210a645f1d976a66b17c97b4e3f024; sid=gzu8vqld; home_feed_column=4; browser_resolution=930-748; bp_t_offset_146086607=1106368856596676608"
 
 const FFMPEG_PATH = "ffmpeg"
 
@@ -131,7 +131,14 @@ export class bilibili extends plugin {
   async getVideoInfo(bvId) {
     const url = `http://api.bilibili.com/x/web-interface/view?bvid=${bvId}`
     try {
-      const response = await fetch(url)
+      const response = await fetch(url, {
+        headers: {
+          Cookie: BILI_COOKIE,
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
+          Referer: `https://www.bilibili.com/video/${bvId}`,
+        },
+      })
       const json = await response.json()
       if (json.code === 0) {
         return json.data
@@ -145,9 +152,10 @@ export class bilibili extends plugin {
   }
 
   async getComments(aid, count = 3) {
-    const url = `http://api.bilibili.com/x/v2/reply?type=1&oid=${aid}&sort=2`
+    // 新版评论接口, mode=2 表示按热度排序
+    const url = `http://api.bilibili.com/x/v2/reply/main?type=1&oid=${aid}&mode=2`
     try {
-      const response = await fetch(url)
+      const response = await fetch(url, { headers: { Cookie: BILI_COOKIE } })
       const json = await response.json()
       if (json.code === 0 && json.data.replies && json.data.replies.length > 0) {
         return json.data.replies.slice(0, count)
