@@ -7,7 +7,7 @@ export function supportGuoba() {
       name: "sakura-plugin",
       title: "35插件",
       description: "一个简单插件",
-      author: "suzuka",
+      author: "@suzuka",
       authorLink: "https://github.com/suzuka-suzuka",
       link: "https://github.com/suzuka-suzuka/sakura-plugin",
       isV3: true,
@@ -121,7 +121,7 @@ export function supportGuoba() {
         },
         {
           field: "EditImage",
-          label: "自定义图片编辑",
+          label: "修图提示词",
           bottomHelpMessage: "配置自定义图片编辑指令和提示词",
           component: "GSubForm",
           required: false,

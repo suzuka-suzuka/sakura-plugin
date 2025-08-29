@@ -69,7 +69,7 @@ export class TextMsg extends plugin {
     for (const item of e.message) {
       if ((item.type === 'image' && item.sub_type === 1) || item.type === 'mface') {
         try {
-          const response = await axios.get(item.url, { responseType: 'arraybuffer' });
+          const response = await axios.get(item.url, { responseType: 'arraybuffer', timeout: 10000 });
           const buffer = response.data;
 
           const hash = crypto.createHash('md5').update(buffer).digest('hex');
