@@ -191,8 +191,8 @@ export class bilibili extends plugin {
             .filter(c => c.content || c.pictures.length > 0)
         : []
 
-      const tplPath = path.join(process.cwd(), "plugins", "sakura-plugin", "resources", "bilibili", "info.html")
-      const pluResPath = path.join(process.cwd(), "plugins", "sakura-plugin", "resources")
+      const tplPath = path.join(this.pluginPath, "resources", "bilibili", "info.html")
+      const pluResPath = path.join(this.pluginPath, "resources")
 
       const data = {
         pluResPath: `file://${pluResPath.replace(/\\/g, "/")}`, // 确保正确的file URL格式
