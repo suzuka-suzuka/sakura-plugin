@@ -4,6 +4,7 @@ import path from "path"
 import { Readable } from "stream"
 import { finished } from "stream/promises"
 import { fileURLToPath } from "url"
+import { makeForwardMsg } from "../lib/utils"
 
 const BILI_COOKIE =
   "SESSDATA=cd667ba0%2C1767084586%2C93dc8%2A72CjDPG9xheyYVsVRfX5SHz982_syNAs-4R10YTrg4z971EuBJlCX2crsBlsMhR95UqTMSVlU4XzcwSFZheHMtWnY3OWhFeFlDYzZUVFltWWNpODZVNVFTU2JhQXFfMVVHY0Rta0NxLW0zcEhPMWZNa1dBNFc1OXB6MXpPUnE0T1l6SzlqQWg2NGdBIIEC"
@@ -230,8 +231,7 @@ export class bilibili extends plugin {
       }
 
       // 3. 发送合并转发消息
-      const msg = await this.e.bot.makeForwardMsg(forwardMsg);
-      await this.reply(msg);
+ await makeForwardMsg(this.e, forwardMsg);
     } catch (error) {
       logger.error("[B站视频解析] 发送视频信息时出错:", error)
       await this.reply("发送B站视频信息失败，请查看后台日志。")
