@@ -4,7 +4,7 @@ import path from "path"
 import { Readable } from "stream"
 import { finished } from "stream/promises"
 import { fileURLToPath } from "url"
-import { makeForwardMsg } from "../lib/utils"
+import { makeForwardMsg } from "../lib/utils.js"
 
 const BILI_COOKIE =
   "SESSDATA=cd667ba0%2C1767084586%2C93dc8%2A72CjDPG9xheyYVsVRfX5SHz982_syNAs-4R10YTrg4z971EuBJlCX2crsBlsMhR95UqTMSVlU4XzcwSFZheHMtWnY3OWhFeFlDYzZUVFltWWNpODZVNVFTU2JhQXFfMVVHY0Rta0NxLW0zcEhPMWZNa1dBNFc1OXB6MXpPUnE0T1l6SzlqQWg2NGdBIIEC"
