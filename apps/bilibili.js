@@ -248,7 +248,6 @@ export class bilibili extends plugin {
         const dash = json.data.dash
         const availableVideos = dash.video
         const availableQns = [...new Set(availableVideos.map(v => v.id))].sort((a, b) => b - a)
-        logger.info(`[B站视频解析] 可选画质: ${availableQns.join(", ")}`)
         let selectedVideo = availableVideos.find(v => v.id === targetQn)
 
         if (!selectedVideo) {
