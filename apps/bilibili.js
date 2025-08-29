@@ -22,6 +22,7 @@ export class bilibili extends plugin {
         {
           reg: /(b23.tv|bilibili.com|BV[a-zA-Z0-9]{10})|\[CQ:json,data=.*(bilibili\.com|b23\.tv).*\]/i,
           fnc: "handleBiliLink",
+          log: false,
         },
       ],
     })
