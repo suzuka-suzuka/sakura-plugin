@@ -2,6 +2,7 @@ import { exec } from "child_process"
 import fs from "fs"
 import path from "path"
 import { Readable } from "stream"
+import puppeteer from "../../../lib/puppeteer/puppeteer.js"
 import { finished } from "stream/promises"
 
 const BILI_COOKIE = "buvid3=C642B912-5524-5C85-DB35-E8786F3B5FEC55480infoc; b_nut=1755593855; _uuid=8A1C56D3-337C-1F22-B49B-378E4D39AB4653228infoc; bmg_af_switch=1; bmg_src_def_domain=i1.hdslb.com; enable_web_push=DISABLE; buvid_fp=f040d38af3cd27f9568a301e2435b2d0; buvid4=7F76E544-B7C3-292A-12B4-146F70B5082156809-025081916-btpHqvv0d6UVqCmxSBn9Dg%3D%3D; DedeUserID=146086607; DedeUserID__ckMd5=446cc222e0fc12e4; theme-tip-show=SHOWED; theme-avatar-tip-show=SHOWED; rpdid=|(um~J~l~~k|0J'u~lllmJmuu; CURRENT_QUALITY=80; CURRENT_FNVAL=2000; b_lsid=87324D7F_198F37003F8; share_source_origin=QQ; bsource=share_source_qqchat; bili_ticket=eyJhbGciOiJIUzI1NiIsImtpZCI6InMwMyIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTY2OTAwNjMsImlhdCI6MTc1NjQzMDgwMywicGx0IjotMX0.hfGy-l0sOI9tVBO8m767gTLC_qvFC39JMciy4JMfO7U; bili_ticket_expires=1756690003; bili_jct=3b210a645f1d976a66b17c97b4e3f024; sid=gzu8vqld; home_feed_column=4; browser_resolution=930-748; bp_t_offset_146086607=1106368856596676608"
@@ -152,8 +153,8 @@ export class bilibili extends plugin {
   }
 
   async getComments(aid, count = 3) {
-    // 新版评论接口, mode=2 表示按热度排序
-    const url = `http://api.bilibili.com/x/v2/reply/main?type=1&oid=${aid}&mode=2`
+    // 新版评论接口, mode=3 表示按点赞数排序（热门）
+    const url = `http://api.bilibili.com/x/v2/reply/main?type=1&oid=${aid}&mode=3`
     try {
       const response = await fetch(url, { headers: { Cookie: BILI_COOKIE } })
       const json = await response.json()
@@ -169,24 +170,38 @@ export class bilibili extends plugin {
   }
 
   async sendVideoInfoCard(videoInfo, comments) {
-    const formatNum = num => (num > 10000 ? `${(num / 10000).toFixed(1)}万` : num)
-    const msg = [
-      segment.image(videoInfo.pic),
-      `标题: ${videoInfo.title}\n`,
-      `UP主: ${videoInfo.owner.name}\n`,
-      `播放: ${formatNum(videoInfo.stat.view)} | 弹幕: ${formatNum(videoInfo.stat.danmaku)}\n`,
-      `点赞: ${formatNum(videoInfo.stat.like)} | 投币: ${formatNum(videoInfo.stat.coin)} | 收藏: ${formatNum(videoInfo.stat.favorite)}`
-    ]
-    if (comments && comments.length > 0) {
-      msg.push("\n\n---热门评论---")
-      comments.forEach((reply, index) => {
-        const content = reply.content.message.replace(/\[.*?\]/g, "").trim()
-        if (content) {
-          msg.push(`\n${index + 1}. ${reply.member.uname}: ${content.substring(0, 50)}`)
-        }
-      })
-    }
-    await this.reply(msg)
+    const formatNum = num => (num > 10000 ? `${(num / 10000).toFixed(1)}万` : num);
+
+    const processedComments = comments ? comments.map(reply => {
+        const content = reply.content.message.replace(/\[.*?\]/g, "").trim();
+        const pictures = reply.content.pictures ? reply.content.pictures.map(p => p.img_src) : [];
+        return {
+            uname: reply.member.uname,
+            avatar: reply.member.avatar,
+            content: content,
+            pictures: pictures,
+            like: formatNum(reply.like),
+        };
+    }).filter(c => c.content || c.pictures.length > 0) : [];
+
+    const data = {
+        tplFile: path.join(process.cwd(), 'plugins', 'sakura-plugin', 'resources', 'bilibili', 'info.html'),
+        pluResPath: path.join(process.cwd(), 'plugins', 'sakura-plugin', 'resources'),
+        videoInfo: {
+            ...videoInfo,
+            stat: {
+                view: formatNum(videoInfo.stat.view),
+                danmaku: formatNum(videoInfo.stat.danmaku),
+                like: formatNum(videoInfo.stat.like),
+                coin: formatNum(videoInfo.stat.coin),
+                favorite: formatNum(videoInfo.stat.favorite),
+            }
+        },
+        comments: processedComments,
+    };
+
+    const img = await puppeteer.screenshot("sakura-plugin-bilibili", data);
+    await this.reply(img);
   }
 
   autoQuality(duration) {
