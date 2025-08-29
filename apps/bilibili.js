@@ -5,14 +5,18 @@ import { Readable } from "stream"
 import puppeteer from "puppeteer"
 import template from "art-template"
 import { finished } from "stream/promises"
+import { fileURLToPath } from "url"
 
-const BILI_COOKIE = "SESSDATA=cd667ba0%2C1767084586%2C93dc8%2A72CjDPG9xheyYVsVRfX5SHz982_syNAs-4R10YTrg4z971EuBJlCX2crsBlsMhR95UqTMSVlU4XzcwSFZheHMtWnY3OWhFeFlDYzZUVFltWWNpODZVNVFTU2JhQXFfMVVHY0Rta0NxLW0zcEhPMWZNa1dBNFc1OXB6MXpPUnE0T1l6SzlqQWg2NGdBIIEC"
+const BILI_COOKIE =
+  "SESSDATA=cd667ba0%2C1767084586%2C93dc8%2A72CjDPG9xheyYVsVRfX5SHz982_syNAs-4R10YTrg4z971EuBJlCX2crsBlsMhR95UqTMSVlU4XzcwSFZheHMtWnY3OWhFeFlDYzZUVFltWWNpODZVNVFTU2JhQXFfMVVHY0Rta0NxLW0zcEhPMWZNa1dBNFc1OXB6MXpPUnE0T1l6SzlqQWg2NGdBIIEC"
 
 const FFMPEG_PATH = "ffmpeg"
 
 const MAX_VIDEO_DURATION = 600
 
 const TEMP_DIR = path.join(process.cwd(), "data", "bilibili_temp")
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export class bilibili extends plugin {
   constructor() {
@@ -28,6 +32,8 @@ export class bilibili extends plugin {
         },
       ],
     })
+
+    this.pluginPath = path.join(__dirname, "..")
 
     if (!fs.existsSync(TEMP_DIR)) {
       fs.mkdirSync(TEMP_DIR, { recursive: true })
@@ -154,7 +160,6 @@ export class bilibili extends plugin {
   }
 
   async getComments(aid, count = 3) {
-    // 新版评论接口, mode=3 表示按点赞数排序（热门）
     const url = `http://api.bilibili.com/x/v2/reply/main?type=1&oid=${aid}&mode=3`
     try {
       const response = await fetch(url, { headers: { Cookie: BILI_COOKIE } })
@@ -179,7 +184,9 @@ export class bilibili extends plugin {
         ? comments
             .map(reply => {
               const content = reply.content.message.replace(/\[.*?\]/g, "").trim()
-              const pictures = reply.content.pictures ? reply.content.pictures.map(p => p.img_src) : []
+              const pictures = reply.content.pictures
+                ? reply.content.pictures.map(p => p.img_src)
+                : []
               return {
                 uname: reply.member.uname,
                 avatar: reply.member.avatar,
@@ -195,7 +202,7 @@ export class bilibili extends plugin {
       const pluResPath = path.join(this.pluginPath, "resources")
 
       const data = {
-        pluResPath: `file://${pluResPath.replace(/\\/g, "/")}`, // 确保正确的file URL格式
+        pluResPath: `file://${pluResPath.replace(/\\/g, "/")}`,
         videoInfo: {
           ...videoInfo,
           stat: {
@@ -216,11 +223,9 @@ export class bilibili extends plugin {
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
       })
       const page = await browser.newPage()
-  // 设置内容，并等待图片等资源加载
       await page.setContent(html, { waitUntil: "networkidle2" })
 
-      // 注入外部 CSS 文件以应用样式
-      const cssPath = path.join(this.pluginPath, 'resources/bilibili/info.css')
+      const cssPath = path.join(this.pluginPath, "resources/bilibili/info.css")
       await page.addStyleTag({ path: cssPath })
       const cardElement = await page.$(".container")
 
@@ -233,11 +238,9 @@ export class bilibili extends plugin {
         await browser.close()
         await this.reply("生成B站分享图失败，未找到 .container 元素。")
       }
-
     } catch (error) {
       logger.error("[B站截图] 生成分享图失败:", error)
       if (browser) await browser.close()
-      // 如果图片生成失败，回退到发送文字消息
       await this.reply(`生成B站分享图失败，请检查后台日志。\n错误: ${error.message}`)
     }
   }
@@ -301,7 +304,6 @@ export class bilibili extends plugin {
   }
 
   async processAndSendVideo(bvId, urls) {
-
     const videoPath = path.join(TEMP_DIR, `${bvId}_video.m4s`)
     const audioPath = path.join(TEMP_DIR, `${bvId}_audio.m4s`)
     const outputPath = path.join(TEMP_DIR, `${bvId}.mp4`)
