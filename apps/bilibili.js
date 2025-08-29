@@ -216,12 +216,24 @@ export class bilibili extends plugin {
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
       })
       const page = await browser.newPage()
-      await page.setContent(html, { waitUntil: "networkidle0" })
-      const cardElement = await page.$(".container")
-      const img = await cardElement.screenshot({ type: "png" })
-      await browser.close()
+  // 设置内容，并等待图片等资源加载
+      await page.setContent(html, { waitUntil: "networkidle2" })
 
-      await this.reply(img)
+      // 注入外部 CSS 文件以应用样式
+      const cssPath = path.join(this.pluginPath, 'resources/bilibili/info.css')
+      await page.addStyleTag({ path: cssPath })
+      const cardElement = await page.$(".container")
+
+      if (cardElement) {
+        const img = await cardElement.screenshot({ type: "png" })
+        await browser.close()
+        await this.reply(img)
+      } else {
+        logger.error("[B站截图] 未找到 .container 元素，无法截图")
+        await browser.close()
+        await this.reply("生成B站分享图失败，未找到 .container 元素。")
+      }
+
     } catch (error) {
       logger.error("[B站截图] 生成分享图失败:", error)
       if (browser) await browser.close()
