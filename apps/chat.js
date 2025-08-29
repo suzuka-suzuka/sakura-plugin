@@ -161,7 +161,7 @@ export class AIChat extends plugin {
             await this.reply(msg);
             
         } catch (error) {
-            logger.error(`AI Chat 处理过程中出现错误: ${error.message}`);
+            logger.error(`Chat处理过程中出现错误: ${error.message}`);
             await this.reply(`处理过程中出现错误: ${error.message}`, false, { recallMsg: 10 });
             return true;
         }

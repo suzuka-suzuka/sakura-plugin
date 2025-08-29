@@ -46,7 +46,6 @@ export class bilibili extends plugin {
       const bvMatch = e.msg.match(/BV([a-zA-Z0-9]{10})/i)
       if (bvMatch) {
         bvId = `BV${bvMatch[1]}`
-        logger.info(`[B站视频解析] 直接从消息中匹配到BV号: ${bvId}`)
       } else {
         let url = null
         if (Array.isArray(e.message)) {
@@ -58,13 +57,7 @@ export class bilibili extends plugin {
               if (rawUrl) {
                 url = rawUrl.replace(/\\/g, "")
               }
-            } catch (error) {
-              logger.debug("[B站视频解析] 内层JSON解析失败，尝试从原始data字符串中正则匹配URL")
-              const urlMatchInData = jsonMessage.data.match(/"qqdocurl":"(https?:\\{1,2}\/\\{1,2}[^"]+)"/)
-              if (urlMatchInData && urlMatchInData[1]) {
-                url = urlMatchInData[1].replace(/\\/g, "")
-              }
-            }
+            } catch (error) {}
           }
         }
 
@@ -79,15 +72,14 @@ export class bilibili extends plugin {
           return false
         }
 
-        logger.info(`[B站视频解析] 检测到链接: ${url}`)
         bvId = await this.getBvIdFromUrl(url)
       }
 
       if (!bvId) {
-        logger.warn("[B站视频解析] 未能从链接中提取到有效的BV号")
+        logger.warn("未能从链接中提取到有效的BV号")
         return false
       }
-      logger.info(`[B站视频解析] 成功解析BV号: ${bvId}`)
+      logger.info(`成功解析BV号: ${bvId}`)
 
       const videoInfo = await this.getVideoInfo(bvId)
       if (!videoInfo) {
@@ -123,7 +115,7 @@ export class bilibili extends plugin {
         cd.set(this.e.group_id, Date.now())
       }
     } catch (error) {
-      logger.error("[B站视频解析] 处理过程中发生未知错误:", error)
+      logger.error("处理过程中发生未知错误:", error)
     }
 
     return true
@@ -145,7 +137,7 @@ export class bilibili extends plugin {
           }
         }
       } catch (error) {
-        logger.error(`[B站视频解析] 解析短链接 ${url} 失败:`, error)
+        logger.error(`解析短链接 ${url} 失败:`, error)
         return null
       }
     }
@@ -169,10 +161,10 @@ export class bilibili extends plugin {
       if (json.code === 0) {
         return json.data
       }
-      logger.error(`[B站视频解析] API获取视频信息失败: ${json.message}`)
+      logger.error(`API获取视频信息失败: ${json.message}`)
       return null
     } catch (error) {
-      logger.error("[B站视频解析] 请求视频信息API时出错:", error)
+      logger.error("请求视频信息API时出错:", error)
       return null
     }
   }
@@ -186,10 +178,10 @@ export class bilibili extends plugin {
       if (json.code === 0 && json.data.replies && json.data.replies.length > 0) {
         return json.data.replies.slice(0, count)
       }
-      logger.warn(`[B站视频解析] 获取评论失败或没有评论: ${json.message || "返回数据为空"}`)
+      logger.warn(`获取评论失败或没有评论: ${json.message || "返回数据为空"}`)
       return null
     } catch (error) {
-      logger.error("[B站视频解析] 请求评论API时出错:", error)
+      logger.error("请求评论API时出错:", error)
       return null
     }
   }
@@ -234,8 +226,7 @@ export class bilibili extends plugin {
         }
       }
     } catch (error) {
-      logger.error("[B站视频解析] 发送视频信息时出错:", error)
-      await this.reply("发送B站视频信息失败，请查看后台日志。")
+      logger.error("发送视频信息时出错:", error)
     }
   }
 
@@ -283,17 +274,17 @@ export class bilibili extends plugin {
           }
         }
 
-        logger.info(`[B站视频解析] 目标清晰度: ${targetQn}, 最终选择: ${selectedVideo.id}`)
+        logger.info(`目标清晰度: ${targetQn}, 最终选择: ${selectedVideo.id}`)
 
         return {
           videoUrl: selectedVideo.baseUrl,
           audioUrl: dash.audio[0].baseUrl,
         }
       }
-      logger.error(`[B站视频解析] API获取播放地址失败: ${json.message}`)
+      logger.error(`API获取播放地址失败: ${json.message}`)
       return null
     } catch (error) {
-      logger.error("[B站视频解析] 请求播放地址API时出错:", error)
+      logger.error("请求播放地址API时出错:", error)
       return null
     }
   }
@@ -314,19 +305,14 @@ export class bilibili extends plugin {
         this.downloadFile(urls.videoUrl, videoPath),
         this.downloadFile(urls.audioUrl, audioPath),
       ])
-      logger.info(`[B站视频解析] ${bvId} 音视频下载完成`)
 
       await this.mergeWithFfmpeg(videoPath, audioPath, outputPath)
-      logger.info(`[B站视频解析] ${bvId} 视频合并完成`)
 
       await this.reply(segment.video(outputPath))
-      logger.info(`[B站视频解析] ${bvId} 视频发送成功`)
     } catch (error) {
-      logger.error(`[B站视频解析] 处理视频 ${bvId} 时出错:`, error.message)
-      await this.reply(`处理视频时出错：${error.message}`)
+      logger.error(`处理视频 ${bvId} 时出错:`, error.message)
     } finally {
       cleanup()
-      logger.info(`[B站视频解析] ${bvId} 临时文件清理完毕`)
     }
   }
 
@@ -351,7 +337,7 @@ export class bilibili extends plugin {
 
       exec(command, (error, _, stderr) => {
         if (error) {
-          logger.error(`[FFmpeg] 合并失败: ${stderr}`)
+          logger.error(`合并失败: ${stderr}`)
           if (stderr.includes("not found") || error.code === 127) {
             return reject(new Error("FFmpeg未找到，请检查路径配置是否正确。"))
           }
