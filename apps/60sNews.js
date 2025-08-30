@@ -30,7 +30,7 @@ export class News60s extends plugin {
       return
     }
 
-    const imageUrl = "https://60s.viki.moe/v2/60s"
+    const imageUrl = "https://60s.viki.moe/v2/60s?encoding=image-proxy"
 
     for (const groupId of groups) {
       try {
