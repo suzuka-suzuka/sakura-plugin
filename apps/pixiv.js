@@ -64,7 +64,11 @@ export class pixivSearch extends plugin {
       logger.error(`[P站搜图][PID:${pid}] 请求API时发生错误: ${error}`)
       let replyMsg = "哎呀，网络似乎出了点问题，请稍后再试吧~"
       if (error.status) {
-        replyMsg = `请求P站API失败，HTTP状态码: ${error.status}。可能是Cookie失效或作品不存在。`
+        if (error.status == 429) {
+          replyMsg = `P站API请求过于频繁，已被临时拒绝。请稍后再试！`
+        } else {
+          replyMsg = `请求P站API失败，HTTP状态码: ${error.status}。可能是Cookie失效或作品不存在。`
+        }
       } else {
         replyMsg = `请求P站API时出错: ${error.message}`
       }
@@ -131,6 +135,8 @@ export class pixivSearch extends plugin {
             continue
           }
 
+          await new Promise(resolve => setTimeout(resolve, 500))
+
           let detailRes
           try {
             const detailUrl = `https://www.pixiv.net/ajax/illust/${tempIllust.id}`
@@ -173,11 +179,7 @@ export class pixivSearch extends plugin {
       }
 
       if (!illust) {
-        await this.reply(
-          `在所有搜索结果中没有找到满足质量要求（收藏不小于500且收藏率不小于0.1）的图片，换个标签试试？`,
-          false,
-          { recallMsg: 10 },
-        )
+        await this.reply(`未能找到符合条件的图片，请换个标签再试。`, false, { recallMsg: 10 })
 
         return true
       }
@@ -190,7 +192,11 @@ export class pixivSearch extends plugin {
       logger.error(`[P站搜图] 请求API时发生错误: ${error}`)
       let replyMsg = "哎呀，网络似乎出了点问题，请稍后再试吧~"
       if (error.status) {
-        replyMsg = `搜索失败，API返回错误: ${error.status}，可能是Cookie失效了。`
+        if (error.status == 429) {
+          replyMsg = `P站API请求过于频繁，已被临时拒绝。请稍后再试！`
+        } else {
+          replyMsg = `搜索失败，API返回错误: ${error.status}，可能是Cookie失效了。`
+        }
       } else {
         replyMsg = `搜索失败: ${error.message}`
       }
