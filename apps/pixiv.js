@@ -103,7 +103,7 @@ export class pixivSearch extends plugin {
       let pages = null
 
       for (let page = 1; ; page++) {
-        const searchUrl = `https://www.pixiv.net/ajax/search/illustrations/${encodeURIComponent(tag)}?word=${encodeURIComponent(tag)}&order=date_d&mode=all&p=${page}&s_mode=s_tag_full&type=illust_and_ugoira&lang=zh`
+        const searchUrl = `https://www.pixiv.net/ajax/search/illustrations/${encodeURIComponent(tag)}?word=${encodeURIComponent(tag)}&order=date_d&mode=all&p=${page}&s_mode=s_tag_full&type=illust_and_ugoira&lang=zh&bkm_min=${config.minBookmarks}`
         const searchRes = await requestApi(searchUrl)
 
         let pageIllusts = searchRes.body?.illust?.data || []
@@ -127,7 +127,6 @@ export class pixivSearch extends plugin {
           continue
         }
 
-        const minBookmarks = config.minBookmarks
         const minBookmarkViewRatio = config.minBookmarkViewRatio
 
         for (const tempIllust of pageIllusts) {
@@ -154,9 +153,8 @@ export class pixivSearch extends plugin {
           const viewCount = fullIllustData.viewCount
           const ratio = viewCount > 0 ? bookmarkCount / viewCount : 0
 
-          const isHighQuality = bookmarkCount >= minBookmarks && ratio >= minBookmarkViewRatio
-
-          if (!isHighQuality) {
+          const meetsRatioRequirement = ratio >= minBookmarkViewRatio
+          if (!meetsRatioRequirement) {
             continue
           }
 
@@ -179,7 +177,11 @@ export class pixivSearch extends plugin {
       }
 
       if (!illust) {
-        await this.reply(`未能找到符合条件的图片，请换个标签再试。`, false, { recallMsg: 10 })
+        await this.reply(
+          `未能找到符合条件的图片，可能是结果为空或不满足筛选要求（如R18/AI/收藏率/已发送等），请换个标签或调整配置再试。`,
+          false,
+          { recallMsg: 10 },
+        )
 
         return true
       }
