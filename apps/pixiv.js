@@ -96,6 +96,9 @@ export class pixivSearch extends plugin {
       }
     }
 
+    const minBookmarks = 500
+    tag += ` 500users入り`
+
     await this.reply("获取中...请稍等", true, { recallMsg: 10 })
 
     try {
@@ -103,14 +106,14 @@ export class pixivSearch extends plugin {
       let pages = null
 
       for (let page = 1; ; page++) {
-        const searchUrl = `https://www.pixiv.net/ajax/search/illustrations/${encodeURIComponent(tag)}?word=${encodeURIComponent(tag)}&order=date_d&mode=all&p=${page}&s_mode=s_tag_full&type=illust_and_ugoira&lang=zh&bkm_min=${config.minBookmarks}`
+        const searchUrl = `https://www.pixiv.net/ajax/search/illustrations/${encodeURIComponent(tag)}?word=${encodeURIComponent(tag)}&order=date_d&mode=all&p=${page}&s_mode=s_tag_full&type=illust_and_ugoira&lang=zh`
         const searchRes = await requestApi(searchUrl)
 
-        let pageIllusts = searchRes.body?.illust?.data || []
-        if (pageIllusts.length === 0) {
+        const pageIllustsData = searchRes.body?.illust?.data
+        if (!pageIllustsData || pageIllustsData.length === 0) {
           break
         }
-
+        let pageIllusts = pageIllustsData
         pageIllusts = pageIllusts.filter(i => i.illustType !== 2)
 
         if (isR18Search) {
@@ -153,8 +156,9 @@ export class pixivSearch extends plugin {
           const viewCount = fullIllustData.viewCount
           const ratio = viewCount > 0 ? bookmarkCount / viewCount : 0
 
-          const meetsRatioRequirement = ratio >= minBookmarkViewRatio
-          if (!meetsRatioRequirement) {
+          const isHighQuality = bookmarkCount >= minBookmarks && ratio >= minBookmarkViewRatio
+
+          if (!isHighQuality) {
             continue
           }
 
@@ -177,11 +181,7 @@ export class pixivSearch extends plugin {
       }
 
       if (!illust) {
-        await this.reply(
-          `未能找到符合条件的图片，可能是结果为空或不满足筛选要求（如R18/AI/收藏率/已发送等），请换个标签或调整配置再试。`,
-          false,
-          { recallMsg: 10 },
-        )
+        await this.reply(`未能找到符合条件的图片，请换个标签再试。`, false, { recallMsg: 10 })
 
         return true
       }
