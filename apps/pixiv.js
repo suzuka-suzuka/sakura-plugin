@@ -216,7 +216,7 @@ export class pixivSearch extends plugin {
     const startIndex = (pageNum - 1) * imagesPerPage
     const imagesToSend = pages.slice(startIndex, startIndex + imagesPerPage)
 
-    let caption = ""
+    let caption = "找到图片啦！"
     const pidMatch = e.msg.match(/^#?pid\s*(\d+)/)
 
     if (totalPages > 1) {
