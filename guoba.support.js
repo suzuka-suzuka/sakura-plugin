@@ -114,10 +114,6 @@ export function supportGuoba() {
           label: "外显文本列表",
           component: "GTags",
           required: true,
-          componentProps: {
-            allowAdd: true,
-            allowDel: true,
-          },
         },
         {
           field: "EditImage",
@@ -132,6 +128,53 @@ export function supportGuoba() {
               { field: "prompt", label: "描述", component: "Input", required: true },
             ],
           },
+        },
+        {
+          label: "p站功能",
+          component: "Divider",
+        },
+        {
+          field: "pixiv.cookie",
+          label: "p站cookie",
+          component: "Input",
+          required: true,
+        },
+        {
+          field: "pixiv.proxy",
+          label: "p站反代",
+          component: "Input",
+          required: true,
+        },
+        {
+          field: "pixiv.excludeAI",
+          label: "排除AI绘图",
+          component: "Switch",
+          required: true,
+        },
+        {
+          field: "pixiv.minBookmarks",
+          label: "p站收藏数下限",
+          component: "InputNumber",
+          required: true,
+          componentProps: {
+            min: 0,
+          },
+        },
+        {
+          field: "pixiv.minBookmarkViewRatio",
+          label: "p站收藏浏览比下限",
+          component: "InputNumber",
+          required: true,
+          componentProps: {
+            min: 0,
+            max: 1,
+          },
+        },
+        {
+          field: "pixiv.defaultTags",
+          label: "p站默认搜索标签",
+          component: "GTags",
+          required: true,
         },
         {
           label: "AI渠道",

@@ -14,10 +14,12 @@ export class pixivSearch extends plugin {
         {
           reg: `^#?涩图(\。)?(.*)$`,
           fnc: "searchPixiv",
+          log: false,
         },
         {
           reg: `^#?pid(.*)$`,
           fnc: "getPixivByPid",
+          log: false,
         },
       ],
     })
@@ -90,7 +92,7 @@ export class pixivSearch extends plugin {
       }
     }
 
-    await this.reply("获取中...请稍等", false, { recallMsg: 10 })
+    await this.reply("获取中...请稍等", true, { recallMsg: 10 })
 
     try {
       let illust = null

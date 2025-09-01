@@ -1,5 +1,5 @@
-cookie: "first_visit_datetime_pc=2025-08-19%2018%3A37%3A29; p_ab_id=5; p_ab_id_2=5; p_ab_d_id=156123385; yuid_b=J2hiMRA; _ga=GA1.1.1909854018.1755596249; PHPSESSID=82818998_kmFHCNFNB978D0mTT7hofaPLIxTac4Ih; device_token=7a93a79571e6c4fd2c715d0c8e8f376b; c_type=30; privacy_policy_notification=0; a_type=0; b_type=0; privacy_policy_agreement=7; _ga_MZ1NL4PHH0=GS2.1.s1755596260$o1$g0$t1755596266$j54$l0$h0; _gcl_au=1.1.1421574961.1755596279; __cf_bm=kVk0VsxD0YwL.NeWDGnG4fb8QMs4GPz4hMldTwVQA9o-1756516793-1.0.1.1-2hcm3BSW223B4nH2mu.FQvbQEfQGl3UhFyab0xKAT02T948lwKjv8SMPk8BFsKGDLPzvgoKeckRo.bu9VwKBlKaQ5SV6GxS1fJT7OjZYqhJmr8vzNAIa7qXQn1RNvi2B; _cfuvid=7SNMquZx5TVkj.WSP53iX0SVokWLHuUptKoEuO7Mw7k-1756516793710-0.0.1.1-604800000; _ga_75BBYNYN9J=GS2.1.s1756516793$o4$g1$t1756518324$j60$l0$h0; cf_clearance=2p.g4IUTp8q8AZ5J.HHzkCyraxGv5vZNsxSrwFhlqU-1756518326-1.2.1.1-sSGaQ1ZNRZ0djkQJzjTfmL5jv8fCVvkbLRDlnUfkp6RCSthUFUvIRv39enQH9xRvqh6Hq9lAJwVel71y9tTxTCnXvqY6jA5GujUux9SiQ4jshj02tYu01rINqdQPKMvmZCHeevB_QZvYaEbuKlfxiSpmeRPC3vBYr4G3NSamiBiQLdH4cAJOTGyhgY94xxcNif3D9GSIPPU4LlPyOSvR0G2mPapBdSLyZClx7_Jds.Q"
-proxy: "pixiv.manbomanbo.asia"
+cookie: "你的cookie"
+proxy: "你的反代地址"
 excludeAI: true
 minBookmarks: 500
 minBookmarkViewRatio: 0.1
