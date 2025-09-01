@@ -4,6 +4,7 @@ import path from "path"
 import { Readable } from "stream"
 import { finished } from "stream/promises"
 import setting from "../lib/setting.js"
+import { makeForwardMsg } from "../lib/utils.js"
 
 const FFMPEG_PATH = "ffmpeg"
 
@@ -11,7 +12,7 @@ const MAX_VIDEO_DURATION = 600
 
 const TEMP_DIR = path.join(process.cwd(), "data", "bilibili_temp")
 
-const cd = new Map()
+let lastVideoSentTimestamp = 0
 
 if (!fs.existsSync(TEMP_DIR)) {
   fs.mkdirSync(TEMP_DIR, { recursive: true })
@@ -94,26 +95,18 @@ export class bilibili extends plugin {
         return false
       }
 
-      if (this.e.isGroup) {
-        const groupId = this.e.group_id
-        const lastSent = cd.get(groupId)
-        const cooldown = 5 * 60 * 1000
-
-        if (lastSent && Date.now() - lastSent < cooldown) {
-          return false
-        }
+      const cooldown = 5 * 60 * 1000
+      if (Date.now() - lastVideoSentTimestamp < cooldown) {
+        logger.info("视频解析处于冷却中，跳过发送视频。")
+        return false
       }
 
       const playUrls = await this.getPlayUrls(bvId, videoInfo.cid, videoInfo.duration)
       if (!playUrls) {
         return false
       }
-
       await this.processAndSendVideo(bvId, playUrls)
-
-      if (this.e.isGroup) {
-        cd.set(this.e.group_id, Date.now())
-      }
+      lastVideoSentTimestamp = Date.now()
     } catch (error) {
       logger.error("处理过程中发生未知错误:", error)
     }
@@ -205,24 +198,28 @@ export class bilibili extends plugin {
       await this.e.reply([segment.image(pic), infoText])
 
       if (comments && comments.length > 0) {
-        const allComments = []
+        const forwardMessages = []
         for (const comment of comments) {
           const content = comment.content.message.replace(/\[.*?\]/g, "").trim()
           const hasPictures = comment.content.pictures && comment.content.pictures.length > 0
 
           if (content || hasPictures) {
-            const text =
-              (allComments.length > 0 ? "\n\n" : "") + `${comment.member.uname}: ${content}`
-            allComments.push(text)
-
+            const messageParts = []
+            if (content) {
+              messageParts.push(content)
+            }
             if (hasPictures) {
-              comment.content.pictures.forEach(p => allComments.push(segment.image(p.img_src)))
+              comment.content.pictures.forEach(p => messageParts.push(segment.image(p.img_src)))
+            }
+
+            if (messageParts.length > 0) {
+              forwardMessages.push({ text: messageParts, senderId: this.e.user_id })
             }
           }
         }
 
-        if (allComments.length > 0) {
-          await this.e.reply(["热门评论：\n\n", ...allComments])
+        if (forwardMessages.length > 0) {
+          await makeForwardMsg(this.e, forwardMessages, "热门评论")
         }
       }
     } catch (error) {

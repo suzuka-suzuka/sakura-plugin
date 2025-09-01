@@ -3,6 +3,9 @@ import { getImg } from "../lib/utils.js"
 import Setting from "../lib/setting.js"
 import sharp from "sharp"
 
+const cooldowns = new Map()
+const COOLDOWN_DURATION = 2 * 60 * 1000
+
 export class EditImage extends plugin {
   constructor() {
     super({
@@ -47,7 +50,16 @@ export class EditImage extends plugin {
     const matchedTask = this.task.find(t => new RegExp(t.reg).test(e.msg))
     if (!matchedTask) return false
 
-    const imageUrls = await getImg(e)
+    let imageUrls = await getImg(e)
+    if (!imageUrls || imageUrls.length === 0) {
+      if (Array.isArray(e.message)) {
+        const atMsg = e.message.find(msg => msg.type === "at" && msg.qq && !isNaN(msg.qq))
+        if (atMsg) {
+          imageUrls = [`https://q1.qlogo.cn/g?b=qq&s=640&nk=${atMsg.qq}`]
+        }
+      }
+    }
+
     if (!imageUrls || imageUrls.length === 0) {
       const commandName = e.msg.replace(/\^|\$/g, "")
       await this.reply(`请上传需要${commandName}的图片哦~`, true, { recallMsg: 10 })
@@ -60,7 +72,16 @@ export class EditImage extends plugin {
 
   async editImageHandler(e) {
     const promptText = e.msg.replace(/^i/, "").trim()
-    const imageUrls = await getImg(e)
+    let imageUrls = await getImg(e)
+
+    if (!imageUrls || imageUrls.length === 0) {
+      if (Array.isArray(e.message)) {
+        const atMsg = e.message.find(msg => msg.type === "at" && msg.qq && !isNaN(msg.qq))
+        if (atMsg) {
+          imageUrls = [`https://q1.qlogo.cn/g?b=qq&s=640&nk=${atMsg.qq}`]
+        }
+      }
+    }
 
     if (!promptText) {
       await this.reply("请告诉我你想如何修改图片哦~ 例如：i 帮我把背景换成海滩", true, { recallMsg: 10 })
@@ -71,9 +92,16 @@ export class EditImage extends plugin {
   }
 
   async _processAndCallAPI(e, promptText, imageUrls) {
-    if (!this.appconfig?.enable?.includes(e.sender.user_id)) {
-      return false
+    if (!e.isMaster) {
+      const lastUsage = cooldowns.get(e.user_id)
+      if (lastUsage && Date.now() - lastUsage < COOLDOWN_DURATION) {
+        const remaining = Math.ceil((COOLDOWN_DURATION - (Date.now() - lastUsage)) / 1000)
+        await this.reply(`冷却中，请等待 ${remaining} 秒...`, true, { recallMsg: 10 })
+        return true
+      }
+      cooldowns.set(e.user_id, Date.now())
     }
+
     await this.reply("🎨 正在进行创作, 请稍候...", true, { recallMsg: 10 })
 
     const contents = []

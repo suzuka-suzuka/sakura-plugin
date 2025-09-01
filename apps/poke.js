@@ -41,8 +41,8 @@ export class poke extends plugin {
   }
 
   async sendgif(e) {
-    const apiUrl =
-      "https://tenor.googleapis.com/v2/search?key=AIzaSyB48anIc9rAPLKYkv-asoF_GtNsZ5_ricg&q=anime&media_filter=gif&random=true&limit=1"
+    const config = Setting.getConfig("tenor")
+    const apiUrl = `https://tenor.googleapis.com/v2/search?key=${config.apiKey}&q=anime&media_filter=gif&random=true&limit=1`
     const imageUrl = await getgif(apiUrl)
     if (imageUrl) {
       await e.reply(buildStickerMsg(imageUrl))
@@ -405,7 +405,12 @@ export class poke extends plugin {
                   const apiUrl = "https://yande.re/post.json?tags=loli+-rating:e+-nipples&limit=500"
                   const imageUrl = await yandeimage(apiUrl)
                   if (imageUrl) {
-                    await e.reply(segment.image(imageUrl))
+                    try {
+                      await e.reply(segment.image(imageUrl))
+                    } catch (error) {
+                      logger.error(`[戳一戳] 发送图片失败: ${error}`)
+                      e.reply("嘻嘻，骗你的，其实根本没有涩图~")
+                    }
                   }
                   break
                 case 8:
@@ -414,7 +419,12 @@ export class poke extends plugin {
                     "https://yande.re/post.json?tags=feet+-rating:e+-nipples&limit=500"
                   const feet_imageUrl = await yandeimage(feet_apiUrl)
                   if (feet_imageUrl) {
-                    await e.reply(segment.image(feet_imageUrl))
+                    try {
+                      await e.reply(segment.image(feet_imageUrl))
+                    } catch (error) {
+                      logger.error(`[戳一戳] 发送图片失败: ${error}`)
+                      e.reply("你还真张嘴了啊（收起脚），想得美~")
+                    }
                   }
                   break
                 case 9:

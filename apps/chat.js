@@ -121,6 +121,11 @@ export class AIChat extends plugin {
 
                 if (functionCalls && functionCalls.length > 0) {
                     toolCallCount++; 
+                    if (toolCallCount >= 5) {
+                        logger.warn(`[Chat] 工具调用次数超过上限，强行结束对话`);
+                        return true;
+                    }
+
                     if (textContent) {
                         const cleanedTextContent = textContent.replace(/\n+$/, '');
                         const parsedcleanedTextContent = parseAtMessage(cleanedTextContent);
@@ -135,7 +140,7 @@ export class AIChat extends plugin {
                         '',
                         Prompt,
                         GroupContext,
-                        toolCallCount >= 5 ? false : Tool, 
+                        Tool, 
                         currentFullHistory
                     );
 

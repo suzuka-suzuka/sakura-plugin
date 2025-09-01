@@ -1,5 +1,5 @@
 import { connect } from "puppeteer-real-browser"
-import { downloadImage, checkAndFlipImage } from "../lib/ImageUtils/ImageUtils.js"
+import { FlipImage } from "../lib/ImageUtils/ImageUtils.js"
 import _ from "lodash"
 
 const IMAGE_SOURCES = {
@@ -87,32 +87,30 @@ export class GetImagePlugin extends plugin {
           const imageUrl = _.sample(imageUrls)
           const sendResult = await e.reply(segment.image(imageUrl))
 
-          if (!sendResult || !sendResult.message_id) {
+          if (!sendResult?.message_id) {
             logger.warn(`图片URL发送失败 (${sourceKey}): ${imageUrl}，尝试备用方案...`)
-            await e.reply("图片发送失败，正在尝试备用方案...")
-
-            const imageData = await downloadImage(imageUrl)
-            if (imageData) {
-              const { processedBuffer } = await checkAndFlipImage(imageData, null)
-              const finalSendResult = await e.reply(segment.image(processedBuffer))
-              if (!finalSendResult || !finalSendResult.message_id) {
-                await e.reply("备用方案也失败了，图片最终发送失败。")
+            await e.reply("图片发送失败，正在尝试翻转图片...")
+ 
+            const flippedBuffer = await FlipImage(imageUrl)
+            if (flippedBuffer) {
+              const finalSendResult = await e.reply(segment.image(flippedBuffer))
+              if (!finalSendResult?.message_id) {
+                await e.reply("翻转后图片也发送失败，可能图片太色了")
               }
             } else {
-              logger.error(`图片下载失败 (${sourceKey}): ${imageUrl}，备用方案无法执行。`)
-              await e.reply("图片下载失败，备用方案无法执行。")
+              await e.reply("图片翻转失败")
             }
           }
         } else {
-          logger.warn(`没有获取到有效的图片URL (${sourceKey})。`)
-          await e.reply("获取失败，没有找到可用的图片。")
+          logger.warn("没有获取到有效的图片URL")
+          await e.reply("获取失败,没有有效的图片URL")
         }
       } else {
-        await e.reply("获取失败，没有找到可用的图片。")
+        await e.reply("获取失败,没有获取到有效的图片数据")
       }
     } catch (error) {
-      logger.error(`整体处理流程出错 (${sourceKey}):`, error)
-      await e.reply("获取失败，请重试") 
+      logger.error(`整体处理流程出错:`, error)
+      await e.reply("获取失败,发生错误，请稍后再试") 
     }
   }
 }

@@ -1,10 +1,10 @@
 import { getgif,buildStickerMsg } from '../lib/ImageUtils/ImageUtils.js';
-
+import Setting from "../lib/setting.js"
 export class gifPlugin extends plugin {
 	constructor() {
 		super({
 			name: 'gifPlugin',
-			dsc: '发送带sub_type的gif表情包',
+			dsc: '发送带gif表情包',
 			event: 'message.group',
 			priority: 1135,
 			rule: [
@@ -18,10 +18,17 @@ export class gifPlugin extends plugin {
 	}
 
 	async gif(e) {
+			const config = Setting.getConfig("tenor");
+			if (!config.apiKey) {
+				return false
+			}
 			const keyword = e.msg.match(/^来张(.*)表情包$/)[1]
-			const apiKey = "AIzaSyB48anIc9rAPLKYkv-asoF_GtNsZ5_ricg";
-			const apiUrl = `https://tenor.googleapis.com/v2/search?key=${apiKey}&q=${encodeURIComponent(keyword)}&media_filter=gif&random=true&limit=1`;
-			const imageBuffer = await getgif(apiUrl);
-		    await e.reply(buildStickerMsg(imageBuffer));
+			const apiUrl = `https://tenor.googleapis.com/v2/search?key=${config.apiKey}&q=${encodeURIComponent(keyword)}&media_filter=gif&random=true&limit=1`;
+			const imageUrl = await getgif(apiUrl);
+			if (imageUrl) {
+				await e.reply(buildStickerMsg(imageUrl));
+			} else {
+				await e.reply("找不到相关的表情包呢~", true);
+			}
 	}
 }

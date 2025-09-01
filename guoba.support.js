@@ -5,7 +5,7 @@ export function supportGuoba() {
   return {
     pluginInfo: {
       name: "sakura-plugin",
-      title: "樱花插件",
+      title: "sakura-plugin",
       description: "一个简单插件",
       author: "@suzuka",
       authorLink: "https://github.com/suzuka-suzuka",
