@@ -84,7 +84,9 @@ export class EditImage extends plugin {
     }
 
     if (!promptText) {
-      await this.reply("请告诉我你想如何修改图片哦~ 例如：i 帮我把背景换成海滩", true, { recallMsg: 10 })
+      await this.reply("请告诉我你想如何修改图片哦~ ", true, {
+        recallMsg: 10,
+      })
       return true
     }
 
@@ -95,8 +97,7 @@ export class EditImage extends plugin {
     if (!e.isMaster) {
       const lastUsage = cooldowns.get(e.user_id)
       if (lastUsage && Date.now() - lastUsage < COOLDOWN_DURATION) {
-        const remaining = Math.ceil((COOLDOWN_DURATION - (Date.now() - lastUsage)) / 1000)
-        await this.reply(`冷却中，请等待 ${remaining} 秒...`, true, { recallMsg: 10 })
+        await this.reply("冷却中...", true, { recallMsg: 10 })
         return true
       }
       cooldowns.set(e.user_id, Date.now())
