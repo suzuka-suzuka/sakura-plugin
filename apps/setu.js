@@ -35,7 +35,7 @@ export class setuPlugin extends plugin {
       tag = ""
     }
 
-    await this.reply([segment.at(e.user_id), "正在获取图片..."], true, { recallMsg: 10 })
+    await this.reply("正在获取图片...", true, { recallMsg: 10 })
 
     try {
       const apiFunction =
@@ -85,7 +85,7 @@ export class setuPlugin extends plugin {
         finalSuccess = !!sendResult?.message_id
       } else {
         logger.error("翻转图片失败，很可能是源图片链接已失效(404)。")
-        await this.reply("图片链接已失效(404)，无法获取。", true, { recallMsg: 10 })
+        await this.reply("图片链接已失效，无法获取。", true, { recallMsg: 10 })
         return false
       }
     }
@@ -95,9 +95,9 @@ export class setuPlugin extends plugin {
         await this.reply(messageText, false, { recallMsg: 60 })
       }
       await common.sleep(500)
-      await this.reply("图片已发送", true, { at: true, recallMsg: 10 })
+      await this.reply("图片已发送", true, { recallMsg: 10 })
     } else {
-      await this.reply("图片最终发送失败，请稍后重试。", true, { recallMsg: 10 })
+      await this.reply(`图片发送仍然失败，请自行查看图片链接：\n${imageUrl}`, true, { recallMsg: 10 })
     }
 
     return finalSuccess
