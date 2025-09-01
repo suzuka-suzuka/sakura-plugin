@@ -139,7 +139,7 @@ export class EditImage extends plugin {
           })
         } catch (error) {
           logger.error("处理其中一张图片时出错:", error)
-          await this.reply("处理其中一张图片时失败, 请检查图片链接或稍后再试。", true, {
+          await this.reply("处理图片时失败, 请稍后再试。", true, {
             recallMsg: 10,
           })
           return true
@@ -220,7 +220,7 @@ export class EditImage extends plugin {
       }
     } catch (error) {
       logger.error(`调用Vertex AI失败:`, error)
-      await this.reply("创作失败，可能是服务或配置问题。", true, { recallMsg: 10 })
+      await this.reply("创作失败，可能是网络问题", true, { recallMsg: 10 })
     }
 
     return true
