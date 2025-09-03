@@ -22,7 +22,7 @@ export class EditImage extends plugin {
   generateRules() {
     const rules = [
       {
-        reg: "^i(.*)$",
+        reg: "^#i(.*)$",
         fnc: "editImageHandler",
         log: false,
       },
@@ -71,7 +71,7 @@ export class EditImage extends plugin {
   }
 
   async editImageHandler(e) {
-    const promptText = e.msg.replace(/^i/, "").trim()
+    const promptText = e.msg.replace(/^#i/, "").trim()
     let imageUrls = await getImg(e)
 
     if (!imageUrls || imageUrls.length === 0) {
