@@ -3,8 +3,8 @@ import common from "../../../lib/common/common.js"
 const DEFAULT_PROXY = "pixiv.manbomanbo.asia"
 
 const REGEX_CONFIG = {
-  lolisuki: "^#?来张萝莉图$",
-  lolicon: "^#?来张涩图(。)?(.*)$",
+  lolisuki: "^#来张萝莉图$",
+  lolicon: "^#来张涩图(。)?(.*)$",
 }
 
 export class setuPlugin extends plugin {

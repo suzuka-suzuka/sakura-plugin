@@ -12,7 +12,7 @@ export class pixivSearch extends plugin {
       priority: 1135,
       rule: [
         {
-          reg: `^#?涩图(\。)?(.*)$`,
+          reg: `^#涩图(\。)?(.*)$`,
           fnc: "searchPixiv",
           log: false,
         },
@@ -78,7 +78,7 @@ export class pixivSearch extends plugin {
   }
 
   async searchPixiv(e) {
-    const match = e.msg.match(/^#?涩图(\。)?(.*)$/)
+    const match = e.msg.match(/^#涩图(\。)?(.*)$/)
     if (!match) return false
 
     const config = this.appconfig
