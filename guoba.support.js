@@ -115,20 +115,7 @@ export function supportGuoba() {
           component: "GTags",
           required: true,
         },
-        {
-          field: "EditImage",
-          label: "修图提示词",
-          bottomHelpMessage: "配置自定义图片编辑指令和提示词",
-          component: "GSubForm",
-          required: false,
-          componentProps: {
-            multiple: true,
-            schemas: [
-              { field: "reg", label: "触发词", component: "Input", required: true },
-              { field: "prompt", label: "描述", component: "Input", required: true },
-            ],
-          },
-        },
+
         {
           label: "p站功能",
           component: "Divider",
@@ -175,6 +162,24 @@ export function supportGuoba() {
           label: "p站默认搜索标签",
           component: "GTags",
           required: true,
+        },
+        {
+          label: "杂项",
+          component: "Divider",
+        },
+        {
+          field: "EditImage",
+          label: "修图提示词",
+          bottomHelpMessage: "配置自定义图片编辑指令和提示词",
+          component: "GSubForm",
+          required: false,
+          componentProps: {
+            multiple: true,
+            schemas: [
+              { field: "reg", label: "触发词", component: "Input", required: true },
+              { field: "prompt", label: "描述", component: "Input", required: true },
+            ],
+          },
         },
         {
           label: "AI渠道",
