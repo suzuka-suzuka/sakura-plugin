@@ -14,7 +14,7 @@ export class helpMenu extends plugin {
       priority: 1135,
       rule: [
         {
-          reg: "^#?菜单$",
+          reg: "^#(菜单|帮助)$",
           fnc: "showMenu",
         },
       ],
