@@ -21,16 +21,6 @@ export class Conversationmanagement extends plugin {
       priority: 1135,
       rule: [
         {
-          reg: `^清空对话\\s+(.+)`,
-          fnc: "handleClearSingleConversation",
-          log: false,
-        },
-        {
-          reg: `^列出对话\\s+(.+)`,
-          fnc: "handleListSingleConversation",
-          log: false,
-        },
-        {
           reg: `^清空全部对话$`,
           fnc: "handleClearAllPrefixesForCurrentUser",
           log: false,
@@ -42,7 +32,17 @@ export class Conversationmanagement extends plugin {
           permission: "master",
         },
         {
-          reg: `^导出对话\\s+(.+)`,
+          reg: `^清空对话\\s*(.+)`,
+          fnc: "handleClearSingleConversation",
+          log: false,
+        },
+        {
+          reg: `^列出对话\\s*(.+)`,
+          fnc: "handleListSingleConversation",
+          log: false,
+        },
+        {
+          reg: `^导出对话\\s*(.+)`,
           fnc: "handleExportConversation",
           log: false,
         },
