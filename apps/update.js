@@ -18,7 +18,7 @@ export class Update extends plugin {
       priority: 1000,
       rule: [
         {
-          reg: `^#?(sakura|樱花)(插件)?(强制)?(更新|绽放)$`,
+          reg: `^#?(sakura|樱花)(插件)?(强制)?更新$`,
           fnc: "update",
         },
       ],
