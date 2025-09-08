@@ -83,7 +83,7 @@ export class repeatPlugin extends plugin {
         const muteTargetId = msg[e.group_id].lastSender
         const muteDuration = 60
 
-        const memberMap = await e.group.getMemberMap()
+        const memberMap = e.bot.gml.get(e.group_id)
         const botMember = memberMap.get(e.bot.uin)
         const muteTarget = memberMap.get(muteTargetId)
         if (

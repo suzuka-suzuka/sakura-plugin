@@ -17,10 +17,10 @@ export class groupRequestListener extends plugin {
     })
   }
 
-  async handleGroupAddRequest(e) { 
+  async handleGroupAddRequest(e) {
     let nickname = e.user_id
 
-    const userObject = Bot.pickUser(e.user_id)
+    const userObject = e.bot.pickUser(e.user_id)
     const userInfo = await userObject.getInfo()
 
     if (userInfo && userInfo.nickname) {
@@ -42,7 +42,7 @@ export class groupRequestListener extends plugin {
       segment.image(avatarUrl),
       `\n敲门口令: ${e.comment || "这个人啥也没说"}`,
     ]
-    await Bot.sendGroupMsg(e.group_id, message)
+    await e.bot.sendGroupMsg(e.group_id, message)
 
     return false
   }

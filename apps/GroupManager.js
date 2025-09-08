@@ -70,7 +70,7 @@ export class GroupManager extends plugin {
     await e.reply(`好的，我这就开门`)
     const flag = groupRequests.get(markerId)
 
-    await Bot.setGroupAddRequest(flag, true)
+    await e.bot.setGroupAddRequest(flag, true)
     groupRequests.delete(markerId)
 
     return true
@@ -80,8 +80,7 @@ export class GroupManager extends plugin {
     if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
       return false
     }
-    const group = e.bot.pickGroup(e.group_id)
-    const bot = await group.pickMember(e.self_id)
+    const bot = e.bot.gml.get(e.group_id)?.get(e.self_id)
     if (bot.role === "member") {
       return false
     }
@@ -90,16 +89,15 @@ export class GroupManager extends plugin {
       this.finish("confirmCleanupNeverSpoken", true)
     }
 
-    let memberMap
-    try {
-      memberMap = await e.group.getMemberMap(true)
-    } catch (error) {
-      logger.error(`[清理从未发言] 获取群成员列表失败: ${error}`)
+    const memberMap = e.bot.gml.get(e.group_id)
+    if (!memberMap) {
+      logger.error(`[清理从未发言] 获取群成员缓存失败`)
+      return await e.reply("获取群成员列表失败，请稍后再试。")
     }
 
     const inactiveMembers = []
     memberMap.forEach(member => {
-      if (member.user_id === Bot.uin) {
+      if (member.user_id === e.bot.uin) {
         return
       }
       if (member.join_time === member.last_sent_time) {
@@ -117,8 +115,8 @@ export class GroupManager extends plugin {
     const forwardMsgNodes = [
       {
         message: `检测到 ${inactiveMembers.length} 位从未发言的成员，详情如下：`,
-        nickname: Bot.nickname,
-        user_id: Bot.uin,
+        nickname: bot.card || bot.nickname,
+        user_id: e.bot.uin,
       },
     ]
 
@@ -129,8 +127,8 @@ export class GroupManager extends plugin {
           `\n昵称: ${member.nickname}`,
           `\nQQ: ${member.user_id}`,
         ],
-        nickname: Bot.nickname,
-        user_id: Bot.uin,
+        nickname: bot.card || bot.nickname,
+        user_id: e.bot.uin,
       })
     }
 
@@ -183,8 +181,7 @@ export class GroupManager extends plugin {
     if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
       return false
     }
-    const group = e.bot.pickGroup(e.group_id)
-    const bot = await group.pickMember(e.self_id)
+    const bot = e.bot.gml.get(e.group_id)?.get(e.self_id)
     if (bot.role === "member") {
       return false
     }
@@ -208,11 +205,9 @@ export class GroupManager extends plugin {
       this.finish("confirmCleanupInactive", true)
     }
 
-    let memberMap
-    try {
-      memberMap = await e.group.getMemberMap(true)
-    } catch (error) {
-      logger.error(`[清理长时间未发言] 获取群成员列表失败: ${error}`)
+    const memberMap = e.bot.gml.get(e.group_id)
+    if (!memberMap) {
+      logger.error(`[清理长时间未发言] 获取群成员缓存失败`)
       return await e.reply("获取群成员列表失败，请稍后再试。")
     }
 
@@ -221,7 +216,7 @@ export class GroupManager extends plugin {
     const inactiveMembers = []
 
     memberMap.forEach(member => {
-      if (member.user_id === Bot.uin) {
+      if (member.user_id === e.bot.uin) {
         return
       }
       const timeDifference = currentTime - member.last_sent_time
@@ -241,8 +236,8 @@ export class GroupManager extends plugin {
     const forwardMsgNodes = [
       {
         message: `检测到 ${inactiveMembers.length} 位超过 ${value}${unit} 未发言的成员，详情如下：`,
-        nickname: Bot.nickname,
-        user_id: Bot.uin,
+        nickname: bot.card || bot.nickname,
+        user_id: e.bot.uin,
       },
     ]
 
@@ -255,8 +250,8 @@ export class GroupManager extends plugin {
           `\nQQ: ${member.user_id}`,
           `\n最后发言: ${lastSentDate}`,
         ],
-        nickname: Bot.nickname,
-        user_id: Bot.uin,
+        nickname: bot.card || bot.nickname,
+        user_id: e.bot.uin,
       })
     }
 
@@ -309,8 +304,7 @@ export class GroupManager extends plugin {
     if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
       return false
     }
-    const group = e.bot.pickGroup(e.group_id)
-    const bot = await group.pickMember(e.self_id)
+    const bot = e.bot.gml.get(e.group_id)?.get(e.self_id)
     if (bot.role === "member") {
       return false
     }
@@ -326,10 +320,8 @@ export class GroupManager extends plugin {
         unit = "5分钟"
       }
 
-      const targetMember = e.group.pickMember(targetQQ)
-      if (!targetMember) return false
+      const memberInfo = e.bot.gml.get(e.group_id)?.get(targetQQ)
 
-      const memberInfo = await targetMember.getInfo(true)
       const memberName = memberInfo?.card || memberInfo?.nickname || targetQQ
       if (memberInfo?.role !== "member") {
         return false
@@ -340,10 +332,8 @@ export class GroupManager extends plugin {
       const targetQQ = cleanMsg.replace(/解禁/g, "").trim().replace("@", "") || e.at
       if (!targetQQ) return false
 
-      const targetMember = e.group.pickMember(targetQQ)
-      if (!targetMember) return false
+      const memberInfo = e.bot.gml.get(e.group_id)?.get(targetQQ)
 
-      const memberInfo = await targetMember.getInfo(true)
       const memberName = memberInfo?.card || memberInfo?.nickname || targetQQ
       if (memberInfo?.role !== "member") {
         return false
@@ -358,8 +348,7 @@ export class GroupManager extends plugin {
     if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
       return false
     }
-    const group = e.bot.pickGroup(e.group_id)
-    const bot = await group.pickMember(e.self_id)
+    const bot = e.bot.gml.get(e.group_id)?.get(e.self_id)
     if (bot.role === "member") {
       return false
     }
@@ -370,12 +359,11 @@ export class GroupManager extends plugin {
 
     if (!targetQQ) return false
 
-    const targetMember = e.group.pickMember(targetQQ)
-    if (!targetMember || targetMember.user_id === e.self_id) {
+    const memberInfo = e.bot.gml.get(e.group_id)?.get(targetQQ)
+    if (memberInfo.user_id === e.self_id) {
       return false
     }
 
-    const memberInfo = await targetMember.getInfo(true)
     const memberName = memberInfo?.card || memberInfo?.nickname || targetQQ
     if (memberInfo?.role !== "member") {
       return false
@@ -391,8 +379,7 @@ export class GroupManager extends plugin {
   }
 
   async handleEssenceMessage(e) {
-    const group = e.bot.pickGroup(e.group_id)
-    const bot = await group.pickMember(e.self_id)
+    const bot = e.bot.gml.get(e.group_id)?.get(e.self_id)
     if (bot.role === "member") {
       return false
     }

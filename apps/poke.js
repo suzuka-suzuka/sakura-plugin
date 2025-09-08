@@ -54,9 +54,8 @@ export class poke extends plugin {
   }
 
   async checkAndMute(e, duration) {
-    const group = e.bot.pickGroup(e.group_id)
-    const bot = await group.pickMember(e.self_id)
-    const member = await group.pickMember(e.operator_id)
+    const bot = e.bot.gml.get(e.group_id)?.get(e.self_id)
+    const member = e.bot.gml.get(e.group_id)?.get(e.operator_id)
 
     if (bot.role !== "admin" && bot.role !== "owner") {
       return false
@@ -149,16 +148,11 @@ export class poke extends plugin {
           let msg = _.sample(pokeConfig.MASTER_REPLIES)
           await e.reply(msg)
         } else if (retype === 2) {
-          const groupId = e.group_id
-          const group = e.bot.pickGroup(groupId)
-          const memberMap = await group.getMemberMap(true)
-          const botMember = memberMap.get(e.bot.uin)
+          const bot = e.bot.gml.get(e.group_id)?.get(e.self_id)
 
-          if (botMember && botMember.role !== "member") {
-            const senderId = e.operator_id
-            const senderMember = e.group.pickMember(senderId)
-            await senderMember.getInfo(true)
-            const Name = senderMember.card || senderMember.nickname
+          if (bot && bot.role !== "member") {
+            const member = e.bot.gml.get(e.group_id)?.get(e.operator_id)
+            const Name = member.card || member.nickname
 
             const queryParts = [
               {
@@ -168,7 +162,7 @@ export class poke extends plugin {
             const Channel = "2.5"
             const result = await getAI(Channel, e, queryParts, null, false, false, [])
             const newCard = result.text
-            await group.setCard(senderId, newCard)
+            await e.group.setCard(e.operator_id, newCard)
           } else {
             let msg = _.sample(pokeConfig.MASTER_REPLIES)
             await e.reply(msg)

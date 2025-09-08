@@ -37,7 +37,7 @@ export class forwardMessage extends plugin {
 
     for (const targetId of rule.targetGroupIds) {
       try {
-        const targetGroup = Bot.pickGroup(targetId);
+        const targetGroup = e.bot.pickGroup(targetId);
         if (targetGroup) {
           await targetGroup.forwardSingleMsg(e.message_id);
         } else {
