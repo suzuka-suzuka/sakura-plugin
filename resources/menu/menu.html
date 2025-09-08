@@ -13,65 +13,75 @@
     <style>
       body {
         font-family: "Inter", sans-serif;
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-        background-repeat: no-repeat;
-        color: #dcddde;
+        background-color: #f0f2f5;
+        color: #000000;
+        text-shadow: 0px 0px 5px rgba(255, 255, 255, 0.8), 0px 0px 7px rgba(255, 255, 255, 0.8);
       }
       .command {
         font-family: "Fira Code", monospace;
-        color: #ffffff;
-        background-color: #202225;
+        color: #000000;
+        background-color: rgba(255, 255, 255, 0.5);
         padding: 4px 8px;
         border-radius: 6px;
         font-size: 0.9em;
         display: inline-block;
+        text-shadow: none;
       }
       .help-container {
-        background-color: rgba(47, 49, 54, 0.85);
         border-radius: 8px;
         padding: 24px;
         max-width: 900px;
         width: 100%;
-        box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.3);
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        overflow: hidden;
+        position: relative;
+      }
+      #main-title {
+        text-shadow: 0px 0px 6px rgba(255, 255, 255, 0.9), 0px 0px 8px rgba(255, 255, 255, 0.9);
+      }
+      .command-desc {
+         text-shadow: 0px 0px 3px rgba(255, 255, 255, 0.7);
       }
     </style>
   </head>
   <body class="p-8">
     <div class="help-container" id="capture-target">
-      <header class="pb-4 border-b border-gray-600/50 mb-8 text-center">
-        <h1 id="main-title" class="text-3xl font-bold text-white"></h1>
-        <p id="main-description" class="text-md text-gray-400 mt-2"></p>
+      <header class="pb-4 mb-8 text-center">
+        <h1 id="main-title" class="text-3xl font-bold text-gray-900"></h1>
+        <p id="main-description" class="text-md text-gray-700 mt-2"></p>
       </header>
 
       <main id="menu-content" class="space-y-8"></main>
-      <footer class="text-center pt-6 mt-8 border-t border-gray-600/50">
-        <p class="text-sm text-gray-400">Created by @suzuka-suzuka&sakura-plugin</p>
+      <footer class="text-center pt-6 mt-8">
+        <p class="text-sm text-gray-600">Created by @suzuka-suzuka&sakura-plugin</p>
       </footer>
     </div>
 
     <template id="category-template">
-      <div class="bg-gray-800/40 p-5 rounded-lg">
+      <div class="p-5 rounded-lg">
         <h2 class="category-title text-lg font-bold uppercase mb-4 tracking-wider"></h2>
         <div class="command-grid grid grid-cols-3 gap-4"></div>
       </div>
     </template>
 
     <template id="command-template">
-      <div class="bg-gray-900/40 p-4 rounded-md h-full flex flex-col">
+      <div class="bg-white/60 p-4 rounded-md h-full flex flex-col">
         <code class="command-cmd"></code>
-        <p class="command-desc text-gray-300 text-sm mt-2 flex-grow"></p>
+        <p class="command-desc text-gray-800 text-sm mt-2 flex-grow"></p>
       </div>
     </template>
 
     <script>
       function renderMenu(data, imageUrl) {
+        const captureTarget = document.getElementById('capture-target');
         if (imageUrl) {
-          document.body.style.backgroundImage = `url('${imageUrl}')`;
+          captureTarget.style.backgroundImage = `url('${imageUrl}')`;
         } else {
-          document.body.style.backgroundColor = '#36393f';
+          captureTarget.style.backgroundColor = '#f3f4f6';
         }
+
         document.getElementById("main-title").textContent = data.title
         document.getElementById("main-description").textContent = data.description
 
@@ -85,7 +95,7 @@
           const categoryTitle = categoryNode.querySelector(".category-title")
           categoryTitle.textContent = category.name
 
-          const titleColor = "text-blue-400"
+          const titleColor = "text-blue-600"
           categoryTitle.classList.add(titleColor)
 
           const commandGrid = categoryNode.querySelector(".command-grid")

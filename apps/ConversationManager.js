@@ -2,6 +2,7 @@ import Setting from "../lib/setting.js"
 import fs from "fs"
 import path from "path"
 import puppeteer from "puppeteer"
+import _ from "lodash"
 import { pluginresources } from "../lib/path.js"
 import {
   loadConversationHistory,
@@ -147,6 +148,35 @@ export class Conversationmanagement extends plugin {
     return true
   }
 
+  async getImageUrl() {
+    const url = "https://yande.re/post.json?tags=loli+-rating:e+-nipples&limit=500"
+    try {
+      const response = await fetch(url)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const jsonData = await response.json()
+
+      if (Array.isArray(jsonData) && jsonData.length > 0) {
+        const imageItems = jsonData.filter(item => item?.file_url && item?.id)
+
+        if (imageItems.length > 0) {
+          const selectedItem = _.sample(imageItems)
+          return { url: selectedItem.file_url, id: selectedItem.id }
+        } else {
+          logger.warn("没有获取到有效的图片URL和ID")
+          return null
+        }
+      } else {
+        logger.warn("没有获取到有效的图片数据")
+        return null
+      }
+    } catch (error) {
+      logger.error("获取图片URL时出错:", error)
+      return null
+    }
+  }
+
   async handleExportConversation(e) {
     const msg = e.msg || ""
     const trigger = "导出对话"
@@ -191,13 +221,57 @@ export class Conversationmanagement extends plugin {
 
       let backgroundImageBase64 = ""
       try {
-        const backgroundImagePath = path.join(pluginresources, "AI", "background.jpg")
-        if (fs.existsSync(backgroundImagePath)) {
-          const backgroundImageBuffer = fs.readFileSync(backgroundImagePath)
-          backgroundImageBase64 = `data:image/jpeg;base64,${backgroundImageBuffer.toString("base64")}`
+        const defaultImagePath = path.join(pluginresources, "background")
+
+        await fs.promises.mkdir(defaultImagePath, { recursive: true })
+
+        const imageInfo = await this.getImageUrl()
+
+        if (imageInfo?.url && imageInfo.url.startsWith("http")) {
+          try {
+            const response = await fetch(imageInfo.url)
+            if (response.ok) {
+              const imageBuffer = Buffer.from(await response.arrayBuffer())
+
+              if (imageInfo.id) {
+                ;(async () => {
+                  try {
+                    const extension = path.extname(new URL(imageInfo.url).pathname)
+                    const filename = `${imageInfo.id}${extension}`
+                    const savePath = path.join(defaultImagePath, filename)
+                    await fs.promises.writeFile(savePath, imageBuffer)
+                    logger.debug(`菜单图片已保存: ${savePath}`)
+                  } catch (saveError) {
+                    logger.error("保存菜单图片失败:", saveError)
+                  }
+                })()
+              }
+
+              const mimeType = response.headers.get("content-type") || "image/jpeg"
+              backgroundImageBase64 = `data:${mimeType};base64,${imageBuffer.toString("base64")}`
+            } else {
+              logger.warn(`获取对话背景图片失败，状态码: ${response.status}, URL: ${imageInfo.url}`)
+            }
+          } catch (err) {
+            logger.error("获取对话背景图片时网络请求出错:", err)
+          }
         }
-      } catch (fileError) {
-        logger.warn("读取背景图片失败，将使用默认背景色:", fileError)
+
+        if (!backgroundImageBase64) {
+          const files = await fs.promises.readdir(defaultImagePath)
+          const imageFiles = files.filter(file => /\.(jpg|jpeg|png|gif)$/i.test(file))
+          if (imageFiles.length > 0) {
+            const randomImage = _.sample(imageFiles)
+            const imagePath = path.join(defaultImagePath, randomImage)
+            const imageBuffer = await fs.promises.readFile(imagePath)
+            const mimeType = "image/" + path.extname(imagePath).slice(1)
+            backgroundImageBase64 = `data:${mimeType};base64,${imageBuffer.toString("base64")}`
+          } else {
+            logger.warn(`背景图片目录 ${defaultImagePath} 中没有找到图片，将使用默认背景色。`)
+          }
+        }
+      } catch (err) {
+        logger.error("处理对话背景图片时出错:", err)
       }
 
       const user = {

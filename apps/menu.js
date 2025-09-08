@@ -31,12 +31,13 @@ export class helpMenu extends plugin {
       const jsonData = await response.json()
 
       if (Array.isArray(jsonData) && jsonData.length > 0) {
-        const imageUrls = jsonData.map(item => item?.file_url).filter(url => url)
+        const imageItems = jsonData.filter(item => item?.file_url && item?.id)
 
-        if (imageUrls.length > 0) {
-          return _.sample(imageUrls)
+        if (imageItems.length > 0) {
+          const selectedItem = _.sample(imageItems)
+          return { url: selectedItem.file_url, id: selectedItem.id }
         } else {
-          logger.warn("没有获取到有效的图片URL")
+          logger.warn("没有获取到有效的图片URL和ID")
           return null
         }
       } else {
@@ -44,7 +45,7 @@ export class helpMenu extends plugin {
         return null
       }
     } catch (error) {
-      logger.error(`获取图片URL时出错:`, error)
+      logger.error("获取图片URL时出错:", error)
       return null
     }
   }
@@ -53,10 +54,45 @@ export class helpMenu extends plugin {
     let browser = null
     try {
       const menuData = Setting.getConfig("menu")
-      let imageUrl = await this.getImageUrl()
+      const defaultImagePath = path.join(pluginresources, "background")
+      const imageInfo = await this.getImageUrl()
+      let imageUrl = imageInfo?.url
+
+      if (imageUrl && imageUrl.startsWith("http")) {
+        try {
+          const response = await fetch(imageUrl)
+          if (response.ok) {
+            const imageBuffer = Buffer.from(await response.arrayBuffer())
+
+            if (imageInfo?.id) {
+              ;(async () => {
+                try {
+                  await fs.promises.mkdir(defaultImagePath, { recursive: true })
+                  const extension = path.extname(new URL(imageUrl).pathname)
+                  const filename = `${imageInfo.id}${extension}`
+                  const savePath = path.join(defaultImagePath, filename)
+                  await fs.promises.writeFile(savePath, imageBuffer)
+                  logger.debug(`菜单图片已保存: ${savePath}`)
+                } catch (saveError) {
+                  logger.error("保存菜单图片失败:", saveError)
+                }
+              })()
+            }
+
+            const base64Image = imageBuffer.toString("base64")
+            const mimeType = response.headers.get("content-type") || "image/jpeg"
+            imageUrl = `data:${mimeType};base64,${base64Image}`
+          } else {
+            logger.warn(`获取菜单背景图片失败，状态码: ${response.status}, URL: ${imageUrl}`)
+            imageUrl = null
+          }
+        } catch (err) {
+          logger.error("获取菜单背景图片时网络请求出错:", err)
+          imageUrl = null
+        }
+      }
 
       if (!imageUrl) {
-        const defaultImagePath = path.join(pluginresources, "menu", "image")
         try {
           const files = fs.readdirSync(defaultImagePath)
           if (files.length > 0) {
@@ -105,11 +141,10 @@ export class helpMenu extends plugin {
       if (img) {
         await e.reply(segment.image(img))
       } else {
-        await e.reply("菜单图片生成失败，请查看后台日志。")
+        throw new Error("生成图片失败")
       }
     } catch (error) {
-      console.error("生成菜单时出错:", error)
-      await e.reply("生成菜单时遇到问题，请联系管理员。")
+      logger.error("生成菜单时出错:", error)
     } finally {
       if (browser) {
         await browser.close()
