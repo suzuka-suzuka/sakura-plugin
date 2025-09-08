@@ -43,6 +43,9 @@
       </header>
 
       <main id="menu-content" class="space-y-8"></main>
+        <footer class="text-center pt-6 mt-8 border-t border-gray-600/50">
+        <p class="text-sm text-gray-400">Created by @suzuka-suzuka&sakura-plugin</p>
+      </footer>
     </div>
 
     <template id="category-template">
@@ -74,7 +77,7 @@
           const categoryTitle = categoryNode.querySelector(".category-title")
           categoryTitle.textContent = category.name
 
-          const titleColor = category.color || "text-blue-400"
+          const titleColor = "text-blue-400"
           categoryTitle.classList.add(titleColor)
 
           const commandGrid = categoryNode.querySelector(".command-grid")

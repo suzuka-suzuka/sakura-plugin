@@ -27,8 +27,7 @@ categories:
       - cmd: "/roll [数字]"
         desc: "掷一个指定面数的骰子 (默认6面)。"
 
-  - name: "✨ AI 驱动指令"
-    color: "text-green-400"
+  - name: "AI 驱动指令"
     commands:
       - cmd: "/ask [问题]"
         desc: "向强大的 Gemini AI 提问任何事情。"

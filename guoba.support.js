@@ -362,6 +362,63 @@ export function supportGuoba() {
           },
         },
         {
+          label: "菜单",
+          component: "SOFT_GROUP_BEGIN",
+        },
+        {
+          field: "menu.title",
+          label: "标题",
+          component: "Input",
+          required: true,
+        },
+        {
+          field: "menu.description",
+          label: "描述",
+          component: "Input",
+          required: true,
+        },
+        {
+          field: "menu.categories",
+          label: "菜单分类",
+          bottomHelpMessage: "配置菜单中显示的指令分类",
+          component: "GSubForm",
+          required: true,
+          componentProps: {
+            multiple: true,
+            schemas: [
+              {
+                field: "name",
+                label: "分类名称",
+                component: "Input",
+                required: true,
+              },
+              {
+                field: "commands",
+                label: "指令列表",
+                component: "GSubForm",
+                required: true,
+                componentProps: {
+                  multiple: true,
+                  schemas: [
+                    {
+                      field: "cmd",
+                      label: "指令",
+                      component: "Input",
+                      required: true,
+                    },
+                    {
+                      field: "desc",
+                      label: "描述",
+                      component: "Input",
+                      required: true,
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+        {
           label: "其他",
           component: "SOFT_GROUP_BEGIN",
         },
