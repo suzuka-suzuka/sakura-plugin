@@ -1,10 +1,7 @@
 import { GoogleGenAI, Modality } from "@google/genai"
 import { getImg } from "../lib/utils.js"
 import Setting from "../lib/setting.js"
-import { OpenAI } from "openai"
 import sharp from "sharp"
-
-const channelApiKeyIndex = new Map()
 
 export class EditImage extends plugin {
   constructor() {
@@ -40,10 +37,6 @@ export class EditImage extends plugin {
       }
     }
     this.rule = rules
-  }
-
-  get appconfig() {
-    return Setting.getConfig("Permission")
   }
 
   async dynamicImageHandler(e) {
@@ -95,174 +88,82 @@ export class EditImage extends plugin {
 
   async _processAndCallAPI(e, promptText, imageUrls) {
     await this.reply("🎨 正在进行创作, 请稍候...", true, { recallMsg: 10 })
-    const useVertex = this.appconfig?.enable?.includes(e.sender.user_id)
 
-    if (useVertex) {
-      const contents = []
-      const hasImage = imageUrls && imageUrls.length > 0
+    const contents = []
+    const hasImage = imageUrls && imageUrls.length > 0
 
-      if (promptText) {
-        contents.push({ text: promptText })
-      }
+    if (promptText) {
+      contents.push({ text: promptText })
+    }
 
-      if (hasImage) {
-        for (const imageUrl of imageUrls) {
-          try {
-            const { base64Data, finalMimeType } = await this._processImage(imageUrl)
-            contents.push({
-              inlineData: {
-                mimeType: finalMimeType,
-                data: base64Data,
-              },
-            })
-          } catch (error) {
-            logger.error("处理其中一张图片时出错:", error)
-            await this.reply("处理图片时失败，请重试", true, {
-              recallMsg: 10,
-            })
-            return true
-          }
+    if (hasImage) {
+      for (const imageUrl of imageUrls) {
+        try {
+          const { base64Data, finalMimeType } = await this._processImage(imageUrl)
+          contents.push({
+            inlineData: {
+              mimeType: finalMimeType,
+              data: base64Data,
+            },
+          })
+        } catch (error) {
+          logger.error("处理其中一张图片时出错:", error)
+          await this.reply("处理图片时失败，请重试", true, {
+            recallMsg: 10,
+          })
+          return true
         }
       }
+    }
 
-      try {
-        const GEMINI_MODEL = "gemini-2.5-flash-image-preview"
-        const config = Setting.getConfig("Vertex")
-        if (!config || !config.PROJECT_ID || !config.LOCATION) {
-          throw new Error("配置错误：未找到 'Vertex' 配置文件或缺少 PROJECT_ID/LOCATION。")
-        }
-        const { PROJECT_ID, LOCATION } = config
-        const ai = new GoogleGenAI({
-          vertexai: true,
-          project: PROJECT_ID,
-          location: LOCATION,
-        })
-
-        const safetySettings = [
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "OFF" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "OFF" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "OFF" },
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "OFF" },
-          { category: "HARM_CATEGORY_IMAGE_HATE", threshold: "OFF" },
-          { category: "HARM_CATEGORY_IMAGE_DANGEROUS_CONTENT", threshold: "OFF" },
-          { category: "HARM_CATEGORY_IMAGE_HARASSMENT", threshold: "OFF" },
-          { category: "HARM_CATEGORY_IMAGE_SEXUALLY_EXPLICIT", threshold: "OFF" },
-        ]
-
-        const response = await ai.models.generateContent({
-          model: GEMINI_MODEL,
-          contents: contents,
-          config: {
-            responseModalities: [Modality.TEXT, Modality.IMAGE],
-            safetySettings: safetySettings,
-          },
-        })
-
-        const imagePart = response.candidates?.[0]?.content?.parts?.find(
-          part => part.inlineData && part.inlineData.mimeType.startsWith("image/"),
-        )
-
-        if (imagePart) {
-          const imageData = imagePart.inlineData.data
-          await this.reply(segment.image(`base64://${imageData}`))
-        } else {
-          const textPart = response.candidates?.[0]?.content?.parts?.find(part => part.text)
-          const textResponse = textPart ? textPart.text : "创作失败"
-          await this.reply(`${textResponse}`, true, { recallMsg: 10 })
-        }
-      } catch (error) {
-        logger.error(`调用Vertex AI失败:`, error)
-        await this.reply("创作失败，可能是网络问题", true, { recallMsg: 10 })
+    try {
+      const GEMINI_MODEL = "gemini-2.5-flash-image-preview"
+      const config = Setting.getConfig("Vertex")
+      if (!config || !config.PROJECT_ID || !config.LOCATION) {
+        throw new Error("配置错误：未找到 'Vertex' 配置文件或缺少 PROJECT_ID/LOCATION。")
       }
-    } else {
-      const messages = [{ role: "user", content: [] }]
-      const hasImage = imageUrls && imageUrls.length > 0
+      const { PROJECT_ID, LOCATION } = config
+      const ai = new GoogleGenAI({
+        vertexai: true,
+        project: PROJECT_ID,
+        location: LOCATION,
+      })
 
-      if (promptText) {
-        messages[0].content.push({ type: "text", text: promptText })
+      const safetySettings = [
+        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "OFF" },
+        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "OFF" },
+        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "OFF" },
+        { category: "HARM_CATEGORY_HARASSMENT", threshold: "OFF" },
+        { category: "HARM_CATEGORY_IMAGE_HATE", threshold: "OFF" },
+        { category: "HARM_CATEGORY_IMAGE_DANGEROUS_CONTENT", threshold: "OFF" },
+        { category: "HARM_CATEGORY_IMAGE_HARASSMENT", threshold: "OFF" },
+        { category: "HARM_CATEGORY_IMAGE_SEXUALLY_EXPLICIT", threshold: "OFF" },
+      ]
+
+      const response = await ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents: contents,
+        config: {
+          responseModalities: [Modality.TEXT, Modality.IMAGE],
+          safetySettings: safetySettings,
+        },
+      })
+
+      const imagePart = response.candidates?.[0]?.content?.parts?.find(
+        part => part.inlineData && part.inlineData.mimeType.startsWith("image/"),
+      )
+
+      if (imagePart) {
+        const imageData = imagePart.inlineData.data
+        await this.reply(segment.image(`base64://${imageData}`))
+      } else {
+        const textPart = response.candidates?.[0]?.content?.parts?.find(part => part.text)
+        const textResponse = textPart ? textPart.text : "创作失败"
+        await this.reply(`${textResponse}`, true, { recallMsg: 10 })
       }
-
-      if (hasImage) {
-        for (const imageUrl of imageUrls) {
-          try {
-            const { base64Data, finalMimeType } = await this._processImage(imageUrl)
-            messages[0].content.push({
-              type: "image_url",
-              image_url: {
-                url: `data:${finalMimeType};base64,${base64Data}`,
-              },
-            })
-          } catch (error) {
-            logger.error("处理其中一张图片时出错:", error)
-            await this.reply("处理图片时失败，请重试", true, {
-              recallMsg: 10,
-            })
-            return true
-          }
-        }
-      }
-
-      try {
-        const config = Setting.getConfig("Channels")
-        const imageConfig = config?.openai?.find(c => c.name === "image")
-
-        if (!imageConfig || !imageConfig.baseURL || !imageConfig.api || !imageConfig.model) {
-          throw new Error(
-            "配置错误：未在 'Channels' 配置文件中找到名为 'image' 的 'openai' 配置或缺少 baseURL/api/model。",
-          )
-        }
-
-        let API_KEY
-        let apiKeys = imageConfig.api
-        if (typeof apiKeys === "string" && apiKeys.includes("\n")) {
-          apiKeys = apiKeys
-            .split("\n")
-            .map(key => key.trim())
-            .filter(key => key)
-        }
-
-        if (Array.isArray(apiKeys) && apiKeys.length > 0) {
-          const channelName = imageConfig.name
-          let currentIndex = channelApiKeyIndex.get(channelName) || 0
-          if (currentIndex >= apiKeys.length) currentIndex = 0
-          API_KEY = apiKeys[currentIndex]
-          const nextIndex = (currentIndex + 1) % apiKeys.length
-          channelApiKeyIndex.set(channelName, nextIndex)
-          logger.info(`渠道 [${channelName}] 正在使用第 ${currentIndex + 1} 个 API Key`)
-        } else if (typeof apiKeys === "string") {
-          API_KEY = apiKeys
-        } else {
-          throw new Error("配置错误：未找到可用的 OpenAI API Key。")
-        }
-
-        const openai = new OpenAI({
-          apiKey: API_KEY,
-          baseURL: imageConfig.baseURL,
-        })
-
-        const response = await openai.chat.completions.create({
-          model: imageConfig.model,
-          messages: messages,
-        })
-
-        const message = response.choices?.[0]?.message
-
-        const imageData = message?.images?.[0]?.image_url?.url?.match(
-          /^data:image\/[^;]+;base64,(.+)$/,
-        )?.[1]
-
-        if (imageData) {
-          await this.reply(segment.image(`base64://${imageData}`))
-        } else {
-          const replyText = message?.content
-          await this.reply(replyText || "创作失败", true, { recallMsg: 10 })
-        }
-      } catch (error) {
-        logger.error(`调用OpenAI API失败:`, error)
-        await this.reply("创作失败，可能是今日API调用次数已耗尽，请联系主人解决", true, {
-          recallMsg: 10,
-        })
-      }
+    } catch (error) {
+      logger.error(`调用Vertex AI失败:`, error)
+      await this.reply("创作失败，可能是网络问题", true, { recallMsg: 10 })
     }
 
     return true
