@@ -3,6 +3,8 @@ import fs from "fs"
 import path from "path"
 import Setting from "../lib/setting.js"
 import { pluginresources } from "../lib/path.js"
+import _ from "lodash"
+
 export class helpMenu extends plugin {
   constructor() {
     super({
@@ -19,10 +21,56 @@ export class helpMenu extends plugin {
     })
   }
 
+  async getImageUrl() {
+    const url = "https://yande.re/post.json?tags=loli+-rating:e+-nipples&limit=500"
+    try {
+      const response = await fetch(url)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const jsonData = await response.json()
+
+      if (Array.isArray(jsonData) && jsonData.length > 0) {
+        const imageUrls = jsonData.map(item => item?.file_url).filter(url => url)
+
+        if (imageUrls.length > 0) {
+          return _.sample(imageUrls)
+        } else {
+          logger.warn("没有获取到有效的图片URL")
+          return null
+        }
+      } else {
+        logger.warn("没有获取到有效的图片数据")
+        return null
+      }
+    } catch (error) {
+      logger.error(`获取图片URL时出错:`, error)
+      return null
+    }
+  }
+
   async showMenu(e) {
     let browser = null
     try {
-    const menuData= Setting.getConfig("menu")
+      const menuData = Setting.getConfig("menu")
+      let imageUrl = await this.getImageUrl()
+
+      if (!imageUrl) {
+        const defaultImagePath = path.join(pluginresources, "menu", "image")
+        try {
+          const files = fs.readdirSync(defaultImagePath)
+          if (files.length > 0) {
+            const randomImage = _.sample(files)
+            const imagePath = path.join(defaultImagePath, randomImage)
+            const imageBuffer = fs.readFileSync(imagePath)
+            const base64Image = imageBuffer.toString("base64")
+            const mimeType = "image/" + path.extname(imagePath).slice(1)
+            imageUrl = `data:${mimeType};base64,${base64Image}`
+          }
+        } catch (err) {
+          logger.error("读取默认菜单图片时出错:", err)
+        }
+      }
 
       browser = await puppeteer.launch({
         headless: "new",
@@ -37,9 +85,13 @@ export class helpMenu extends plugin {
 
       await page.setContent(htmlContent, { waitUntil: "networkidle0" })
 
-      await page.evaluate(data => {
-        renderMenu(data)
-      }, menuData)
+      await page.evaluate(
+        (data, imageUrl) => {
+          renderMenu(data, imageUrl)
+        },
+        menuData,
+        imageUrl,
+      )
 
       const element = await page.$("#capture-target")
       if (!element) {
