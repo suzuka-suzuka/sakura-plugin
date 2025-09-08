@@ -16,6 +16,7 @@ export class helpMenu extends plugin {
         {
           reg: "^#(菜单|帮助)$",
           fnc: "showMenu",
+          log: false,
         },
       ],
     })
