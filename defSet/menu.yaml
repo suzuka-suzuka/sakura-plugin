@@ -1,0 +1,38 @@
+title: "🤖 指令帮助菜单"
+description: "这是我能做的所有事情！"
+
+categories:
+  - name: "通用指令"
+    commands:
+      - cmd: "/help"
+        desc: "显示这个帮助菜单。"
+      - cmd: "/ping"
+        desc: "检查我的网络延迟。"
+      - cmd: "/info"
+        desc: "获取关于我的详细信息。"
+
+  - name: "音乐指令"
+    commands:
+      - cmd: "/play [歌曲]"
+        desc: "播放一首歌或将其加入播放列表。"
+      - cmd: "/skip"
+        desc: "跳过当前正在播放的歌曲。"
+      - cmd: "/queue"
+        desc: "查看当前的播放列表。"
+
+  - name: "趣味指令"
+    commands:
+      - cmd: "/meme"
+        desc: "发送一个随机的沙雕图。"
+      - cmd: "/roll [数字]"
+        desc: "掷一个指定面数的骰子 (默认6面)。"
+
+  - name: "✨ AI 驱动指令"
+    color: "text-green-400"
+    commands:
+      - cmd: "/ask [问题]"
+        desc: "向强大的 Gemini AI 提问任何事情。"
+      - cmd: "/story [提示]"
+        desc: "让 Gemini 根据你的想法创作一个独特的故事。"
+      - cmd: "/factcheck [陈述]"
+        desc: "使用 Google 搜索来核查一个陈述的真实性。"
