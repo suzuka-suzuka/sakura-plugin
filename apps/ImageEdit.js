@@ -3,6 +3,8 @@ import { getImg } from "../lib/utils.js"
 import Setting from "../lib/setting.js"
 import sharp from "sharp"
 
+const channelApiKeyIndex = new Map()
+
 export class EditImage extends plugin {
   constructor() {
     super({
@@ -117,17 +119,47 @@ export class EditImage extends plugin {
     }
 
     try {
-      const GEMINI_MODEL = "gemini-2.5-flash-image-preview"
-      const config = Setting.getConfig("Vertex")
-      if (!config || !config.PROJECT_ID || !config.LOCATION) {
-        throw new Error("配置错误：未找到 'Vertex' 配置文件或缺少 PROJECT_ID/LOCATION。")
+      const channelsConfig = Setting.getConfig("Channels")
+      const imageConfig = channelsConfig?.gemini?.find(c => c.name === "image")
+
+      if (!imageConfig || !imageConfig.api || !imageConfig.model) {
+        throw new Error(
+          "配置错误：未在 'gemini' 配置中找到名称为 'image' 的有效配置或缺少api/model。",
+        )
       }
-      const { PROJECT_ID, LOCATION } = config
-      const ai = new GoogleGenAI({
-        vertexai: true,
-        project: PROJECT_ID,
-        location: LOCATION,
-      })
+
+      let API_KEY
+      const GEMINI_MODEL = imageConfig.model
+      let apiKeys = imageConfig.api
+
+      if (typeof apiKeys === "string" && apiKeys.includes("\n")) {
+        apiKeys = apiKeys
+          .split("\n")
+          .map(key => key.trim())
+          .filter(key => key)
+      }
+
+      if (Array.isArray(apiKeys) && apiKeys.length > 0) {
+        const channelName = imageConfig.name
+        let currentIndex = channelApiKeyIndex.get(channelName) || 0
+
+        if (currentIndex >= apiKeys.length) {
+          currentIndex = 0
+        }
+
+        API_KEY = apiKeys[currentIndex]
+
+        const nextIndex = (currentIndex + 1) % apiKeys.length
+        channelApiKeyIndex.set(channelName, nextIndex)
+
+        logger.info(`渠道 [${channelName}] 正在使用第 ${currentIndex + 1} 个 API Key: ${API_KEY}`)
+      } else if (typeof apiKeys === "string" && apiKeys.trim()) {
+        API_KEY = apiKeys.trim()
+      } else {
+        throw new Error("渠道配置中的 API Key 无效。")
+      }
+
+      const ai = new GoogleGenAI({ apiKey: API_KEY })
 
       const safetySettings = [
         { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "OFF" },
@@ -162,8 +194,8 @@ export class EditImage extends plugin {
         await this.reply(`${textResponse}`, true, { recallMsg: 10 })
       }
     } catch (error) {
-      logger.error(`调用Vertex AI失败:`, error)
-      await this.reply("创作失败，可能是网络问题", true, { recallMsg: 10 })
+      logger.error(`调用 Gemini API 失败:`, error)
+      await this.reply("创作失败，可能是配置或网络问题", true, { recallMsg: 10 })
     }
 
     return true
