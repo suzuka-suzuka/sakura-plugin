@@ -136,7 +136,7 @@ export class GroupManager extends plugin {
     await e.reply(forwardMsg)
 
     conversationStateNeverSpoken[e.user_id] = { inactiveMembers }
-    this.setContext("confirmCleanupNeverSpoken", true, 20)
+    this.setContext("confirmCleanupNeverSpoken", true, 30)
 
     await e.reply(
       `以上是所有从未发言的成员列表共${inactiveMembers.length}人。\n发送【取消】或【确认清理】来取消或确认清理这些成员。`,
@@ -259,7 +259,7 @@ export class GroupManager extends plugin {
     await e.reply(forwardMsg)
 
     conversationStateInactive[e.user_id] = { inactiveMembers }
-    this.setContext("confirmCleanupInactive", true, 20)
+    this.setContext("confirmCleanupInactive", true, 30)
 
     await e.reply(
       `以上是超过 ${value}${unit} 未发言的成员列表共${inactiveMembers.length}人。\n发送【取消】或【确认清理】来取消或确认清理这些成员。`,
