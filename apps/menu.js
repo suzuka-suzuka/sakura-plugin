@@ -22,7 +22,7 @@ export class helpMenu extends plugin {
   async showMenu(e) {
     let browser = null
     try {
-    const menuData= Setting.getConfig("Menu")
+    const menuData= Setting.getConfig("menu")
 
       browser = await puppeteer.launch({
         headless: "new",
