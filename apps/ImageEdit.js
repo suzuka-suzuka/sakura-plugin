@@ -166,10 +166,6 @@ export class EditImage extends plugin {
         { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "OFF" },
         { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "OFF" },
         { category: "HARM_CATEGORY_HARASSMENT", threshold: "OFF" },
-        { category: "HARM_CATEGORY_IMAGE_HATE", threshold: "OFF" },
-        { category: "HARM_CATEGORY_IMAGE_DANGEROUS_CONTENT", threshold: "OFF" },
-        { category: "HARM_CATEGORY_IMAGE_HARASSMENT", threshold: "OFF" },
-        { category: "HARM_CATEGORY_IMAGE_SEXUALLY_EXPLICIT", threshold: "OFF" },
       ]
 
       const response = await ai.models.generateContent({
