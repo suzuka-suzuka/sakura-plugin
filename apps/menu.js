@@ -13,7 +13,7 @@ export class helpMenu extends plugin {
       rule: [
         {
           reg: "^#?菜单$",
-          fct: "showMenu",
+          fnc: "showMenu",
         },
       ],
     })
