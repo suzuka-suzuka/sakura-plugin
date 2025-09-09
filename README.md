@@ -47,7 +47,7 @@
 ## ⚠️ 注意事项
 
 -   **网络环境**: 本插件的部分功能（如AI对话、图片获取等）需要访问国际网络，请确保您的服务器具备相应的网络代理环境。
--   **`canvas` 依赖**: 飞行棋功能依赖 `canvas`。请在Yunzai-Bot 的根目录下自行`pnpm install canvas`，在某些操作系统上，您可能需要预先安装构建工具。若 `pnpm install canvas`后出现 `canvas` 相关错误，请参考 canvas 官方文档 配置编译环境。
+-   **`canvas` 依赖**: 飞行棋功能依赖 `canvas`。请在Yunzai-Bot 的根目录下`pnpm install canvas`，在某些操作系统上，您可能需要预先安装构建工具。若 `pnpm install canvas`后出现 `canvas` 相关错误，请参考 canvas 官方文档 配置编译环境。
 
 ## ⚙️ 配置说明
 
@@ -65,9 +65,20 @@
 
 根据菜单中的指令即可使用对应功能。
 
+## 🎨 功能展示
+
+以下是插件部分功能的截图展示：
+
+<p align="center">
+  <img src="./readmeresource/1.jpg" width="400" />
+  <img src="./readmeresource/2.jpg" width="400" />
+  <img src="./readmeresource/3.jpg" width="400" />
+  <img src="./readmeresource/4.jpg" width="400" />
+</p>
+
 ## 🗓️ 计划实现
 
-我们计划在未来的版本中加入更多激动人心的功能，包括但不限于：
+计划在未来的版本中加入更多激动人心的功能，包括但不限于：
 
 -   ☐ **P站增强**:
     -   P站日榜查询与定时推送。
