@@ -54,6 +54,10 @@ async function createMockMessageEvent(original_e) {
 }
 
 async function updateGroupMemberList(group_id) {
+  if (!group_id || isNaN(Number(group_id))) {
+    return
+  }
+
   try {
     const memberMap = await Bot.pickGroup(group_id)?.getMemberMap(true)
     const key = `sakura:gml:${group_id}`
@@ -73,6 +77,7 @@ async function updateGroupMemberList(group_id) {
         })
       }
       await redis.hSet(key, memberData)
+      await redis.expire(key, 7 * 24 * 60 * 60)
     }
   } catch (error) {
     logger.error(`更新群[${group_id}]成员列表缓存失败`, error)
@@ -82,10 +87,10 @@ async function updateGroupMemberList(group_id) {
 export class groupNoticeAI extends plugin {
   constructor() {
     super({
-      name: "AI群成员变动",
-      dsc: "新人入群和成员退群(AI版)",
+      name: "群成员变动",
+      dsc: "新人入群和成员退群",
       event: "notice.group",
-      priority: 100,
+      priority: 1135,
     })
   }
 
@@ -135,7 +140,7 @@ export class groupNoticeAI extends plugin {
         AI_PROMPT,
         USE_GROUP_CONTEXT,
         false,
-        []
+        [],
       )
       let responseText = typeof aiResponse === "string" ? aiResponse : aiResponse?.text
       if (responseText) {
@@ -166,12 +171,16 @@ export class groupNoticeAI extends plugin {
         AI_PROMPT,
         USE_GROUP_CONTEXT,
         false,
-        []
+        [],
       )
       let responseText = typeof aiResponse === "string" ? aiResponse : aiResponse?.text
       if (responseText) {
         const msg = parseAtMessage(responseText)
-    await this.reply([segment.image(`https://q1.qlogo.cn/g?b=qq&s=0&nk=${mockE.user_id}`), `${name} 退群了\n`, ...msg])
+        await this.reply([
+          segment.image(`https://q1.qlogo.cn/g?b=qq&s=0&nk=${mockE.user_id}`),
+          `${name} 退群了\n`,
+          ...msg,
+        ])
       } else {
         await this.defaultFarewell()
       }
