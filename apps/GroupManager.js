@@ -5,7 +5,7 @@ const conversationStateInactive = {}
 export class GroupManager extends plugin {
   constructor() {
     super({
-      name: "集成群管插件",
+      name: "群管插件",
       dsc: "合并了入群指令、清理不活跃成员、禁言、踢人、精华消息等功能",
       event: "message.group",
       priority: 1135,
@@ -360,6 +360,12 @@ export class GroupManager extends plugin {
     if (!targetQQ) return false
 
     const memberInfo = e.bot.gml.get(e.group_id)?.get(targetQQ)
+    logger.info(`[踢人插件] 目标QQ: ${targetQQ}, 获取到的memberInfo:`, memberInfo)
+    if (!memberInfo) {
+      e.reply(`无法在群成员列表中找到QQ号为 ${targetQQ} 的用户，可能是缓存未更新或对方已退群。`)
+      return true
+    }
+
     if (memberInfo.user_id === e.self_id) {
       return false
     }
