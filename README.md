@@ -1,63 +1,68 @@
-🌸 Sakura Plugin for Yunzai-Bot
-一款为 Yunzai-Bot 设计的多功能插件，集成了 AI 聊天、飞行棋游戏以及其他实用或娱乐功能，旨在为您的机器人带来更丰富的交互体验。
+# Sakura-Plugin
 
-✨ 功能特性
-🤖 智能 AI 对话: 接入先进的 AI 模型，为您的机器人赋予强大的对话能力。
+一个为 [Yunzai-Bot](https://github.com/Le-niao/Yunzai-Bot) 设计的多功能插件，集成了 AI 聊天、图片获取、群聊管理、飞行棋游戏等多种功能。
 
-🎲 趣味飞行棋: 内置经典的飞行棋游戏，随时随地在群聊中与朋友们来一局。
+## ✨ 功能特色
 
-⚙️ 便捷的管理: 支持通过 Guoba-Plugin 进行可视化配置，管理插件轻松便捷。
+本插件提供丰富的功能，主要分为以下几类：
 
-📋 清晰的菜单: 提供直观的帮助菜单，所有功能一目了然。
+-   **🖼️ 图片功能**:
+    -   获取随机涩图、萝莉图。
+    -   通过 `pid` 获取图片。
+-   **🤖 AI 功能**:
+    -   与 AI (小叶) 进行智能对话。
+    -   AI 图像编辑、风格变换（手办化、雕塑化、毛绒化）。
+    -   管理 AI 设定、查看历史对话等。
+-   **🔧 群聊管理**:
+    -   自动同意入群申请。
+    -   清理不活跃成员。
+    -   禁言、踢人、设置精华消息等。
+-   **🎲 娱乐功能**:
+    -   创建和进行飞行棋游戏。
+    -   早晚安打卡。
+    -   获取 doro 结局图片、GIF 表情包。
+-   **⚙️ 其他**:
+    -   插件内更新。
+    -   美观的指令菜单。
 
-🚀 安装指南
-在开始之前，请确保您已经成功安装了 Yunzai-Bot。
+## 🚀 安装指南
 
-第一步：进入 Yunzai-Bot 根目录
+1.  **进入 Yunzai-Bot 根目录**
+    打开终端，并确保你的当前路径在 Yunzai-Bot 的根目录下。
 
-打开终端，并使用 cd 命令进入您的 Yunzai-Bot 项目文件夹。
+2.  **克隆插件仓库**
+    推荐使用 `git` 进行安装，方便后续更新。
+    ```bash
+    git clone --depth=1 https://github.com/suzuka-suzuka/sakura-plugin.git ./plugins/sakura-plugin/
+    ```
 
-# 将 /path/to/your/Yunzai-Bot 替换为您的实际路径
-cd /path/to/your/Yunzai-Bot
+3.  **安装依赖**
+    进入插件目录并安装所需依赖。
+    ```bash
+    cd ./plugins/sakura-plugin
+    pnpm install
+    ```
+    *如果你没有 `pnpm`，请先安装：`npm install -g pnpm`*
 
-第二步：克隆插件仓库
+## ⚙️ 配置说明
 
-我们推荐使用 git 来安装，这样可以方便地在未来更新插件。
+插件的各项功能可以通过 Guoba-Plugin 进行可视化配置。
 
-git clone --depth=1 [https://github.com/suzuka-suzuka/sakura-plugin.git](https://github.com/suzuka-suzuka/sakura-plugin.git) ./plugins/sakura-plugin/
+如果你没有安装 Guoba-Plugin，也可以手动修改 `plugins/sakura-plugin/config` 目录下的配置文件。首次启动插件后，默认配置文件会从 `defSet` 目录自动复制到 `config` 目录。
 
-第三步：安装依赖
+## 📝 使用方法
 
-进入插件目录，并安装所需的依赖包。
+安装并重启 Yunzai-Bot 后，向机器人发送以下任一指令即可查看功能菜单：
 
-cd ./plugins/sakura-plugin
-pnpm install
+-   `#sakura菜单`
+-   `#樱花菜单`
+-   `#帮助`
 
-如果您没有安装 pnpm，请先执行 npm install -g pnpm 或使用其他包管理工具（如 npm 或 yarn）。
+根据菜单中的指令即可使用对应功能。
 
-第四步：重启 Yunzai-Bot
+## 💬 支持与交流
 
-完成以上步骤后，请重启您的 Yunzai-Bot 以加载插件。
+如果你在使用过程中遇到任何问题，或者有好的建议，欢迎通过以下方式联系：
 
-▶️ 使用说明
-安装并重启机器人后，您可以发送以下指令来开始使用：
-
-查看功能菜单:
-
-#sakura菜单
-
-或
-
-#樱花菜单
-
-修改插件配置:
-为了获得最佳体验，推荐安装 Guoba-Plugin。您可以通过其提供的可视化界面方便地对本插件进行配置。
-
-💬 交流与反馈
-如果您在使用过程中遇到任何问题，或有任何宝贵的建议，欢迎通过以下方式联系我们：
-
-GitHub Issues: 如果您发现了 Bug 或有功能建议，欢迎在仓库中提交 Issue。
-
-QQ 交流群: 1040045728，欢迎加入群聊，与其他用户一起交流！
-
-祝您使用愉快！
+-   **提交 Issue**: [GitHub Issues](https://github.com/suzuka-suzuka/sakura-plugin/issues)
+-   **加入 QQ 交流群**: 1040045728
