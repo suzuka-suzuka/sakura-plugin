@@ -70,10 +70,10 @@
 以下是插件部分功能的截图展示：
 
 <p align="center">
-  <img src="./readmeresource/1.jpg" width="400" />
-  <img src="./readmeresource/2.jpg" width="400" />
-  <img src="./readmeresource/3.jpg" width="400" />
-  <img src="./readmeresource/4.jpg" width="400" />
+  <a href="./readmeresource/1.jpg"><img src="./readmeresource/1.jpg" width="200" /></a>
+  <a href="./readmeresource/2.jpg"><img src="./readmeresource/2.jpg" width="200" /></a>
+  <a href="./readmeresource/3.jpg"><img src="./readmeresource/3.jpg" width="200" /></a>
+  <a href="./readmeresource/4.jpg"><img src="./readmeresource/4.jpg" width="200" /></a>
 </p>
 
 ## 🗓️ 计划实现
