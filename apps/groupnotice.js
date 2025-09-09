@@ -9,7 +9,7 @@ const USE_GROUP_CONTEXT = true
 async function createMockMessageEvent(original_e) {
   const group = Bot.pickGroup(original_e.group_id)
   if (!group) {
-    logger.warn(`[GroupNoticeAI] 无法找到群组: ${original_e.group_id}`)
+    logger.warn(`无法找到群组: ${original_e.group_id}`)
     return null
   }
 
@@ -29,7 +29,7 @@ async function createMockMessageEvent(original_e) {
       title = memberInfo.title || ""
     }
   } catch (e) {
-    logger.error(`[GroupNoticeAI] 从Redis获取成员信息失败: ${e}`)
+    logger.error(`从Redis获取成员信息失败: ${e}`)
   }
 
   const sender = {
@@ -101,7 +101,6 @@ export class groupNoticeAI extends plugin {
     const cd = 30
     const key = `sakura:group_notice:cd:${this.e.group_id}`
     if (await redis.get(key)) {
-      logger.debug(`[GroupNoticeAI] 群[${this.e.group_id}]成员变动通知冷却中`)
       return
     }
 
@@ -127,7 +126,7 @@ export class groupNoticeAI extends plugin {
       return
     }
     const name = mockE.sender.card || mockE.sender.nickname
-    const query = `一个QQ为 ${mockE.user_id}，昵称为 ${name}的新成员刚刚加入了群聊。请根据聊天上下文，写一句欢迎词欢迎他。`
+    const query = `新成员 ${name}(QQ:${mockE.user_id})刚刚加入了群聊。请根据聊天上下文，写一句欢迎词欢迎他。`
     try {
       const aiResponse = await getAI(
         AI_CHANNEL,
@@ -146,7 +145,7 @@ export class groupNoticeAI extends plugin {
         await this.defaultWelcome()
       }
     } catch (error) {
-      logger.error(`[GroupNoticeAI] AI欢迎新人时出错: ${error}`)
+      logger.error(`欢迎新人时出错: ${error}`)
       await this.defaultWelcome()
     }
   }
@@ -158,7 +157,7 @@ export class groupNoticeAI extends plugin {
       return
     }
     const name = mockE.sender.card || mockE.sender.nickname
-    const query = `一个QQ为 ${this.e.user_id}，曾用昵称为 ${name} 的成员刚刚离开了群聊。请根据聊天上下文，写一句简短的告别。`
+    const query = `成员${name}(QQ:${mockE.user_id}) 刚刚离开了群聊。请根据聊天上下文，写一句简短的告别。`
     try {
       const aiResponse = await getAI(
         AI_CHANNEL,
@@ -172,12 +171,12 @@ export class groupNoticeAI extends plugin {
       let responseText = typeof aiResponse === "string" ? aiResponse : aiResponse?.text
       if (responseText) {
         const msg = parseAtMessage(responseText)
-        await this.reply(msg)
+        await this.reply([segment.image(`https://q1.qlogo.cn/g?b=qq&s=0&nk=${mockE.user_id}`), `${name} 退群了\n`, msg])
       } else {
         await this.defaultFarewell()
       }
     } catch (error) {
-      logger.error(`[GroupNoticeAI] AI告别时出错: ${error}`)
+      logger.error(`告别时出错: ${error}`)
       await this.defaultFarewell()
     }
     await updateGroupMemberList(this.e.group_id)
@@ -198,7 +197,7 @@ export class groupNoticeAI extends plugin {
         name = memberInfo.card || memberInfo.nickname
       }
     } catch (e) {}
-    const tips = "离开了我们"
+    const tips = "退群了"
     const msg = name ? `${name}(${this.e.user_id}) ${tips}` : `${this.e.user_id} ${tips}`
     await this.reply([segment.image(`https://q1.qlogo.cn/g?b=qq&s=0&nk=${this.e.user_id}`), msg])
   }
