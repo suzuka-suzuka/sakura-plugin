@@ -80,7 +80,7 @@ export class GroupManager extends plugin {
     if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
       return false
     }
-    const bot = await e.pickMember(e.self_id).getInfo(true)
+    const bot = await e.group.pickMember(e.self_id).getInfo(true)
     if (bot.role === "member") {
       return false
     }
@@ -181,7 +181,7 @@ export class GroupManager extends plugin {
     if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
       return false
     }
-    const bot = await e.pickMember(e.self_id).getInfo(true)
+    const bot = await e.group.pickMember(e.self_id).getInfo(true)
     if (bot.role === "member") {
       return false
     }
@@ -304,7 +304,7 @@ export class GroupManager extends plugin {
     if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
       return false
     }
-    const bot = await e.pickMember(e.self_id).getInfo(true)
+    const bot = await e.group.pickMember(e.self_id).getInfo(true)
     if (bot.role === "member") {
       return false
     }
@@ -320,7 +320,7 @@ export class GroupManager extends plugin {
         unit = "5分钟"
       }
 
-      const memberInfo = await e.pickMember(targetQQ).getInfo(true)
+      const memberInfo = await e.group.pickMember(targetQQ).getInfo(true)
 
       const memberName = memberInfo?.card || memberInfo?.nickname || targetQQ
       if (memberInfo?.role !== "member") {
@@ -332,7 +332,7 @@ export class GroupManager extends plugin {
       const targetQQ = cleanMsg.replace(/解禁/g, "").trim().replace("@", "") || e.at
       if (!targetQQ) return false
 
-      const memberInfo = await e.pickMember(targetQQ).getInfo(true)
+      const memberInfo = await e.group.pickMember(targetQQ).getInfo(true)
 
       const memberName = memberInfo?.card || memberInfo?.nickname || targetQQ
       if (memberInfo?.role !== "member") {
@@ -348,7 +348,7 @@ export class GroupManager extends plugin {
     if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
       return false
     }
-    const bot = await e.pickMember(e.self_id).getInfo(true)
+    const bot = await e.group.pickMember(e.self_id).getInfo(true)
     if (bot.role === "member") {
       return false
     }
@@ -359,7 +359,7 @@ export class GroupManager extends plugin {
 
     if (!targetQQ) return false
 
-    const memberInfo = await e.pickMember(targetQQ).getInfo(true)
+    const memberInfo = await e.group.pickMember(targetQQ).getInfo(true)
     
 
     if (memberInfo.user_id === e.self_id) {
@@ -381,7 +381,7 @@ export class GroupManager extends plugin {
   }
 
   async handleEssenceMessage(e) {
-    const bot = await e.pickMember(e.self_id).getInfo(true)
+    const bot = await e.group.pickMember(e.self_id).getInfo(true)
     if (bot.role === "member") {
       return false
     }
