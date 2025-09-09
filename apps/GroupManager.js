@@ -80,7 +80,7 @@ export class GroupManager extends plugin {
     if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
       return false
     }
-    const bot = e.bot.gml.get(e.group_id)?.get(e.self_id)
+    const bot = await e.pickMember(e.self_id).getInfo(true)
     if (bot.role === "member") {
       return false
     }
@@ -89,7 +89,7 @@ export class GroupManager extends plugin {
       this.finish("confirmCleanupNeverSpoken", true)
     }
 
-    const memberMap = e.bot.gml.get(e.group_id)
+    const memberMap = await e.group.getMemberMap(true)
     if (!memberMap) {
       logger.error(`[清理从未发言] 获取群成员缓存失败`)
       return await e.reply("获取群成员列表失败，请稍后再试。")
@@ -181,7 +181,7 @@ export class GroupManager extends plugin {
     if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
       return false
     }
-    const bot = e.bot.gml.get(e.group_id)?.get(e.self_id)
+    const bot = await e.pickMember(e.self_id).getInfo(true)
     if (bot.role === "member") {
       return false
     }
@@ -205,7 +205,7 @@ export class GroupManager extends plugin {
       this.finish("confirmCleanupInactive", true)
     }
 
-    const memberMap = e.bot.gml.get(e.group_id)
+    const memberMap = await e.group.getMemberMap(true)
     if (!memberMap) {
       logger.error(`[清理长时间未发言] 获取群成员缓存失败`)
       return await e.reply("获取群成员列表失败，请稍后再试。")
@@ -304,7 +304,7 @@ export class GroupManager extends plugin {
     if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
       return false
     }
-    const bot = e.bot.gml.get(e.group_id)?.get(e.self_id)
+    const bot = await e.pickMember(e.self_id).getInfo(true)
     if (bot.role === "member") {
       return false
     }
@@ -320,7 +320,7 @@ export class GroupManager extends plugin {
         unit = "5分钟"
       }
 
-      const memberInfo = e.bot.gml.get(e.group_id)?.get(targetQQ)
+      const memberInfo = await e.pickMember(targetQQ).getInfo(true)
 
       const memberName = memberInfo?.card || memberInfo?.nickname || targetQQ
       if (memberInfo?.role !== "member") {
@@ -332,7 +332,7 @@ export class GroupManager extends plugin {
       const targetQQ = cleanMsg.replace(/解禁/g, "").trim().replace("@", "") || e.at
       if (!targetQQ) return false
 
-      const memberInfo = e.bot.gml.get(e.group_id)?.get(targetQQ)
+      const memberInfo = await e.pickMember(targetQQ).getInfo(true)
 
       const memberName = memberInfo?.card || memberInfo?.nickname || targetQQ
       if (memberInfo?.role !== "member") {
@@ -348,10 +348,10 @@ export class GroupManager extends plugin {
     if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
       return false
     }
-   // const bot = e.bot.gml.get(e.group_id)?.get(e.self_id)
-    //if (bot.role === "member") {
-      //return false
-   // }
+    const bot = await e.pickMember(e.self_id).getInfo(true)
+    if (bot.role === "member") {
+      return false
+    }
     const cleanMsg = e.msg.replace(/^#?/, "")
     const isBlacklist = cleanMsg.startsWith("踢黑")
     const command = isBlacklist ? "踢黑" : "踢"
@@ -359,12 +359,8 @@ export class GroupManager extends plugin {
 
     if (!targetQQ) return false
 
-    const memberInfo = e.bot.gml.get(e.group_id)?.get(targetQQ)
-    logger.info(`[踢人插件] 目标QQ: ${targetQQ}, 获取到的memberInfo:`, memberInfo)
-    if (!memberInfo) {
-      e.reply(`无法在群成员列表中找到QQ号为 ${targetQQ} 的用户，可能是缓存未更新或对方已退群。`)
-      return true
-    }
+    const memberInfo = await e.pickMember(targetQQ).getInfo(true)
+    
 
     if (memberInfo.user_id === e.self_id) {
       return false
@@ -385,7 +381,7 @@ export class GroupManager extends plugin {
   }
 
   async handleEssenceMessage(e) {
-    const bot = e.bot.gml.get(e.group_id)?.get(e.self_id)
+    const bot = await e.pickMember(e.self_id).getInfo(true)
     if (bot.role === "member") {
       return false
     }
