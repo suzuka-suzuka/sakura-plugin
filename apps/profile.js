@@ -49,7 +49,7 @@ export class UserProfilePlugin extends plugin {
                   return "@全体成员"
                 }
                 try {
-                  const info = e.bot.gml.get(e.group_id)?.get(e.sender.user_id)
+                  const info = await e.group.pickMember(e.user_id).getInfo(true)
                   const atNickname = info.card || info.nickname || part.qq
                   return `@${atNickname}`
                 } catch (err) {
@@ -88,8 +88,8 @@ ${rawChatHistory}`
           const forwardMsgContent = [
             {
               text: result.text,
-              senderId: e.self_id,
-              senderName: "画像分析师",
+              senderId: e.user_id,
+              senderName: e.member.card || e.member.nickname,
             },
           ]
           await makeForwardMsg(e, forwardMsgContent, `【${senderNickname}】的用户画像`)
@@ -151,7 +151,7 @@ async function getUserTextHistory(e, userId, num) {
     const maxScanLimit = 2000
 
     while (userChats.length < num && totalScanned < maxScanLimit) {
-      const chatHistory = await e.group.getChatHistory(0, 20)
+      const chatHistory = await e.group.getChatHistory(seq, 20)
 
       if (chatHistory.length === 0) {
         break

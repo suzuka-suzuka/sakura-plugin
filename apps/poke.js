@@ -54,8 +54,8 @@ export class poke extends plugin {
   }
 
   async checkAndMute(e, duration) {
-    const bot = e.bot.gml.get(e.group_id)?.get(e.self_id)
-    const member = e.bot.gml.get(e.group_id)?.get(e.operator_id)
+    const bot = await e.group.pickMember(e.self_id).getInfo(true)
+    const member = await e.group.pickMember(e.operator_id).getInfo(true)
 
     if (bot.role !== "admin" && bot.role !== "owner") {
       return false
@@ -148,10 +148,10 @@ export class poke extends plugin {
           let msg = _.sample(pokeConfig.MASTER_REPLIES)
           await e.reply(msg)
         } else if (retype === 2) {
-          const bot = e.bot.gml.get(e.group_id)?.get(e.self_id)
+          const bot = await e.group.pickMember(e.self_id).getInfo(true)
 
           if (bot && bot.role !== "member") {
-            const member = e.bot.gml.get(e.group_id)?.get(e.operator_id)
+            const member = await e.group.pickMember(e.operator_id).getInfo(true)
             const Name = member.card || member.nickname
 
             const queryParts = [

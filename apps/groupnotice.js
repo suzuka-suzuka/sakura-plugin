@@ -55,7 +55,7 @@ async function createMockMessageEvent(original_e) {
 
 async function updateGroupMemberList(group_id) {
   try {
-    const memberMap = Bot.gml.get(group_id)
+    const memberMap = await Bot.pickGroup(group_id)?.getMemberMap(true)
     const key = `sakura:gml:${group_id}`
 
     if (!memberMap) return
@@ -140,7 +140,7 @@ export class groupNoticeAI extends plugin {
       let responseText = typeof aiResponse === "string" ? aiResponse : aiResponse?.text
       if (responseText) {
         const msg = parseAtMessage(responseText)
-        await this.reply(msg)
+        await this.reply(...msg)
       } else {
         await this.defaultWelcome()
       }
@@ -171,7 +171,7 @@ export class groupNoticeAI extends plugin {
       let responseText = typeof aiResponse === "string" ? aiResponse : aiResponse?.text
       if (responseText) {
         const msg = parseAtMessage(responseText)
-        await this.reply([segment.image(`https://q1.qlogo.cn/g?b=qq&s=0&nk=${mockE.user_id}`), `${name} 退群了\n`, msg])
+    await this.reply([segment.image(`https://q1.qlogo.cn/g?b=qq&s=0&nk=${mockE.user_id}`), `${name} 退群了\n`, ...msg])
       } else {
         await this.defaultFarewell()
       }

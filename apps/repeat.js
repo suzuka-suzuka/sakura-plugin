@@ -82,10 +82,8 @@ export class repeatPlugin extends plugin {
       } else if (msg[e.group_id].times === 7) {
         const muteTargetId = msg[e.group_id].lastSender
         const muteDuration = 60
-
-        const memberMap = e.bot.gml.get(e.group_id)
-        const botMember = memberMap.get(e.bot.uin)
-        const muteTarget = memberMap.get(muteTargetId)
+        const botMember = await e.group.pickMember(e.bot.uin).getInfo(true)
+        const muteTarget = await e.group.pickMember(muteTargetId).getInfo(true)
         if (
           botMember &&
           botMember.role !== "member" &&

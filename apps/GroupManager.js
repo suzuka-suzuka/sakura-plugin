@@ -91,7 +91,7 @@ export class GroupManager extends plugin {
 
     const memberMap = await e.group.getMemberMap(true)
     if (!memberMap) {
-      logger.error(`[清理从未发言] 获取群成员缓存失败`)
+      logger.error(`[清理从未发言] 获取群成员列表失败`)
       return await e.reply("获取群成员列表失败，请稍后再试。")
     }
 
@@ -207,7 +207,7 @@ export class GroupManager extends plugin {
 
     const memberMap = await e.group.getMemberMap(true)
     if (!memberMap) {
-      logger.error(`[清理长时间未发言] 获取群成员缓存失败`)
+      logger.error(`[清理长时间未发言] 获取群成员列表失败`)
       return await e.reply("获取群成员列表失败，请稍后再试。")
     }
 

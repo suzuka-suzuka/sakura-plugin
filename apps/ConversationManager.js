@@ -119,7 +119,7 @@ export class Conversationmanagement extends plugin {
         const botUin = e.self_id || e.bot?.uin
         let name
         if (e.isGroup) {
-          const info = e.bot.gml.get(e.group_id)?.get(botUin)
+          const info = await e.group.pickMember(botUin).getInfo(true)
           name = info?.card || info?.nickname
         } else {
           name = e.bot.nickname
@@ -282,7 +282,7 @@ export class Conversationmanagement extends plugin {
       const botUin = e.self_id || e.bot?.uin
       let botName = e.bot.nickname
       if (e.isGroup) {
-        const info = e.bot.gml.get(e.group_id)?.get(botUin)
+        const info = await e.group.pickMember(botUin).getInfo(true)
         botName = info?.card || info?.nickname || botName
       }
       const bot = {
