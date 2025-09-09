@@ -348,10 +348,10 @@ export class GroupManager extends plugin {
     if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
       return false
     }
-    const bot = e.bot.gml.get(e.group_id)?.get(e.self_id)
-    if (bot.role === "member") {
-      return false
-    }
+   // const bot = e.bot.gml.get(e.group_id)?.get(e.self_id)
+    //if (bot.role === "member") {
+      //return false
+   // }
     const cleanMsg = e.msg.replace(/^#?/, "")
     const isBlacklist = cleanMsg.startsWith("踢黑")
     const command = isBlacklist ? "踢黑" : "踢"
