@@ -49,6 +49,7 @@
 -   **网络环境**: 本插件的部分功能（如AI对话、图片获取等）需要访问国际网络，请确保您的服务器具备相应的网络代理环境。
 -   **`canvas` 依赖**: 飞行棋功能依赖 `canvas`。请在Yunzai-Bot 的根目录下`pnpm install canvas`，在某些操作系统上，您可能需要预先安装构建工具。若 `pnpm install canvas`后出现 `canvas` 相关错误，请参考 canvas 官方文档 配置编译环境。
 
+-   **框架兼容性**: 本插件目前仅在 `Napcat` 框架下经过测试，不保证在其他框架（如 `ICQQ`）上的兼容性，请使用者自行测试。
 ## ⚙️ 配置说明
 
 插件的各项功能可以通过 [Guoba-Plugin](https://github.com/guoba-yunzai/guoba-plugin) 进行可视化配置。

@@ -178,7 +178,7 @@ export class groupNoticeAI extends plugin {
         const msg = parseAtMessage(responseText)
         await this.reply([
           segment.image(`https://q1.qlogo.cn/g?b=qq&s=0&nk=${mockE.user_id}`),
-          `${name} 退群了\n`,
+          `${name}(${mockE.user_id}) 退群了\n`,
           ...msg,
         ])
       } else {
