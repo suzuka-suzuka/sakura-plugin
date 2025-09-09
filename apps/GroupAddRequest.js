@@ -42,7 +42,7 @@ export class groupRequestListener extends plugin {
       segment.image(avatarUrl),
       `\n敲门口令: ${e.comment || "这个人啥也没说"}`,
     ]
-    await e.bot.sendGroupMsg(e.group_id, message)
+    await Bot.sendGroupMsg(e.group_id, message)
 
     return false
   }
