@@ -6,14 +6,19 @@ import { makeForwardMsg } from "../lib/utils.js"
 export class UserProfilePlugin extends plugin {
   constructor() {
     super({
-      name: "用户画像",
-      dsc: "获取用户画像",
-      event: "message",
+      name: "画像",
+      dsc: "获取画像",
+      event: "message.group",
       priority: 1135,
       rule: [
         {
           reg: "^#画像$",
           fnc: "generateUserProfile",
+          log: false,
+        },
+        {
+          reg: "^#学舌(.*)$",
+          fnc: "mimicUser",
           log: false,
         },
       ],
@@ -49,7 +54,7 @@ export class UserProfilePlugin extends plugin {
                   return "@全体成员"
                 }
                 try {
-                  const info = await e.group.pickMember(e.user_id).getInfo(true)
+                  const info = await e.group.pickMember(part.qq).getInfo(true)
                   const atNickname = info.card || info.nickname || part.qq
                   return `@${atNickname}`
                 } catch (err) {
@@ -68,14 +73,11 @@ export class UserProfilePlugin extends plugin {
 
       const rawChatHistory = formattedLines.join("\n")
 
-      const aiPrompt = `你是一个资深的社交网络用户行为分析师。请根据以下用户【${senderNickname}】在群聊中的发言记录，对该用户进行全面的画像分析。请从以下几个维度进行分析，并以清晰、有条理的Markdown格式呈现你的结论：
-
-1.  **关键主题**：分析用户最常讨论的话题或感兴趣的领域是什么？
-2.  **语言风格**：用户的说话风格是怎样的？（例如：正式、口语化、幽默、简洁等）
-3.  **活跃时段**：根据发言时间，分析用户的活跃时间段，推测其作息习惯。
-4.  **社交关系**：用户与哪些群成员互动最频繁？（根据'@'记录）
-
----
+      const aiPrompt = `请根据【${senderNickname}】在群聊中的发言记录，对该用户进行全面的画像分析。请从以下几个维度进行分析，并以清晰、有条理的Markdown格式呈现你的结论：
+1. **关键主题**：分析用户最常讨论的话题或感兴趣的领域是什么？
+2. **语言风格**：用户的说话风格是怎样的？（例如：正式、口语化、幽默、简洁等）
+3. **活跃时段**：根据发言时间，分析用户的活跃时间段，推测其作息习惯。
+4. **社交关系**：用户与哪些群成员互动最频繁？（根据'@'记录）
 以下是用户【${senderNickname}】的发言记录：
 ${rawChatHistory}`
 
@@ -127,12 +129,83 @@ ${rawChatHistory}`
 
           await e.reply(segment.image(imageBuffer))
         } else {
-          this.reply("分析失败，未能获取到有效的返回结果。", false, { recallMsg: 10 })
+          this.reply("画像分析失败，未能获取到有效的返回结果。", false, { recallMsg: 10 })
         }
       } catch (error) {
-        logger.error("调用分析或生成消息时出错:", error)
-        this.reply("分析或消息生成过程中出现错误，请稍后再试。", false, { recallMsg: 10 })
+        logger.error("调用画像分析或生成消息时出错:", error)
+        this.reply("画像分析或消息生成过程中出现错误，请稍后再试。", false, { recallMsg: 10 })
       }
+    }
+    return true
+  }
+
+  async mimicUser(e) {
+    if (!e.isGroup) {
+      return false
+    }
+
+    const atMsg = e.message.find(msg => msg.type === "at" && msg.qq && !isNaN(msg.qq))
+    const targetUserId = atMsg ? atMsg.qq : e.user_id
+    const messageCount = 100
+
+    try {
+      const member = await e.group.pickMember(targetUserId).getInfo(true)
+      const nickname = member.card || member.nickname
+
+      const messages = await getUserTextHistory(e, targetUserId, messageCount)
+
+      const formattedLines = await Promise.all(
+        messages.map(async chat => {
+          const contentParts = await Promise.all(
+            chat.message.map(async part => {
+              if (part.type === "text") {
+                return part.text
+              }
+              if (part.type === "at") {
+                if (part.qq === "all" || part.qq === 0) {
+                  return "@全体成员"
+                }
+                try {
+                  const info = await e.group.pickMember(part.qq).getInfo(true)
+                  const atNickname = info.card || info.nickname || part.qq
+                  return `@${atNickname}`
+                } catch (err) {
+                  return `@${part.qq}`
+                }
+              }
+              return ""
+            }),
+          )
+
+          const textContent = contentParts.join("")
+          return textContent
+        }),
+      )
+      const rawChatHistory = formattedLines.join("\n")
+
+      const aiPrompt = `你需要模仿指定群友【${nickname}】的说话风格说话。不要重复他的话，尽可能符合情境地说一句或一段话即可。要求给出三个候选项，用换行符隔开。要求重点学习常用口癖词汇、标点符号、语气词等，以及关注的领域。不要OOC，不要自己编造破坏人设。
+以下是该用户的发言记录：
+${rawChatHistory}`
+
+      const queryParts = [{ text: aiPrompt }]
+      const Channel = "2.5"
+      const result = await getAI(Channel, e, queryParts, null, false, false, [])
+
+      if (result && result.text) {
+        const replies = result.text.split("\n").filter(line => line.trim() !== "")
+        if (replies.length > 0) {
+          for (const reply of replies) {
+            await e.reply(reply)
+          }
+        } else {
+          await this.reply("学舌失败，没有给出有效的模仿内容。", true, { recallMsg: 10 })
+        }
+      } else {
+        await this.reply("学舌失败，未能获取到有效的返回结果。", true, { recallMsg: 10 })
+      }
+    } catch (error) {
+      logger.error("学舌时出错:", error)
+      await this.reply("学舌时出现错误，请稍后再试。", true, { recallMsg: 10 })
     }
     return true
   }
@@ -140,7 +213,7 @@ ${rawChatHistory}`
 
 async function getUserTextHistory(e, userId, num) {
   if (!e.group || typeof e.group.getChatHistory !== "function") {
-    console.error("错误：无法获取群聊对象或 getChatHistory 方法。")
+    logger.error("错误：无法获取群聊对象或 getChatHistory 方法。")
     return []
   }
 
@@ -182,7 +255,7 @@ async function getUserTextHistory(e, userId, num) {
 
     return userChats.slice(-num)
   } catch (err) {
-    console.error("获取用户聊天记录时出错:", err)
+    logger.error("获取用户聊天记录时出错:", err)
     return []
   }
 }
