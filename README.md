@@ -1,6 +1,6 @@
 # Sakura-Plugin
 
-一个为 [Yunzai-Bot](https://github.com/Le-niao/Yunzai-Bot) 设计的多功能插件，集成了 AI 聊天、图片获取、群聊管理、飞行棋游戏等多种功能。
+一个为 Yunzai-Bot设计的多功能插件，集成了 AI 聊天、图片获取、群聊管理、飞行棋游戏等多种功能。
 
 ## ✨ 功能特色
 
