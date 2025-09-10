@@ -188,7 +188,7 @@ ${rawChatHistory}`
 ${rawChatHistory}`
 
       const queryParts = [{ text: aiPrompt }]
-      const Channel = "3.1"
+      const Channel = "2.5"
       const result = await getAI(Channel, e, queryParts, null, false, false, [])
 
       if (result && result.text) {
