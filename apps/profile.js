@@ -16,11 +16,6 @@ export class UserProfilePlugin extends plugin {
           fnc: "generateUserProfile",
           log: false,
         },
-        {
-          reg: "^#学舌(.*)$",
-          fnc: "mimicUser",
-          log: false,
-        },
       ],
     })
   }
@@ -135,77 +130,6 @@ ${rawChatHistory}`
         logger.error("调用画像分析或生成消息时出错:", error)
         this.reply("画像分析或消息生成过程中出现错误，请稍后再试。", false, { recallMsg: 10 })
       }
-    }
-    return true
-  }
-
-  async mimicUser(e) {
-    if (!e.isGroup) {
-      return false
-    }
-
-    const atMsg = e.message.find(msg => msg.type === "at" && msg.qq && !isNaN(msg.qq))
-    const targetUserId = atMsg ? atMsg.qq : e.user_id
-    const messageCount = 100
-
-    try {
-      const member = await e.group.pickMember(targetUserId).getInfo(true)
-      const nickname = member.card || member.nickname
-
-      const messages = await getUserTextHistory(e, targetUserId, messageCount)
-
-      const formattedLines = await Promise.all(
-        messages.map(async chat => {
-          const contentParts = await Promise.all(
-            chat.message.map(async part => {
-              if (part.type === "text") {
-                return part.text
-              }
-              if (part.type === "at") {
-                if (part.qq === "all" || part.qq === 0) {
-                  return "@全体成员"
-                }
-                try {
-                  const info = await e.group.pickMember(part.qq).getInfo(true)
-                  const atNickname = info.card || info.nickname || part.qq
-                  return `@${atNickname}`
-                } catch (err) {
-                  return `@${part.qq}`
-                }
-              }
-              return ""
-            }),
-          )
-
-          const textContent = contentParts.join("")
-          return textContent
-        }),
-      )
-      const rawChatHistory = formattedLines.join("\n")
-
-      const aiPrompt = `你需要模仿指定群友【${nickname}】的说话风格说话。不要重复他的话，尽可能符合情境地说一句或一段话即可。要求给出三个候选项，用换行符隔开。要求重点学习常用口癖词汇、标点符号、语气词等，以及关注的领域。不要OOC，不要自己编造破坏人设。
-以下是【${nickname}】的发言记录：
-${rawChatHistory}`
-
-      const queryParts = [{ text: aiPrompt }]
-      const Channel = "2.5"
-      const result = await getAI(Channel, e, queryParts, null, false, false, [])
-
-      if (result && result.text) {
-        const replies = result.text.split("\n").filter(line => line.trim() !== "")
-        if (replies.length > 0) {
-          for (const reply of replies) {
-            await e.reply(reply)
-          }
-        } else {
-          await this.reply("学舌失败，没有给出有效的模仿内容。", true, { recallMsg: 10 })
-        }
-      } else {
-        await this.reply("学舌失败，未能获取到有效的返回结果。", true, { recallMsg: 10 })
-      }
-    } catch (error) {
-      logger.error("学舌时出错:", error)
-      await this.reply("学舌时出现错误，请稍后再试。", true, { recallMsg: 10 })
     }
     return true
   }

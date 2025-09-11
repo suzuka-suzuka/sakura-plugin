@@ -142,7 +142,7 @@ export class groupNoticeAI extends plugin {
         false,
         [],
       )
-      let responseText = typeof aiResponse === "string" ? aiResponse : aiResponse?.text
+      let responseText = aiResponse.text
       if (responseText) {
         const msg = parseAtMessage(responseText)
         await this.reply(...msg)
@@ -173,7 +173,7 @@ export class groupNoticeAI extends plugin {
         false,
         [],
       )
-      let responseText = typeof aiResponse === "string" ? aiResponse : aiResponse?.text
+      let responseText = aiResponse.text
       if (responseText) {
         const msg = parseAtMessage(responseText)
         await this.reply([
@@ -205,7 +205,9 @@ export class groupNoticeAI extends plugin {
         const memberInfo = JSON.parse(memberJson)
         name = memberInfo.card || memberInfo.nickname
       }
-    } catch (e) {}
+    } catch (e) {
+      logger.warn(`从Redis获取用户 ${this.e.user_id} 的缓存信息失败`, e)
+    }
     const tips = "退群了"
     const msg = name ? `${name}(${this.e.user_id}) ${tips}` : `${this.e.user_id} ${tips}`
     await this.reply([segment.image(`https://q1.qlogo.cn/g?b=qq&s=0&nk=${this.e.user_id}`), msg])
