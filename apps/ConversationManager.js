@@ -222,38 +222,40 @@ export class Conversationmanagement extends plugin {
       let backgroundImageBase64 = ""
       try {
         const defaultImagePath = path.join(pluginresources, "background")
-
         await fs.promises.mkdir(defaultImagePath, { recursive: true })
 
-        const imageInfo = await this.getImageUrl()
+        if (Math.random() < 0.2) {
+          const imageInfo = await this.getImageUrl()
+          const remoteUrl = imageInfo?.url
 
-        if (imageInfo?.url && imageInfo.url.startsWith("http")) {
-          try {
-            const response = await fetch(imageInfo.url)
-            if (response.ok) {
-              const imageBuffer = Buffer.from(await response.arrayBuffer())
+          if (remoteUrl && remoteUrl.startsWith("http")) {
+            try {
+              const response = await fetch(remoteUrl)
+              if (response.ok) {
+                const imageBuffer = Buffer.from(await response.arrayBuffer())
 
-              if (imageInfo.id) {
-                ;(async () => {
-                  try {
-                    const extension = path.extname(new URL(imageInfo.url).pathname)
-                    const filename = `${imageInfo.id}${extension}`
-                    const savePath = path.join(defaultImagePath, filename)
-                    await fs.promises.writeFile(savePath, imageBuffer)
-                    logger.debug(`菜单图片已保存: ${savePath}`)
-                  } catch (saveError) {
-                    logger.error("保存菜单图片失败:", saveError)
-                  }
-                })()
+                if (imageInfo.id) {
+                  ;(async () => {
+                    try {
+                      const extension = path.extname(new URL(remoteUrl).pathname)
+                      const filename = `${imageInfo.id}${extension}`
+                      const savePath = path.join(defaultImagePath, filename)
+                      await fs.promises.writeFile(savePath, imageBuffer)
+                      logger.debug(`对话背景图片已保存: ${savePath}`)
+                    } catch (saveError) {
+                      logger.error("保存对话背景图片失败:", saveError)
+                    }
+                  })()
+                }
+
+                const mimeType = response.headers.get("content-type") || "image/jpeg"
+                backgroundImageBase64 = `data:${mimeType};base64,${imageBuffer.toString("base64")}`
+              } else {
+                logger.warn(`获取对话背景图片失败，状态码: ${response.status}, URL: ${remoteUrl}`)
               }
-
-              const mimeType = response.headers.get("content-type") || "image/jpeg"
-              backgroundImageBase64 = `data:${mimeType};base64,${imageBuffer.toString("base64")}`
-            } else {
-              logger.warn(`获取对话背景图片失败，状态码: ${response.status}, URL: ${imageInfo.url}`)
+            } catch (err) {
+              logger.error("获取对话背景图片时网络请求出错:", err)
             }
-          } catch (err) {
-            logger.error("获取对话背景图片时网络请求出错:", err)
           }
         }
 
@@ -344,11 +346,11 @@ export class Conversationmanagement extends plugin {
       if (imageBuffer) {
         await e.reply(segment.image(imageBuffer))
       } else {
-        await e.reply("对话记录图片生成失败。", true)
+        await this.reply("对话记录图片生成失败。", true, { recallMsg: 10 })
       }
     } catch (error) {
       logger.error("导出对话失败:", error)
-      await e.reply("导出对话时遇到错误，请查看后台日志。", true)
+      await this.reply("导出对话时遇到错误，请查看后台日志。", true, { recallMsg: 10 })
     }
 
     return true
