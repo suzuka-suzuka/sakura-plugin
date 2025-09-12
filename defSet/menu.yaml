@@ -60,7 +60,7 @@ categories:
   - name: "娱乐功能"
     commands:
       - cmd: "#创建飞行棋"
-        desc: "创建飞行棋游戏"
+        desc: "创建飞行棋游戏，仅管理员可用"
       - cmd: "#结束飞行棋"
         desc: "强制结束飞行棋游戏，仅管理员可用"
 

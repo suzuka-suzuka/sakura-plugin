@@ -45,6 +45,9 @@ export class Ludo extends plugin {
     await loadAssets()
   }
   async createLudoGame(e) {
+    if (!(e.isMaster || e.isAdmin || e.isOwner)) {
+      return false
+    }
     if (activeGames.has(e.group_id)) {
       await this.reply("本群已经有一局飞行棋正在进行中啦。")
       return true
