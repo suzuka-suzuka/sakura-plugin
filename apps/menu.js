@@ -56,40 +56,42 @@ export class helpMenu extends plugin {
     try {
       const menuData = Setting.getConfig("menu")
       const defaultImagePath = path.join(pluginresources, "background")
-      const imageInfo = await this.getImageUrl()
-      let imageUrl = imageInfo?.url
+      let imageUrl = null
 
-      if (imageUrl && imageUrl.startsWith("http")) {
-        try {
-          const response = await fetch(imageUrl)
-          if (response.ok) {
-            const imageBuffer = Buffer.from(await response.arrayBuffer())
+      if (Math.random() < 0.2) {
+        const imageInfo = await this.getImageUrl()
+        const remoteUrl = imageInfo?.url
 
-            if (imageInfo?.id) {
-              ;(async () => {
-                try {
-                  await fs.promises.mkdir(defaultImagePath, { recursive: true })
-                  const extension = path.extname(new URL(imageUrl).pathname)
-                  const filename = `${imageInfo.id}${extension}`
-                  const savePath = path.join(defaultImagePath, filename)
-                  await fs.promises.writeFile(savePath, imageBuffer)
-                  logger.debug(`菜单图片已保存: ${savePath}`)
-                } catch (saveError) {
-                  logger.error("保存菜单图片失败:", saveError)
-                }
-              })()
+        if (remoteUrl && remoteUrl.startsWith("http")) {
+          try {
+            const response = await fetch(remoteUrl)
+            if (response.ok) {
+              const imageBuffer = Buffer.from(await response.arrayBuffer())
+
+              if (imageInfo?.id) {
+                ;(async () => {
+                  try {
+                    await fs.promises.mkdir(defaultImagePath, { recursive: true })
+                    const extension = path.extname(new URL(remoteUrl).pathname)
+                    const filename = `${imageInfo.id}${extension}`
+                    const savePath = path.join(defaultImagePath, filename)
+                    await fs.promises.writeFile(savePath, imageBuffer)
+                    logger.debug(`菜单图片已保存: ${savePath}`)
+                  } catch (saveError) {
+                    logger.error("保存菜单图片失败:", saveError)
+                  }
+                })()
+              }
+
+              const base64Image = imageBuffer.toString("base64")
+              const mimeType = response.headers.get("content-type") || "image/jpeg"
+              imageUrl = `data:${mimeType};base64,${base64Image}`
+            } else {
+              logger.warn(`获取菜单背景图片失败，状态码: ${response.status}, URL: ${remoteUrl}`)
             }
-
-            const base64Image = imageBuffer.toString("base64")
-            const mimeType = response.headers.get("content-type") || "image/jpeg"
-            imageUrl = `data:${mimeType};base64,${base64Image}`
-          } else {
-            logger.warn(`获取菜单背景图片失败，状态码: ${response.status}, URL: ${imageUrl}`)
-            imageUrl = null
+          } catch (err) {
+            logger.error("获取菜单背景图片时网络请求出错:", err)
           }
-        } catch (err) {
-          logger.error("获取菜单背景图片时网络请求出错:", err)
-          imageUrl = null
         }
       }
 
