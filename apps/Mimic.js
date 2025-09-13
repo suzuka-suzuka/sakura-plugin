@@ -62,12 +62,12 @@ export class Mimic extends plugin {
     let isNewMember = false
     if (e.isGroup) {
       try {
-        const memberInfo = e.group.pickMember(e.user_id).getInfo(true)
+        const memberInfo = await e.group.pickMember(e.user_id).getInfo(true)
         if (memberInfo?.join_time) {
           const joinTime = memberInfo.join_time
           const currentTime = Math.floor(Date.now() / 1000)
-          const sevenDaysInSeconds = 7 * 24 * 60 * 60
-          if (currentTime - joinTime < sevenDaysInSeconds) {
+          const NEW_MEMBER_THRESHOLD = 7 * 24 * 60 * 60
+          if (currentTime - joinTime < NEW_MEMBER_THRESHOLD) {
             isNewMember = true
             logger.info(`新成员 ${e.user_id} 触发Mimic`)
           }
