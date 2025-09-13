@@ -59,9 +59,27 @@ export class Mimic extends plugin {
       return false
     }
 
+    let isNewMember = false
+    if (e.isGroup) {
+      try {
+        const memberInfo = e.group.pickMember(e.user_id).getInfo(true)
+        if (memberInfo?.join_time) {
+          const joinTime = memberInfo.join_time
+          const currentTime = Math.floor(Date.now() / 1000)
+          const sevenDaysInSeconds = 7 * 24 * 60 * 60
+          if (currentTime - joinTime < sevenDaysInSeconds) {
+            isNewMember = true
+            logger.info(`新成员 ${e.user_id} 触发Mimic`)
+          }
+        }
+      } catch (error) {
+        logger.warn(`获取成员入群时间失败: ${error.message}`)
+      }
+    }
+
     let selectedPresetPrompt = this.appconfig.Prompt
     let shouldRecall = false
-    if (!e.isMaster && Math.random() < this.appconfig.alternatePromptProbability) {
+    if (!e.isMaster && !isNewMember && Math.random() < this.appconfig.alternatePromptProbability) {
       selectedPresetPrompt = this.appconfig.alternatePrompt
       shouldRecall = true
     }
