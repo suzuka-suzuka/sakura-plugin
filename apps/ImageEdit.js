@@ -3,6 +3,8 @@ import { getImg } from "../lib/utils.js"
 import Setting from "../lib/setting.js"
 import sharp from "sharp"
 
+const TEST_BASE_URL = "https://gemini.maliy.top/"
+
 const channelApiKeyIndex = new Map()
 
 export class EditImage extends plugin {
@@ -159,7 +161,12 @@ export class EditImage extends plugin {
         throw new Error("渠道配置中的 API Key 无效。")
       }
 
-      const ai = new GoogleGenAI({ apiKey: API_KEY })
+      const genAIArgs = { apiKey: API_KEY }
+      if (TEST_BASE_URL) {
+        genAIArgs.baseURL = TEST_BASE_URL
+      }
+
+      const ai = new GoogleGenAI(genAIArgs)
 
       const safetySettings = [
         { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "OFF" },
