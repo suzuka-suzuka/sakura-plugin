@@ -3,7 +3,7 @@ import { getImg } from "../lib/utils.js"
 import Setting from "../lib/setting.js"
 import sharp from "sharp"
 
-const TEST_BASE_URL = "https://gemini.maliy.top/v1beta"
+const TEST_BASE_URL = "https://a.geminiproxy.ggff.net"
 
 const channelApiKeyIndex = new Map()
 
