@@ -3,7 +3,8 @@ import { getImg } from "../lib/utils.js"
 import Setting from "../lib/setting.js"
 import sharp from "sharp"
 
-const TEST_BASE_URL = "https://gemini.maliy.top/"
+// 测试用的基本URL，如果设置了，会覆盖配置文件的baseURL
+const TEST_BASE_URL = "https://gemini.maliy.top/v1beta" // 注意：反代地址通常需要包含 /v1beta
 
 const channelApiKeyIndex = new Map()
 
