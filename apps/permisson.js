@@ -20,7 +20,10 @@ export class Permission extends plugin {
     return Setting.getConfig("Permission")
   }
   async managePermission(e) {
-    if (!this.appconfig?.enable?.includes(e.sender.user_id)) {
+    if (
+      !this.appconfig?.enable?.includes(e.sender.user_id) &&
+      !cfg.masterQQ.includes(e.sender.user_id)
+    ) {
       return false
     }
 

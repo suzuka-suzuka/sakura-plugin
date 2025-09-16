@@ -360,7 +360,6 @@ export class GroupManager extends plugin {
     if (!targetQQ) return false
 
     const memberInfo = await e.group.pickMember(targetQQ).getInfo(true)
-    
 
     if (memberInfo.user_id === e.self_id) {
       return false
