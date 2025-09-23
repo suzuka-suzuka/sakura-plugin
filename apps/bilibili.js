@@ -188,7 +188,7 @@ export class bilibili extends plugin {
       const infoText = [
         `标题：${title}`,
         `UP主：${owner.name}`,
-        `播放：${formatNum(stat.view)} | 弹幕：${formatNum(stat.danmaku)}`,
+        `播放：${formatNum(stat.view)} | 弹幕：${formatNum(stat.danmaku)} | 评论：${formatNum(stat.reply)}`,
         `点赞：${formatNum(stat.like)} | 投币：${formatNum(stat.coin)} | 收藏：${formatNum(
           stat.favorite,
         )}`,
