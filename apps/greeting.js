@@ -21,7 +21,7 @@ export class greeting extends plugin {
           log: false,
         },
         {
-          reg: "^晚安$",
+          reg: "^(睡觉|晚安|好梦)$",
           fnc: "night",
           log: false,
         },
@@ -115,6 +115,22 @@ export class greeting extends plugin {
       }
     }
 
+    if (monightlist[groupId].mlist.includes(userId)) {
+      return
+    }
+
+    let userdata = (await this.readUserData(userId)) || {}
+    const todayData = userdata[moment().format("YYYY-MM-DD")]
+    const yesterdayData = userdata[moment().subtract(1, "days").format("YYYY-MM-DD")]
+    const lastNtime = todayData?.ntime || yesterdayData?.ntime
+
+    if (lastNtime) {
+      const sleepDuration = moment().diff(moment(lastNtime), "hours")
+      if (sleepDuration < 4) {
+        return this.getAIReply(e, e.msg).then(aiReply => e.reply(aiReply, true))
+      }
+    }
+
     if (e.msg === "早安" && !monightlist[groupId].mlist.includes(userId)) {
       let userdata = (await this.readUserData(userId)) || {}
       const today = moment().format("YYYY-MM-DD")
@@ -155,6 +171,21 @@ export class greeting extends plugin {
         mnum: 0,
         nlist: [],
         nnum: 0,
+      }
+    }
+
+    if (monightlist[groupId].nlist.includes(userId)) {
+      return
+    }
+
+    let userdata = (await this.readUserData(userId)) || {}
+    const todayData = userdata[moment().format("YYYY-MM-DD")]
+    const lastMtime = todayData?.mtime
+
+    if (lastMtime) {
+      const awakeDuration = moment().diff(moment(lastMtime), "hours")
+      if (awakeDuration < 4) {
+        return this.getAIReply(e, e.msg).then(aiReply => e.reply(aiReply, true))
       }
     }
 

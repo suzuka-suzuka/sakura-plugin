@@ -312,6 +312,14 @@ export function supportGuoba() {
           },
         },
         {
+          field: "AI.enableUserLock",
+          label: "是否启用用户锁",
+          component: "Switch",
+          required: true,
+          bottomHelpMessage:
+            "启用后，每个用户处理完当前消息前，不会处理该用户的后续消息，直到当前消息处理完毕",
+        },
+        {
           field: "mimic.Channel",
           label: "伪人渠道",
           component: "Input",
@@ -360,6 +368,14 @@ export function supportGuoba() {
             min: 0,
             max: 1,
           },
+        },
+        {
+          field: "mimic.enableGroupLock",
+          label: "是否启用群聊锁",
+          component: "Switch",
+          required: true,
+          bottomHelpMessage:
+            "启用后，伪人模式的每个群处理完当前消息前，不会处理该群的后续消息，直到当前消息处理完毕",
         },
         {
           label: "菜单",

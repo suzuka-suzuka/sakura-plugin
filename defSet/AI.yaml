@@ -7,3 +7,4 @@ profiles:
     History: true
     Tool: true
 groupContextLength: 20
+enableUserLock: false
