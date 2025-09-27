@@ -127,7 +127,13 @@ export class greeting extends plugin {
     if (lastNtime) {
       const sleepDuration = moment().diff(moment(lastNtime), "hours")
       if (sleepDuration < 4) {
-        return this.getAIReply(e, e.msg).then(aiReply => e.reply(aiReply, true))
+        const cdKey = `sakura:greeting:ai_cd:${groupId}`
+        if (await redis.get(cdKey)) {
+          return
+        }
+        const aiReply = await this.getAIReply(e, e.msg)
+        await redis.set(cdKey, "1", { EX: 300 })
+        return e.reply(aiReply, true)
       }
     }
 
@@ -156,6 +162,11 @@ export class greeting extends plugin {
       return e.reply(msg + `你是本群今天第${monightlist[groupId].mnum}个起床的！`, true)
     }
 
+    const cdKey = `sakura:greeting:ai_cd:${groupId}`
+    if (await redis.get(cdKey)) {
+      return
+    }
+    await redis.set(cdKey, "1", { EX: 300 })
     const promptText = e.msg
     const aiReply = await this.getAIReply(e, promptText)
     e.reply(aiReply, true)
@@ -185,7 +196,13 @@ export class greeting extends plugin {
     if (lastMtime) {
       const awakeDuration = moment().diff(moment(lastMtime), "hours")
       if (awakeDuration < 4) {
-        return this.getAIReply(e, e.msg).then(aiReply => e.reply(aiReply, true))
+        const cdKey = `sakura:greeting:ai_cd:${groupId}`
+        if (await redis.get(cdKey)) {
+          return
+        }
+        const aiReply = await this.getAIReply(e, e.msg)
+        await redis.set(cdKey, "1", { EX: 300 })
+        return e.reply(aiReply, true)
       }
     }
 
@@ -214,6 +231,11 @@ export class greeting extends plugin {
       return e.reply(msg + `你是本群今天第${monightlist[groupId].nnum}个睡觉的！`, true)
     }
 
+    const cdKey = `sakura:greeting:ai_cd:${groupId}`
+    if (await redis.get(cdKey)) {
+      return
+    }
+    await redis.set(cdKey, "1", { EX: 300 })
     const promptText = e.msg
     const aiReply = await this.getAIReply(e, promptText)
     e.reply(aiReply, true)
