@@ -456,7 +456,7 @@ export class GroupManager extends plugin {
     if (bot.role === "member") {
       return false
     }
-    const isMute = e.msg.includes("全体禁言")
+    const isMute = e.msg.includes("全员禁言")
 
     try {
       if (isMute) {
