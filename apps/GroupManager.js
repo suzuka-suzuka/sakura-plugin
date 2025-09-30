@@ -40,6 +40,11 @@ export class GroupManager extends plugin {
           fnc: "handleEssenceMessage",
           log: false,
         },
+        {
+          reg: "^#?(全体禁言|全体解禁)$",
+          fnc: "handleAllMuteAction",
+          log: false,
+        },
       ],
     })
   }
@@ -441,5 +446,28 @@ export class GroupManager extends plugin {
     }
 
     return { targetQQ, duration, unit: unitText }
+  }
+
+  async handleAllMuteAction(e) {
+    if (e.sender.role === "member") {
+      return false
+    }
+    const bot = await e.group.pickMember(e.self_id).getInfo(true)
+    if (bot.role === "member") {
+      return false
+    }
+    const isMute = e.msg.includes("全体禁言")
+
+    try {
+      if (isMute) {
+        await e.group.muteAll(true)
+        await e.reply("已开启全体禁言。")
+      } else {
+        await e.group.muteAll(false)
+        await e.reply("已关闭全体禁言。")
+      }
+    } catch (err) {
+      logger.error("全体禁言/解禁操作失败:", err)
+    }
   }
 }
