@@ -41,7 +41,7 @@ export class GroupManager extends plugin {
           log: false,
         },
         {
-          reg: "^#?(全体禁言|全体解禁)$",
+          reg: "^#?(全员禁言|全员解禁)$",
           fnc: "handleAllMuteAction",
           log: false,
         },
@@ -461,10 +461,10 @@ export class GroupManager extends plugin {
     try {
       if (isMute) {
         await e.group.muteAll(true)
-        await e.reply("已开启全体禁言。")
+        await e.reply("✅已开启全员禁言。")
       } else {
         await e.group.muteAll(false)
-        await e.reply("已关闭全体禁言。")
+        await e.reply("✅已关闭全员禁言。")
       }
     } catch (err) {
       logger.error("全体禁言/解禁操作失败:", err)
