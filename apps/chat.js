@@ -109,7 +109,7 @@ export class AIChat extends plugin {
 
     try {
       if (History) {
-        currentFullHistory = await loadConversationHistory(e, prefix)
+        currentFullHistory = await loadConversationHistory(e, matchedProfile.prefix)
       }
 
       const queryParts = [{ text: query }]
