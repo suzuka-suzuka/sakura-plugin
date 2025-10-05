@@ -21,7 +21,7 @@ export class EditImage extends plugin {
   generateRules() {
     const rules = [
       {
-        reg: "^#i(.*)$",
+        reg: "^#i(.*)$s",
         fnc: "editImageHandler",
         log: false,
       },

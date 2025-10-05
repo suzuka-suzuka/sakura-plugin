@@ -8,7 +8,7 @@ export class pixivSearch extends plugin {
     super({
       name: "pixiv搜图",
       dsc: "Ppxiv搜图",
-      event: "message",
+      event: "message.group",
       priority: 1135,
       rule: [
         {
@@ -26,6 +26,10 @@ export class pixivSearch extends plugin {
   }
   get appconfig() {
     return Setting.getConfig("pixiv")
+  }
+
+  get r18Config() {
+    return Setting.getConfig("r18")
   }
 
   async getPixivByPid(e) {
@@ -59,6 +63,9 @@ export class pixivSearch extends plugin {
       const pages = pagesRes.body
 
       const isR18 = illust.xRestrict !== 0
+      if (isR18 && !this.r18Config.enable.includes(e.group_id)) {
+        return this.reply("本群未开启r18功能哦~", true, { recallMsg: 10 })
+      }
       await this.sendIllustMessage(e, illust, pages, isR18, pageNum)
     } catch (error) {
       logger.error(`[P站搜图][PID:${pid}] 请求API时发生错误: ${error}`)
@@ -85,6 +92,10 @@ export class pixivSearch extends plugin {
 
     const isR18Search = !!match[1]
     let tag = match[2].trim()
+
+    if (isR18Search && !this.r18Config.enable_group.includes(e.group_id)) {
+      return this.reply("根据插件设置，本群不可使用r18功能。", true)
+    }
 
     if (!tag) {
       const defaultTags = config.defaultTags

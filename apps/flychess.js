@@ -1,5 +1,5 @@
-import { GameManager } from "../model/flychess/Rule.js"
-import { loadAssets } from "../model/flychess/ImageDrawer.js"
+import { GameManager } from "../lib/flychess/Rule.js"
+import { loadAssets } from "../lib/flychess/ImageDrawer.js"
 
 const activeGames = new Map()
 

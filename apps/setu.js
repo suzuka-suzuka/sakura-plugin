@@ -1,5 +1,6 @@
 import { FlipImage } from "../lib/ImageUtils/ImageUtils.js"
 import common from "../../../lib/common/common.js"
+import setting from "../lib/setting.js"
 const DEFAULT_PROXY = "pixiv.manbomanbo.asia"
 
 const REGEX_CONFIG = {
@@ -20,6 +21,10 @@ export class setuPlugin extends plugin {
       ],
     })
   }
+
+  get r18Config() {
+    return setting.getConfig("r18")
+  }
   async handleApiRequest(e) {
     let apiType,
       tag,
@@ -33,6 +38,10 @@ export class setuPlugin extends plugin {
     } else {
       apiType = "lolisuki"
       tag = ""
+    }
+
+    if (isR18 && !this.r18Config.enable.includes(e.group_id)) {
+      return this.reply("本群未开启r18功能哦~", true, { recallMsg: 10 })
     }
 
     await this.reply("正在获取图片...", true, { recallMsg: 10 })

@@ -164,6 +164,15 @@ export function supportGuoba() {
           required: true,
         },
         {
+          field: "r18.enable",
+          label: "r18功能启用群,影响所有图片功能",
+          component: "GSelectGroup",
+          required: false,
+          componentProps: {
+            multiple: true,
+          },
+        },
+        {
           label: "杂项",
           component: "Divider",
         },
