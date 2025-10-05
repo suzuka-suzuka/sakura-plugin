@@ -186,7 +186,7 @@ export default class DailySign extends plugin {
 
     this.drawTitle(ctx, isNightly)
 
-    this.drawInfoText(ctx, data, isNightly)
+    this.drawInfoText(ctx, data, isNightly, width, height)
 
     return canvas.toBuffer("image/png")
   }
