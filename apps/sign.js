@@ -3,7 +3,7 @@ import { createCanvas, loadImage, registerFont } from "canvas"
 import path from "node:path"
 import fs from "node:fs"
 import _ from "lodash"
-import { plugindata, pluginresources } from "../../lib/path.js"
+import { plugindata, pluginresources } from "../lib/path.js"
 
 const fontPathMain = path.join(pluginresources, "sign", "font", "FZFWZhuZiAYuanJWD.ttf")
 const fontPathKaomoji = path.join(pluginresources, "sign", "font", "MotoyaMaruStd-W5.otf")
