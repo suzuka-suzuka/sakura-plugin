@@ -285,7 +285,7 @@ export default class DailySign extends plugin {
     ctx.fillText(kaomoji, 345, 155)
   }
 
-  drawInfoText(ctx, data, isNightly) {
+  drawInfoText(ctx, data, isNightly, width, height) {
     ctx.font = "25px ZhuZiAYuan"
     ctx.fillStyle = "#E1E4DC"
     ctx.fillText(`您今天是第       个签到的，已连续签到 ${data.lastingTimes} 天！`, 107, 203)
