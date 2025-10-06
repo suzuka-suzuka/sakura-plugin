@@ -557,7 +557,7 @@ export function supportGuoba() {
         },
         {
           field: "recall.enable",
-          label: "复读",
+          label: "防撤回",
           component: "Switch",
           required: true,
         },
