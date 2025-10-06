@@ -1,3 +1,4 @@
+import Setting from "../lib/setting.js"
 if (!global.msgStore) {
   global.msgStore = new Map()
 }
@@ -20,7 +21,7 @@ export class recordMessage extends plugin {
     })
   }
   get appconfig() {
-    return setting.getConfig("recall")
+    return Setting.getConfig("recall")
   }
 
   async recordMessage(e) {
