@@ -556,6 +556,12 @@ export function supportGuoba() {
           required: true,
         },
         {
+          field: "recall.enable",
+          label: "复读",
+          component: "Switch",
+          required: true,
+        },
+        {
           field: "60sNews.Groups",
           label: "每日新闻启用群",
           component: "GSelectGroup",
