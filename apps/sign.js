@@ -65,11 +65,12 @@ export default class DailySign extends plugin {
       name: "每日签到图",
       dsc: "生成每日签到图",
       event: "message",
-      priority: 100,
+      priority: 1135,
       rule: [
         {
           reg: "^#?签到$",
           fnc: "signIn",
+          log: false,
         },
       ],
     })

@@ -1,6 +1,7 @@
 import Setting from "../lib/setting.js"
 const conversationStateNeverSpoken = {}
 const conversationStateInactive = {}
+const conversationStateLevel = {}
 
 export class GroupManager extends plugin {
   constructor() {
@@ -23,6 +24,11 @@ export class GroupManager extends plugin {
         {
           reg: "^#?清理(\\d+)(天|个月)未发言的人$",
           fnc: "prepareCleanupInactive",
+          log: false,
+        },
+        {
+          reg: "^#?清理低于(\\d+)级的人$",
+          fnc: "prepareCleanupByLevel",
           log: false,
         },
         {
@@ -296,6 +302,114 @@ export class GroupManager extends plugin {
     await e.reply(`正在开始清理 ${inactiveMembers.length} 位长时间未发言的成员...`)
 
     for (const member of inactiveMembers) {
+      await e.group.kickMember(member.user_id)
+      successCount++
+      await new Promise(resolve => setTimeout(resolve, 1000))
+    }
+
+    let reportMsg = `清理完成。成功清理 ${successCount} 人。`
+    await e.reply(reportMsg)
+  }
+  async prepareCleanupByLevel(e) {
+    if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
+      return false
+    }
+    const bot = await e.group.pickMember(e.self_id).getInfo(true)
+    if (bot.role === "member") {
+      return false
+    }
+    const match = e.msg.match(/^#?清理低于(\d+)级的人$/)
+    const level = parseInt(match[1])
+
+    if (isNaN(level) || level <= 0) {
+      return await e.reply("请输入有效的等级！")
+    }
+
+    if (conversationStateLevel[e.user_id]) {
+      delete conversationStateLevel[e.user_id]
+      this.finish("confirmCleanupByLevel", true)
+    }
+
+    const memberMap = await e.group.getMemberMap(true)
+    if (!memberMap) {
+      logger.error(`[清理低等级成员] 获取群成员列表失败`)
+      return await e.reply("获取群成员列表失败，请稍后再试。")
+    }
+
+    const lowLevelMembers = []
+    memberMap.forEach(member => {
+      if (member.user_id === e.bot.uin || member.role !== "member") {
+        return
+      }
+      if (member.level <= level) {
+        lowLevelMembers.push({
+          user_id: member.user_id,
+          nickname: member.card || member.nickname,
+          level: member.level,
+        })
+      }
+    })
+
+    if (lowLevelMembers.length === 0) {
+      return await e.reply(`本群没有群等级低于 ${level} 级的成员。`)
+    }
+
+    const forwardMsgNodes = [
+      {
+        message: `检测到 ${lowLevelMembers.length} 位群等级低于 ${level} 级的成员，详情如下：`,
+        nickname: bot.card || bot.nickname,
+        user_id: e.bot.uin,
+      },
+    ]
+
+    for (const member of lowLevelMembers) {
+      forwardMsgNodes.push({
+        message: [
+          segment.image(`https://q1.qlogo.cn/g?b=qq&s=100&nk=${member.user_id}`),
+          `\n昵称: ${member.nickname}`,
+          `\nQQ: ${member.user_id}`,
+          `\n群等级: ${member.level}`,
+        ],
+        nickname: bot.card || bot.nickname,
+        user_id: e.bot.uin,
+      })
+    }
+
+    const forwardMsg = await e.group.makeForwardMsg(forwardMsgNodes)
+    await e.reply(forwardMsg)
+
+    conversationStateLevel[e.user_id] = { lowLevelMembers }
+    this.setContext("confirmCleanupByLevel", true, 30)
+
+    await e.reply(
+      `以上是群等级低于 ${level} 级的成员列表共${lowLevelMembers.length}人。\n发送【取消】或【确认清理】来取消或确认清理这些成员。`,
+    )
+  }
+  async confirmCleanupByLevel() {
+    const e = this.e
+    const userInput = e.raw_message?.trim()
+    const state = conversationStateLevel[e.user_id]
+
+    if (!state) return
+
+    if (userInput === "取消") {
+      delete conversationStateLevel[e.user_id]
+      this.finish("confirmCleanupByLevel", true)
+      await e.reply("操作已取消。")
+      return
+    }
+
+    if (userInput !== "确认清理") return
+
+    const { lowLevelMembers } = state
+
+    delete conversationStateLevel[e.user_id]
+    this.finish("confirmCleanupByLevel", true)
+
+    let successCount = 0
+    await e.reply(`正在开始清理 ${lowLevelMembers.length} 位低等级的成员...`)
+
+    for (const member of lowLevelMembers) {
       await e.group.kickMember(member.user_id)
       successCount++
       await new Promise(resolve => setTimeout(resolve, 1000))
