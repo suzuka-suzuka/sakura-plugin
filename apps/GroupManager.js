@@ -341,7 +341,7 @@ export class GroupManager extends plugin {
       if (member.user_id === e.bot.uin || member.role !== "member") {
         return
       }
-      if (member.level <= level) {
+      if (member.level < level) {
         lowLevelMembers.push({
           user_id: member.user_id,
           nickname: member.card || member.nickname,
