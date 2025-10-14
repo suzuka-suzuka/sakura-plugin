@@ -513,7 +513,7 @@ export function supportGuoba() {
           },
         },
         {
-          label: "消息转发",
+          label: "杂项",
           component: "Divider",
         },
         {
@@ -546,10 +546,6 @@ export function supportGuoba() {
           },
         },
         {
-          label: "杂项",
-          component: "Divider",
-        },
-        {
           field: "repeat.enable",
           label: "复读",
           component: "Switch",
@@ -575,6 +571,16 @@ export function supportGuoba() {
           label: "b站cookie",
           component: "Input",
           required: false,
+        },
+        {
+          field: "AutoCleanup.groups",
+          label: "自动清理启用群",
+          bottomHelpMessage: "每天0点自动清理：1.半年未发言的人 2.进群超24小时但群等级为1级的号",
+          component: "GSelectGroup",
+          required: false,
+          componentProps: {
+            multiple: true,
+          },
         },
       ],
 
