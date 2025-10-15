@@ -177,7 +177,7 @@ export function supportGuoba() {
           component: "Divider",
         },
         {
-          field: "EditImage",
+          field: "EditImage.tasks",
           label: "修图提示词",
           bottomHelpMessage: "配置自定义图片编辑指令和提示词",
           component: "GSubForm",

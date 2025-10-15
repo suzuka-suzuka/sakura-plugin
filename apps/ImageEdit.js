@@ -27,8 +27,8 @@ export class EditImage extends plugin {
       },
     ]
 
-    if (this.task && Array.isArray(this.task)) {
-      for (const task of this.task) {
+    if (this.task?.tasks && Array.isArray(this.task.tasks)) {
+      for (const task of this.task.tasks) {
         if (task.reg && task.prompt) {
           rules.push({
             reg: task.reg,
@@ -42,7 +42,9 @@ export class EditImage extends plugin {
   }
 
   async dynamicImageHandler(e) {
-    const matchedTask = this.task.find(t => new RegExp(t.reg).test(e.msg))
+    if (!this.task?.tasks || !Array.isArray(this.task.tasks)) return false
+    
+    const matchedTask = this.task.tasks.find(t => new RegExp(t.reg).test(e.msg))
     if (!matchedTask) return false
 
     let imageUrls = await getImg(e)
