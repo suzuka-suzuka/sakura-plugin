@@ -109,17 +109,12 @@ export class groupNoticeAI extends plugin {
       return
     }
 
-    let handled = false
+    await redis.set(key, "1", { EX: cd })
+
     if (this.e.sub_type === "increase") {
       await this.handleIncrease()
-      handled = true
     } else if (this.e.sub_type === "decrease") {
       await this.handleDecrease()
-      handled = true
-    }
-
-    if (handled) {
-      await redis.set(key, "1", { EX: cd })
     }
   }
 
