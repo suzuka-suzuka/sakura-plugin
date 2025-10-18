@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sakura Plugin 登录</title>
+    <title>Sakura-Plugin 登录</title>
     <style>
       * {
         margin: 0;
@@ -22,10 +22,24 @@
           -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         background: url("sakura.png") no-repeat center center fixed;
         background-size: cover;
+        background-color: #f5e6f0;
         display: flex;
         justify-content: center;
         align-items: center;
         position: relative;
+        min-height: 100vh;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: url("sakura.png") no-repeat center center;
+        background-size: cover;
+        z-index: -2;
       }
 
       body::after {
@@ -37,7 +51,7 @@
         height: 100%;
         background: rgba(0, 0, 0, 0.3);
         pointer-events: none;
-        z-index: 0;
+        z-index: -1;
       }
 
       .sakura-container {
@@ -185,7 +199,7 @@
 
     <div class="login-container">
       <div class="logo"></div>
-      <h1 class="login-title">Sakura Plugin</h1>
+      <h1 class="login-title">Sakura-Plugin</h1>
       <p class="login-subtitle">🌸登录🌸</p>
 
       <form id="loginForm">
@@ -208,7 +222,6 @@
     </div>
 
     <script>
-      // 樱花特效
       function createSakura() {
         const container = document.getElementById("sakuraContainer")
         const sakura = document.createElement("div")
@@ -225,7 +238,6 @@
 
       setInterval(createSakura, 300)
 
-      // 登录表单处理
       const loginForm = document.getElementById("loginForm")
       const passwordInput = document.getElementById("password")
       const loginButton = document.getElementById("loginButton")
@@ -278,10 +290,8 @@
         }, 3000)
       }
 
-      // 自动聚焦密码输入框
       passwordInput.focus()
 
-      // 检查是否已登录
       async function checkLogin() {
         try {
           const response = await fetch("/api/check-login")
