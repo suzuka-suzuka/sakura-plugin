@@ -69,8 +69,14 @@ class WebEditor {
       res.json({ loggedIn: this.isLoggedIn })
     })
 
+    this.app.use(express.static(path.join(__dirname, "resources/webeditor")))
+
     this.app.use((req, res, next) => {
-      if (!this.isLoggedIn && !req.path.startsWith("/api/login") && !req.path.startsWith("/api/check-login")) {
+      if (
+        !this.isLoggedIn &&
+        !req.path.startsWith("/api/login") &&
+        !req.path.startsWith("/api/check-login")
+      ) {
         if (req.path.startsWith("/api/")) {
           return res.status(401).json({ success: false, error: "未登录" })
         }
@@ -78,8 +84,6 @@ class WebEditor {
       }
       next()
     })
-
-    this.app.use(express.static(path.join(__dirname, "resources/webeditor")))
   }
 
   setupRoutes() {
@@ -225,7 +229,7 @@ class WebEditor {
     this.app.listen(this.port, this.host, () => {
       const ip = this.getLocalIP()
       const log = global.logger || console
-      log.info(`[sakura-plugin] 配置编辑器已启动: http://localhost:${this.port}`)
+      log.info(`[sakura-plugin] sakura面板已启动: http://localhost:${this.port}`)
       log.info(`[sakura-plugin] 外网访问: http://${ip}:${this.port}`)
     })
   }

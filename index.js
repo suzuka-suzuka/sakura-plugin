@@ -41,6 +41,6 @@ setTimeout(() => {
       }
     })
     .catch(err => {
-      logger.error("[sakura-plugin] Web编辑器启动失败:", err)
+      logger.error("[sakura-plugin] sakura面板启动失败:", err)
     })
 }, 3000)

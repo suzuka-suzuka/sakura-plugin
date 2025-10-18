@@ -20,26 +20,12 @@
       body {
         font-family:
           -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        background: url("sakura.png") no-repeat center center fixed;
-        background-size: cover;
-        background-color: #f5e6f0;
+        background: linear-gradient(135deg, #ffeef8 0%, #ffe0f0 50%, #ffd4e8 100%);
         display: flex;
         justify-content: center;
         align-items: center;
         position: relative;
         min-height: 100vh;
-      }
-
-      body::before {
-        content: "";
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: url("sakura.png") no-repeat center center;
-        background-size: cover;
-        z-index: -2;
       }
 
       body::after {
@@ -184,13 +170,25 @@
         display: block;
       }
 
-      .logo {
-        width: 80px;
-        height: 80px;
-        margin: 0 auto 20px;
-        background: url("sakura.png") no-repeat center center;
-        background-size: contain;
+      .avatar {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 25px;
         border-radius: 50%;
+        overflow: hidden;
+        border: 4px solid rgba(255, 255, 255, 0.8);
+        box-shadow: 0 4px 15px rgba(255, 105, 180, 0.3);
+        background: #f0f0f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
       }
     </style>
   </head>
@@ -198,9 +196,12 @@
     <div class="sakura-container" id="sakuraContainer"></div>
 
     <div class="login-container">
-      <div class="logo"></div>
       <h1 class="login-title">Sakura-Plugin</h1>
-      <p class="login-subtitle">🌸登录🌸</p>
+      <p class="login-subtitle">🌸面板登录🌸</p>
+
+      <div class="avatar">
+        <img src="login.png" alt="头像" onerror="this.style.display='none'" />
+      </div>
 
       <form id="loginForm">
         <div class="form-group">
@@ -243,7 +244,7 @@
       const loginButton = document.getElementById("loginButton")
       const errorMessage = document.getElementById("errorMessage")
 
-      loginForm.addEventListener("submit", async (e) => {
+      loginForm.addEventListener("submit", async e => {
         e.preventDefault()
 
         const password = passwordInput.value
@@ -292,12 +293,84 @@
 
       passwordInput.focus()
 
+      function preloadLoginAvatar() {
+        const avatarImage = new Image()
+        avatarImage.onload = function () {
+          console.log("✓ 登录头像加载完成")
+        }
+        avatarImage.onerror = function () {
+          console.log("✗ 登录头像加载失败")
+        }
+        avatarImage.src = "/login.png"
+      }
+
+      preloadLoginAvatar()
+
+      function preloadMainPage() {
+        console.log("[Sakura] 开始预加载主页面资源...")
+
+        fetch("/", {
+          method: "GET",
+          credentials: "include",
+        })
+          .then(response => {
+            if (response.ok) {
+              console.log("✓ 主页面 HTML 预加载完成")
+              return response.text()
+            }
+          })
+          .catch(err => {
+            console.log("✗ 主页面预加载失败:", err)
+          })
+
+        const scripts = ["schema.js", "app.js"]
+        scripts.forEach(script => {
+          const link = document.createElement("link")
+          link.rel = "prefetch"
+          link.href = `/${script}`
+          link.as = "script"
+          document.head.appendChild(link)
+          console.log(`✓ 预加载脚本: ${script}`)
+        })
+
+        const bgImage = new Image()
+        bgImage.src = "/sakura.png"
+        console.log("✓ 预加载背景图片: sakura.png")
+
+        const apiEndpoints = ["/api/configs", "/api/groups"]
+
+        apiEndpoints.forEach(url => {
+          fetch(url, {
+            method: "GET",
+            credentials: "include",
+          })
+            .then(response => {
+              if (response.ok) {
+                console.log(`✓ API 预加载完成: ${url}`)
+                return response.json()
+              }
+            })
+            .catch(err => {
+              console.log(`✗ API 预加载失败: ${url}`, err)
+            })
+        })
+
+        const preconnect = document.createElement("link")
+        preconnect.rel = "preconnect"
+        preconnect.href = window.location.origin
+        document.head.appendChild(preconnect)
+
+        console.log("[Sakura] 预加载任务已全部启动")
+      }
+
       async function checkLogin() {
         try {
           const response = await fetch("/api/check-login")
           const data = await response.json()
           if (data.loggedIn) {
             window.location.href = "/"
+          } else {
+            preloadMainPage()
           }
         } catch (error) {
           console.error("检查登录状态失败:", error)
