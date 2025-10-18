@@ -270,6 +270,50 @@
       ::-webkit-scrollbar-thumb:hover {
         background: rgba(0, 0, 0, 0.4);
       }
+
+      .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        padding: 16px 24px;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        z-index: 9999;
+        animation: slideIn 0.3s ease-out, slideOut 0.3s ease-in 2.7s;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+      }
+
+      .toast.success {
+        border-left: 4px solid #10b981;
+      }
+
+      .toast.error {
+        border-left: 4px solid #ef4444;
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateX(400px);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes slideOut {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(400px);
+          opacity: 0;
+        }
+      }
     </style>
   </head>
   <body class="p-6">
@@ -401,6 +445,22 @@
       let editingCategoryIndex = -1
       let editingCommandIndex = -1
       let currentCategoryIndex = -1
+
+      function showToast(message, type = "success") {
+        const toast = document.createElement("div")
+        toast.className = `toast ${type}`
+        toast.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 24px;">${type === "success" ? "✅" : "❌"}</span>
+            <span style="font-weight: 500; color: #333;">${message}</span>
+          </div>
+        `
+        document.body.appendChild(toast)
+
+        setTimeout(() => {
+          toast.remove()
+        }, 3000)
+      }
 
       async function init() {
         try {
@@ -656,12 +716,12 @@
           })
           const result = await response.json()
           if (result.success) {
-            alert("✅ 保存成功！")
+            showToast("保存成功！", "success")
           } else {
-            alert("❌ 保存失败: " + result.error)
+            showToast("保存失败: " + result.error, "error")
           }
         } catch (error) {
-          alert("❌ 保存失败: " + error.message)
+          showToast("保存失败: " + error.message, "error")
         }
       }
 

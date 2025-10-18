@@ -1064,14 +1064,13 @@ function selectGroupsForObject(key) {
         <div class="group-selector-modal-content">
             <div class="group-selector-header">
                 <div class="search-bar">
-                    <input type="text" id="groupSearchInput" placeholder="搜索群名称或群号..." 
-                           onkeyup="filterGroupList()" style="width: 100%; padding: 10px; border: 1px solid #d9d9d9; border-radius: 4px;">
+                    <input type="text" id="groupSearchInput" placeholder="搜索群名称或群号..." onkeyup="filterGroupList()">
                 </div>
-                <div class="selected-count" style="margin-top: 10px; color: #666;">
-                    已选择 <span id="selectedGroupCount" style="color: #1890ff; font-weight: bold;">${selectedGroupIds.length}</span> 个群
+                <div class="selected-count">
+                    已选择 <span id="selectedGroupCount">${selectedGroupIds.length}</span> 个群
                 </div>
             </div>
-            <div class="group-list" id="modalGroupList" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
+            <div class="group-list" id="modalGroupList">
                 ${groupList
                   .map(group => {
                     const isSelected = selectedGroupIds.includes(String(group.id))
@@ -1415,14 +1414,13 @@ function renderGroupSelectorModal() {
         <div class="group-selector-modal-content">
             <div class="group-selector-header">
                 <div class="search-bar">
-                    <input type="text" id="groupSearchInput" placeholder="搜索群名称或群号..." 
-                           onkeyup="filterGroupList()" style="width: 100%; padding: 10px; border: 1px solid #d9d9d9; border-radius: 4px;">
+                    <input type="text" id="groupSearchInput" placeholder="搜索群名称或群号..." onkeyup="filterGroupList()">
                 </div>
-                <div class="selected-count" style="margin-top: 10px; color: #666;">
-                    已选择 <span id="selectedGroupCount" style="color: #1890ff; font-weight: bold;">${selectedGroupIds.length}</span> 个群
+                <div class="selected-count">
+                    已选择 <span id="selectedGroupCount">${selectedGroupIds.length}</span> 个群
                 </div>
             </div>
-            <div class="group-list" id="modalGroupList" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
+            <div class="group-list" id="modalGroupList">
                 ${groupList
                   .map(group => {
                     const isSelected = selectedGroupIds.includes(String(group.id))
