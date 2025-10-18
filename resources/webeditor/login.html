@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sakura Plugin 登录</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        background: url("sakura.png") no-repeat center center fixed;
+        background-size: cover;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+      }
+
+      body::after {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.3);
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .sakura-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1;
+        overflow: hidden;
+      }
+
+      .sakura {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background: radial-gradient(circle, #ffb7d5 0%, #ffc0e0 50%, transparent 70%);
+        border-radius: 50% 0 50% 0;
+        opacity: 0.6;
+        animation: fall linear infinite;
+        transform-origin: center;
+      }
+
+      @keyframes fall {
+        0% {
+          transform: translateY(-10vh) rotate(0deg);
+          opacity: 0.6;
+        }
+        100% {
+          transform: translateY(110vh) rotate(720deg);
+          opacity: 0;
+        }
+      }
+
+      .login-container {
+        position: relative;
+        z-index: 10;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(30px);
+        -webkit-backdrop-filter: blur(30px);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 20px;
+        padding: 50px 40px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        width: 100%;
+        max-width: 400px;
+        text-align: center;
+      }
+
+      .login-title {
+        font-size: 28px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 10px;
+      }
+
+      .login-subtitle {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 30px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+        text-align: left;
+      }
+
+      .form-label {
+        display: block;
+        font-size: 14px;
+        color: #555;
+        margin-bottom: 8px;
+        font-weight: 500;
+      }
+
+      .form-input {
+        width: 100%;
+        padding: 12px 15px;
+        border: 2px solid rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        font-size: 16px;
+        background: rgba(255, 255, 255, 0.8);
+        transition: all 0.3s;
+      }
+
+      .form-input:focus {
+        outline: none;
+        border-color: #ff69b4;
+        background: rgba(255, 255, 255, 1);
+      }
+
+      .login-button {
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: 600;
+        color: white;
+        background: linear-gradient(135deg, #ff69b4, #ff1493);
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-top: 10px;
+      }
+
+      .login-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(255, 105, 180, 0.4);
+      }
+
+      .login-button:active {
+        transform: translateY(0);
+      }
+
+      .login-button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .error-message {
+        color: #ff4444;
+        font-size: 14px;
+        margin-top: 10px;
+        display: none;
+      }
+
+      .error-message.show {
+        display: block;
+      }
+
+      .logo {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 20px;
+        background: url("sakura.png") no-repeat center center;
+        background-size: contain;
+        border-radius: 50%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sakura-container" id="sakuraContainer"></div>
+
+    <div class="login-container">
+      <div class="logo"></div>
+      <h1 class="login-title">Sakura Plugin</h1>
+      <p class="login-subtitle">🌸登录🌸</p>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label class="form-label" for="password">密码</label>
+          <input
+            type="password"
+            id="password"
+            class="form-input"
+            placeholder="请输入密码"
+            autocomplete="current-password"
+            required
+          />
+        </div>
+
+        <button type="submit" class="login-button" id="loginButton">登录</button>
+
+        <div class="error-message" id="errorMessage"></div>
+      </form>
+    </div>
+
+    <script>
+      // 樱花特效
+      function createSakura() {
+        const container = document.getElementById("sakuraContainer")
+        const sakura = document.createElement("div")
+        sakura.className = "sakura"
+        sakura.style.left = Math.random() * 100 + "%"
+        sakura.style.animationDuration = Math.random() * 10 + 15 + "s"
+        sakura.style.animationDelay = Math.random() * 5 + "s"
+        container.appendChild(sakura)
+
+        setTimeout(() => {
+          sakura.remove()
+        }, 25000)
+      }
+
+      setInterval(createSakura, 300)
+
+      // 登录表单处理
+      const loginForm = document.getElementById("loginForm")
+      const passwordInput = document.getElementById("password")
+      const loginButton = document.getElementById("loginButton")
+      const errorMessage = document.getElementById("errorMessage")
+
+      loginForm.addEventListener("submit", async (e) => {
+        e.preventDefault()
+
+        const password = passwordInput.value
+        if (!password) {
+          showError("请输入密码")
+          return
+        }
+
+        loginButton.disabled = true
+        loginButton.textContent = "登录中..."
+
+        try {
+          const response = await fetch("/api/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ password }),
+          })
+
+          const data = await response.json()
+
+          if (data.success) {
+            window.location.href = "/"
+          } else {
+            showError(data.message || "登录失败")
+            loginButton.disabled = false
+            loginButton.textContent = "登录"
+            passwordInput.value = ""
+            passwordInput.focus()
+          }
+        } catch (error) {
+          showError("网络错误，请稍后重试")
+          loginButton.disabled = false
+          loginButton.textContent = "登录"
+        }
+      })
+
+      function showError(message) {
+        errorMessage.textContent = message
+        errorMessage.classList.add("show")
+        setTimeout(() => {
+          errorMessage.classList.remove("show")
+        }, 3000)
+      }
+
+      // 自动聚焦密码输入框
+      passwordInput.focus()
+
+      // 检查是否已登录
+      async function checkLogin() {
+        try {
+          const response = await fetch("/api/check-login")
+          const data = await response.json()
+          if (data.loggedIn) {
+            window.location.href = "/"
+          }
+        } catch (error) {
+          console.error("检查登录状态失败:", error)
+        }
+      }
+
+      checkLogin()
+    </script>
+  </body>
+</html>

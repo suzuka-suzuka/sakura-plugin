@@ -60,7 +60,7 @@ const configSchema = {
     teatime: "下午茶",
     tenor: "Tenor表情",
     Vertex: "Vertex AI",
-    webeditor: "网页编辑器",
+    webeditor: "配置面板",
   },
 
   fields: {
@@ -469,9 +469,14 @@ const configSchema = {
     "webeditor.port": {
       label: "端口号",
       type: "number",
-      help: "sakura配置编辑的服务端口.修改完需重启生效",
+      help: "sakura服务端口.修改完需重启生效",
       min: 1024,
       max: 65535,
+    },
+    "webeditor.password": {
+      label: "登录密码",
+      type: "text",
+      help: "sakura登录密码，修改后需重启生效",
     },
     port: { label: "端口", type: "number", min: 1024, max: 65535 },
 

@@ -1665,6 +1665,23 @@
       }
 
       window.addEventListener("load", initSakura)
+
+      // 登录检查
+      async function checkLogin() {
+        try {
+          const response = await fetch("/api/check-login")
+          const data = await response.json()
+          if (!data.loggedIn) {
+            window.location.href = "/login"
+          }
+        } catch (error) {
+          console.error("检查登录状态失败:", error)
+          window.location.href = "/login"
+        }
+      }
+
+      // 页面加载时检查登录状态
+      checkLogin()
     </script>
 
     <script src="schema.js"></script>

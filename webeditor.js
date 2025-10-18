@@ -17,7 +17,7 @@ class WebEditor {
     const configPath = path.join(__dirname, "config", "webeditor.yaml")
     const defConfigPath = path.join(__dirname, "defSet", "webeditor.yaml")
 
-    let config = { port: 3456 }
+    let config = { port: 3456, password: "1135" }
 
     try {
       if (fs.existsSync(configPath)) {
@@ -31,9 +31,11 @@ class WebEditor {
     } catch (err) {}
 
     this.port = config.port || 1135
+    this.password = config.password || "1135"
     this.host = "0.0.0.0"
     this.configPath = path.join(__dirname, "config")
     this.defPath = path.join(__dirname, "defSet")
+    this.isLoggedIn = false
 
     this.setupMiddleware()
     this.setupRoutes()
@@ -41,7 +43,6 @@ class WebEditor {
 
   setupMiddleware() {
     this.app.use(express.json({ limit: "10mb" }))
-    this.app.use(express.static(path.join(__dirname, "resources/webeditor")))
 
     this.app.use((req, res, next) => {
       res.header("Access-Control-Allow-Origin", "*")
@@ -49,6 +50,38 @@ class WebEditor {
       res.header("Access-Control-Allow-Headers", "Content-Type")
       next()
     })
+
+    // 登录页面和登录API不需要验证
+    this.app.get("/login", (req, res) => {
+      res.sendFile(path.join(__dirname, "resources/webeditor/login.html"))
+    })
+
+    this.app.post("/api/login", (req, res) => {
+      const { password } = req.body
+      if (password === this.password) {
+        this.isLoggedIn = true
+        res.json({ success: true, message: "登录成功" })
+      } else {
+        res.json({ success: false, message: "密码错误" })
+      }
+    })
+
+    this.app.get("/api/check-login", (req, res) => {
+      res.json({ loggedIn: this.isLoggedIn })
+    })
+
+    // 所有其他请求需要登录验证
+    this.app.use((req, res, next) => {
+      if (!this.isLoggedIn && !req.path.startsWith("/api/login") && !req.path.startsWith("/api/check-login")) {
+        if (req.path.startsWith("/api/")) {
+          return res.status(401).json({ success: false, error: "未登录" })
+        }
+        return res.redirect("/login")
+      }
+      next()
+    })
+
+    this.app.use(express.static(path.join(__dirname, "resources/webeditor")))
   }
 
   setupRoutes() {
