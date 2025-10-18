@@ -51,7 +51,6 @@ class WebEditor {
       next()
     })
 
-    // 登录页面和登录API不需要验证
     this.app.get("/login", (req, res) => {
       res.sendFile(path.join(__dirname, "resources/webeditor/login.html"))
     })
@@ -70,7 +69,6 @@ class WebEditor {
       res.json({ loggedIn: this.isLoggedIn })
     })
 
-    // 所有其他请求需要登录验证
     this.app.use((req, res, next) => {
       if (!this.isLoggedIn && !req.path.startsWith("/api/login") && !req.path.startsWith("/api/check-login")) {
         if (req.path.startsWith("/api/")) {

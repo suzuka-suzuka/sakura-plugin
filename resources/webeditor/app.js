@@ -12,12 +12,12 @@ let groupList = []
 async function loadGroupList() {
   try {
     groupList = await apiRequest("/api/groups")
-    console.log("[WebEditor] 成功加载群列表:", groupList.length, "个群")
+    console.log("[sakura] 成功加载群列表:", groupList.length, "个群")
     if (groupList.length === 0) {
-      console.warn("[WebEditor] 群列表为空，请确保 Bot 已登录")
+      console.warn("[sakura] 群列表为空，请确保 Bot 已登录")
     }
   } catch (error) {
-    console.error("[WebEditor] 加载群列表失败:", error)
+    console.error("[sakura] 加载群列表失败:", error)
     groupList = []
   }
 }
@@ -49,7 +49,7 @@ function showLoadingUI(message = "加载中...", tip = "") {
 
 async function apiRequest(url, options = {}) {
   try {
-    console.log("[WebEditor] API 请求:", API_BASE + url)
+    console.log("[sakura] API 请求:", API_BASE + url)
     const response = await fetch(API_BASE + url, {
       headers: {
         "Content-Type": "application/json",
@@ -63,14 +63,14 @@ async function apiRequest(url, options = {}) {
     }
 
     const data = await response.json()
-    console.log("[WebEditor] API 响应:", url, data)
+    console.log("[sakura] API 响应:", url, data)
 
     if (!data.success) {
       throw new Error(data.error || "请求失败")
     }
     return data.data
   } catch (error) {
-    console.error("[WebEditor] API 错误:", url, error)
+    console.error("[sakura] API 错误:", url, error)
     showToast(error.message, "error")
     throw error
   }
@@ -81,7 +81,7 @@ async function loadConfigList() {
 
   try {
     if (typeof getCategories !== "function") {
-      console.error("[WebEditor] getCategories 函数未定义，请检查 schema.js 是否正确加载")
+      console.error("[sakura] getCategories 函数未定义，请检查 schema.js 是否正确加载")
       configTabs.innerHTML =
         '<div style="padding: 20px; text-align: center; color: #ff4d4f;">配置加载失败：schema.js 未加载</div>'
       return
@@ -96,7 +96,7 @@ async function loadConfigList() {
     }
 
     const categories = getCategories()
-    console.log("[WebEditor] 加载分类:", categories)
+    console.log("[sakura] 加载分类:", categories)
 
     configTabs.innerHTML = categories
       .map((cat, index) => {
@@ -131,7 +131,7 @@ async function loadConfigList() {
       }
     }
   } catch (error) {
-    console.error("[WebEditor] 加载配置列表失败:", error)
+    console.error("[sakura] 加载配置列表失败:", error)
     configTabs.innerHTML =
       '<div style="padding: 20px; text-align: center; color: #ff4d4f;">加载失败: ' +
       error.message +
@@ -143,7 +143,7 @@ async function preloadAllCategories(categories) {
   if (isLoadingCache) return
   isLoadingCache = true
 
-  console.log("[WebEditor] 开始预加载所有分类配置...")
+  console.log("[sakura] 开始预加载所有分类配置...")
 
   try {
     const loadPromises = categories
@@ -155,16 +155,16 @@ async function preloadAllCategories(categories) {
           )
           const configsData = await Promise.all(configPromises)
           categoryCache[category.name] = configsData
-          console.log("[WebEditor] 预加载完成:", category.name)
+          console.log("[sakura] 预加载完成:", category.name)
         } catch (error) {
-          console.error("[WebEditor] 预加载失败:", category.name, error)
+          console.error("[sakura] 预加载失败:", category.name, error)
         }
       })
 
     await Promise.all(loadPromises)
-    console.log("[WebEditor] 所有分类配置预加载完成")
+    console.log("[sakura] 所有分类配置预加载完成")
   } catch (error) {
-    console.error("[WebEditor] 预加载过程出错:", error)
+    console.error("[sakura] 预加载过程出错:", error)
   } finally {
     isLoadingCache = false
   }
@@ -175,7 +175,7 @@ async function loadCategory(category) {
   const headerBtn = document.getElementById("headerSaveBtn")
 
   if (categoryCache[category.name]) {
-    console.log("[WebEditor] 从缓存加载分类:", category.name)
+    console.log("[sakura] 从缓存加载分类:", category.name)
     renderCategoryPage(category.name, categoryCache[category.name])
     return
   }
@@ -187,21 +187,21 @@ async function loadCategory(category) {
   }
 
   try {
-    console.log("[WebEditor] 开始加载分类:", category.name)
+    console.log("[sakura] 开始加载分类:", category.name)
 
     const configPromises = category.configs.map(name =>
       apiRequest(`/api/config/${name}`).then(data => ({ name, data: data.config })),
     )
 
     const configsData = await Promise.all(configPromises)
-    console.log("[WebEditor] 分类配置加载完成:", configsData.length, "个配置")
+    console.log("[sakura] 分类配置加载完成:", configsData.length, "个配置")
 
     categoryCache[category.name] = configsData
 
     renderCategoryPage(category.name, configsData)
-    console.log("[WebEditor] 分类页面渲染完成")
+    console.log("[sakura] 分类页面渲染完成")
   } catch (error) {
-    console.error("[WebEditor] 加载分类失败:", error)
+    console.error("[sakura] 加载分类失败:", error)
     content.innerHTML =
       '<div style="padding: 40px; text-align: center; color: #ff4d4f;">加载失败: ' +
       error.message +
@@ -216,9 +216,9 @@ function renderCategoryPage(categoryName, configsData) {
   const headerBtn = document.getElementById("headerSaveBtn")
 
   try {
-    console.log("[WebEditor] 开始渲染分类页面:", categoryName)
+    console.log("[sakura] 开始渲染分类页面:", categoryName)
 
-    console.log("[WebEditor] renderCategoryPage 设置 isCategoryMode = true")
+    console.log("[sakura] renderCategoryPage 设置 isCategoryMode = true")
     isCategoryMode = true
 
     if (headerBtn) {
@@ -231,7 +231,7 @@ function renderCategoryPage(categoryName, configsData) {
       currentData[name] = data
     })
 
-    console.log("[WebEditor] 当前数据:", currentData)
+    console.log("[sakura] 当前数据:", currentData)
 
     content.style.opacity = "0"
 
@@ -249,11 +249,11 @@ function renderCategoryPage(categoryName, configsData) {
         content.style.opacity = "1"
       })
 
-      console.log("[WebEditor] 分类页面 HTML 已生成")
-      console.log("[WebEditor] 检查标志 - isCategoryMode:", isCategoryMode)
+      console.log("[sakura] 分类页面 HTML 已生成")
+      console.log("[sakura] 检查标志 - isCategoryMode:", isCategoryMode)
     }, 150)
   } catch (error) {
-    console.error("[WebEditor] 渲染分类页面失败:", error)
+    console.error("[sakura] 渲染分类页面失败:", error)
     content.innerHTML = `
             <div style="padding: 40px; text-align: center; color: #ff4d4f;">
                 <h3>渲染失败</h3>
@@ -281,7 +281,7 @@ function renderEditor(name, config) {
   const content = document.getElementById("content")
   const displayName = getConfigName(name)
 
-  console.log("[WebEditor] renderEditor 被调用，设置 isCategoryMode = false")
+  console.log("[sakura] renderEditor 被调用，设置 isCategoryMode = false")
   isCategoryMode = false
   currentConfig = name
   currentData = config
@@ -1549,16 +1549,16 @@ function getNestedValueFromCurrent(path) {
 }
 
 function reloadCurrentView() {
-  console.log("[WebEditor] reloadCurrentView 被调用")
-  console.log("[WebEditor] isCategoryMode:", isCategoryMode)
-  console.log("[WebEditor] currentConfig:", currentConfig)
+  console.log("[sakura] reloadCurrentView 被调用")
+  console.log("[sakura] isCategoryMode:", isCategoryMode)
+  console.log("[sakura] currentConfig:", currentConfig)
 
   if (isCategoryMode) {
-    console.log("[WebEditor] 重新加载分类视图")
+    console.log("[sakura] 重新加载分类视图")
     const configsData = Object.entries(currentData).map(([name, data]) => ({ name, data }))
     renderCategoryPage(currentConfig, configsData)
   } else {
-    console.log("[WebEditor] 重新加载单文件视图")
+    console.log("[sakura] 重新加载单文件视图")
     renderEditor(currentConfig, currentData)
   }
 }
@@ -1568,10 +1568,10 @@ async function saveConfig() {
 
   const headerBtn = document.getElementById("headerSaveBtn")
 
-  console.log("[WebEditor] saveConfig 被调用")
-  console.log("[WebEditor] isCategoryMode:", isCategoryMode)
-  console.log("[WebEditor] currentConfig:", currentConfig)
-  console.log("[WebEditor] currentData keys:", Object.keys(currentData || {}))
+  console.log("[sakura] saveConfig 被调用")
+  console.log("[sakura] isCategoryMode:", isCategoryMode)
+  console.log("[sakura] currentConfig:", currentConfig)
+  console.log("[sakura] currentData keys:", Object.keys(currentData || {}))
 
   if (headerBtn) {
     headerBtn.classList.add("saving")
@@ -1580,10 +1580,10 @@ async function saveConfig() {
 
   try {
     if (isCategoryMode) {
-      console.log("[WebEditor] 分类模式，调用 saveCategoryConfigs")
+      console.log("[sakura] 分类模式，调用 saveCategoryConfigs")
       await saveCategoryConfigs()
     } else {
-      console.log("[WebEditor] 单文件模式，保存配置:", currentConfig)
+      console.log("[sakura] 单文件模式，保存配置:", currentConfig)
       await apiRequest(`/api/config/${currentConfig}`, {
         method: "POST",
         body: JSON.stringify({ data: currentData }),
@@ -1603,10 +1603,10 @@ async function saveCategoryConfigs() {
   if (!currentData || typeof currentData !== "object") return
 
   try {
-    console.log("[WebEditor] 准备保存配置，当前数据:", Object.keys(currentData))
+    console.log("[sakura] 准备保存配置，当前数据:", Object.keys(currentData))
 
     const savePromises = Object.entries(currentData).map(([name, data]) => {
-      console.log("[WebEditor] 保存配置文件:", name)
+      console.log("[sakura] 保存配置文件:", name)
       return apiRequest(`/api/config/${name}`, {
         method: "POST",
         body: JSON.stringify({ data }),
@@ -1621,7 +1621,7 @@ async function saveCategoryConfigs() {
         data,
       }))
       categoryCache[currentConfig] = configsData
-      console.log("[WebEditor] 缓存已更新:", currentConfig)
+      console.log("[sakura] 缓存已更新:", currentConfig)
     }
 
     showToast("保存成功！", "success")
@@ -1721,20 +1721,14 @@ function toYAML(obj, indent = 0) {
   return String(obj)
 }
 
-// 简易 YAML 解析 (使用 JSON 作为中间格式)
 function fromYAML(yamlStr) {
-  // 简单的 YAML 转 JSON 转换
-  // 这里我们尝试先转成 JSON，如果失败就抛出错误
   try {
-    // 尝试作为 JSON 解析
     return JSON.parse(yamlStr)
   } catch (e) {
-    // 如果不是 JSON，进行简单的 YAML 解析
     return parseSimpleYAML(yamlStr)
   }
 }
 
-// 简单的 YAML 解析器
 function parseSimpleYAML(str) {
   const lines = str.split("\n")
   const result = {}
@@ -1742,18 +1736,15 @@ function parseSimpleYAML(str) {
   let stack = [{ obj: result, indent: -1 }]
 
   for (let line of lines) {
-    // 跳过空行和注释
     if (!line.trim() || line.trim().startsWith("#")) continue
 
     const indent = line.search(/\S/)
     const content = line.trim()
 
-    // 处理键值对
     const match = content.match(/^([^:]+):\s*(.*)$/)
     if (match) {
       const [, key, value] = match
 
-      // 弹出栈直到找到合适的父级
       while (stack.length > 0 && stack[stack.length - 1].indent >= indent) {
         stack.pop()
       }
@@ -1761,10 +1752,8 @@ function parseSimpleYAML(str) {
       currentObj = stack[stack.length - 1].obj
 
       if (value) {
-        // 有值
         currentObj[key.trim()] = parseValue(value)
       } else {
-        // 无值，可能是对象或数组
         currentObj[key.trim()] = {}
         stack.push({ obj: currentObj[key.trim()], indent })
       }
@@ -1788,7 +1777,6 @@ function parseValue(str) {
   return str
 }
 
-// 暴露全局函数供 HTML onclick 调用
 window.saveConfig = saveConfig
 window.saveCategoryConfigs = saveCategoryConfigs
 window.resetConfig = resetConfig
@@ -1817,19 +1805,17 @@ window.closeArrayModal = closeArrayModal
 window.updateModalValue = updateModalValue
 window.confirmAddArrayItem = confirmAddArrayItem
 
-// 页面加载完成后初始化
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("[WebEditor] ========== 开始初始化 ==========")
-  console.log("[WebEditor] 页面加载完成")
-  console.log("[WebEditor] API_BASE:", API_BASE)
-  console.log("[WebEditor] 检查 schema 函数:", {
+  console.log("[sakura] ========== 开始初始化 ==========")
+  console.log("[sakura] 页面加载完成")
+  console.log("[sakura] API_BASE:", API_BASE)
+  console.log("[sakura] 检查 schema 函数:", {
     getCategories: typeof getCategories,
     getConfigName: typeof getConfigName,
     getFieldSchema: typeof getFieldSchema,
     configSchema: typeof configSchema,
   })
 
-  // 如果 schema 未加载，显示错误
   if (typeof getCategories !== "function") {
     const content = document.getElementById("content")
     if (content) {
@@ -1845,17 +1831,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
             `
     }
-    console.error("[WebEditor] schema.js 未正确加载，请检查文件路径和内容")
+    console.error("[sakura] schema.js 未正确加载，请检查文件路径和内容")
     return
   }
 
   loadGroupList()
     .then(() => {
-      console.log("[WebEditor] 群列表加载完成，开始加载配置列表")
+      console.log("[sakura] 群列表加载完成，开始加载配置列表")
       loadConfigList()
     })
     .catch(err => {
-      console.error("[WebEditor] 初始化失败:", err)
+      console.error("[sakura] 初始化失败:", err)
       const content = document.getElementById("content")
       if (content) {
         content.innerHTML = `
@@ -1871,5 +1857,5 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     })
 
-  console.log("[WebEditor] ========== 初始化完成 ==========")
+  console.log("[sakura] ========== 初始化完成 ==========")
 })
