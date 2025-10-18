@@ -4,7 +4,6 @@ import fs from "node:fs"
 import path from "node:path"
 import os from "node:os"
 import { fileURLToPath } from "node:url"
-import lodash from "lodash"
 import setting from "./lib/setting.js"
 
 const __filename = fileURLToPath(import.meta.url)
@@ -31,7 +30,7 @@ class WebEditor {
       }
     } catch (err) {}
 
-    this.port = config.port || 3456
+    this.port = config.port || 1135
     this.host = "0.0.0.0"
     this.configPath = path.join(__dirname, "config")
     this.defPath = path.join(__dirname, "defSet")
