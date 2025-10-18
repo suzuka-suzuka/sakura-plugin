@@ -1,0 +1,770 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>菜单配置编辑器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Fira+Code:wght@500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          "Inter",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        background: url("sakura.png") no-repeat center center fixed;
+        background-size: cover;
+        min-height: 100vh;
+        position: relative;
+      }
+
+      body::after {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.3);
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .sakura-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1;
+        overflow: hidden;
+      }
+
+      .sakura {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background: radial-gradient(circle, #ffb7d5 0%, #ffc0e0 50%, transparent 70%);
+        border-radius: 50% 0 50% 0;
+        opacity: 0.6;
+        animation: fall linear infinite;
+        transform-origin: center;
+      }
+
+      @keyframes fall {
+        0% {
+          transform: translateY(-10vh) rotate(0deg);
+          opacity: 0.6;
+        }
+        100% {
+          transform: translateY(110vh) rotate(720deg);
+          opacity: 0;
+        }
+      }
+
+      .command {
+        font-family: "Fira Code", monospace;
+      }
+      .dragging {
+        opacity: 0.5;
+      }
+      .drag-over {
+        border: 2px dashed #667eea !important;
+        background-color: rgba(102, 126, 234, 0.1);
+      }
+      .category-card {
+        transition: all 0.3s ease;
+        background: rgba(255, 255, 255, 0.6) !important;
+        backdrop-filter: blur(30px);
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+      }
+      .category-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+        background: rgba(255, 255, 255, 0.75) !important;
+      }
+      .command-item {
+        transition: all 0.2s ease;
+        cursor: move;
+      }
+      .command-item:hover {
+        background-color: rgba(102, 126, 234, 0.1) !important;
+      }
+      .edit-mode {
+        outline: 2px solid #667eea;
+        outline-offset: -2px;
+      }
+      .btn {
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s;
+        border: none;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+      }
+      .btn-primary:hover {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+      }
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.7);
+        color: #333;
+        border: 1px solid rgba(0, 0, 0, 0.2);
+      }
+      .btn-secondary:hover {
+        border-color: rgba(102, 126, 234, 0.5);
+        background: rgba(255, 255, 255, 0.9);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+      }
+      .btn-danger {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 4px 15px rgba(245, 87, 108, 0.3);
+      }
+      .btn-danger:hover {
+        background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(245, 87, 108, 0.4);
+      }
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(5px);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal.show {
+        display: flex;
+      }
+      .modal-content {
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(30px);
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        border-radius: 16px;
+        padding: 24px;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      }
+      .header-fixed {
+        position: sticky;
+        top: 0;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px);
+        z-index: 100;
+        padding: 20px 0;
+        margin-bottom: 20px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      input[type="text"],
+      textarea,
+      select {
+        background: rgba(255, 255, 255, 0.75) !important;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 0, 0, 0.2) !important;
+        color: #333 !important;
+        transition: all 0.3s;
+      }
+
+      input[type="text"]:focus,
+      textarea:focus,
+      select:focus {
+        outline: none !important;
+        border-color: rgba(102, 126, 234, 0.6) !important;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+        background: rgba(255, 255, 255, 0.9) !important;
+      }
+
+      input[type="text"]:hover,
+      textarea:hover,
+      select:hover {
+        border-color: rgba(102, 126, 234, 0.4) !important;
+        background: rgba(255, 255, 255, 0.85) !important;
+      }
+
+      .bg-white {
+        background: rgba(255, 255, 255, 0.6) !important;
+        backdrop-filter: blur(30px);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+      }
+
+      label {
+        color: rgba(51, 51, 51, 0.9) !important;
+        font-weight: 500;
+      }
+
+      h1,
+      h2,
+      h3 {
+        color: #333 !important;
+        text-shadow: 0 1px 3px rgba(255, 255, 255, 0.5);
+      }
+
+      .text-gray-600 {
+        color: rgba(51, 51, 51, 0.7) !important;
+      }
+
+      .text-gray-700 {
+        color: rgba(51, 51, 51, 0.85) !important;
+      }
+
+      .text-gray-900 {
+        color: #333 !important;
+      }
+
+      .max-w-7xl {
+        position: relative;
+        z-index: 5;
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.25);
+        border-radius: 4px;
+        transition: all 0.3s;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.4);
+      }
+    </style>
+  </head>
+  <body class="p-6">
+    <div class="sakura-container" id="sakuraContainer"></div>
+
+    <div class="max-w-7xl mx-auto">
+      <div class="header-fixed">
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-3xl font-bold text-gray-900">菜单配置编辑器</h1>
+            <p class="text-gray-600 mt-2">拖拽排序 | 双击编辑 | 即时预览</p>
+          </div>
+          <div class="flex gap-3">
+            <a href="index.html" class="btn btn-secondary" style="text-decoration: none">
+              ← 返回主页
+            </a>
+            <button onclick="previewMenu()" class="btn btn-secondary">👁️ 预览</button>
+            <button onclick="addCategory()" class="btn btn-secondary">➕ 添加分类</button>
+            <button onclick="saveMenu()" class="btn btn-primary">💾 保存配置</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg p-6 mb-6 shadow-sm">
+        <h2 class="text-xl font-bold mb-4">基本信息</h2>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">菜单标题</label>
+            <input
+              type="text"
+              id="menuTitle"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="如: Sakura Plugin 帮助"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">菜单描述</label>
+            <input
+              type="text"
+              id="menuDescription"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="如: 功能列表与使用说明"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div id="categoriesContainer" class="space-y-6"></div>
+    </div>
+
+    <div id="categoryModal" class="modal">
+      <div class="modal-content">
+        <h3 class="text-xl font-bold mb-4">编辑分类</h3>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">分类名称</label>
+          <input
+            type="text"
+            id="categoryName"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div class="flex justify-end gap-2">
+          <button onclick="closeCategoryModal()" class="btn btn-secondary">取消</button>
+          <button onclick="saveCategoryEdit()" class="btn btn-primary">确定</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="commandModal" class="modal">
+      <div class="modal-content">
+        <h3 class="text-xl font-bold mb-4">编辑命令</h3>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">命令</label>
+          <input
+            type="text"
+            id="commandCmd"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="如: #帮助"
+          />
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">说明</label>
+          <textarea
+            id="commandDesc"
+            rows="3"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="如: 显示帮助信息"
+          ></textarea>
+        </div>
+        <div class="flex justify-end gap-2">
+          <button onclick="closeCommandModal()" class="btn btn-secondary">取消</button>
+          <button onclick="saveCommandEdit()" class="btn btn-primary">确定</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="previewModal" class="modal">
+      <div
+        class="modal-content"
+        style="
+          max-width: 95vw;
+          width: 1400px;
+          max-height: 95vh;
+          height: 90vh;
+          display: flex;
+          flex-direction: column;
+        "
+      >
+        <div class="flex justify-between items-center mb-4" style="flex-shrink: 0">
+          <h3 class="text-xl font-bold">预览</h3>
+          <button onclick="closePreviewModal()" class="text-2xl text-gray-500 hover:text-gray-700">
+            &times;
+          </button>
+        </div>
+        <iframe
+          id="previewFrame"
+          style="width: 100%; flex: 1; min-height: 0; border: 1px solid #e5e7eb; border-radius: 8px"
+        ></iframe>
+      </div>
+    </div>
+
+    <script>
+      let menuData = {
+        title: "Sakura Plugin 帮助",
+        description: "功能列表与使用说明",
+        categories: [],
+      }
+
+      let editingCategoryIndex = -1
+      let editingCommandIndex = -1
+      let currentCategoryIndex = -1
+
+      async function init() {
+        try {
+          const response = await fetch("/api/config/menu")
+          const data = await response.json()
+          if (data.success && data.data.config) {
+            menuData = data.data.config
+            renderMenu()
+          }
+        } catch (error) {
+          console.error("加载菜单配置失败:", error)
+        }
+      }
+
+      function renderMenu() {
+        document.getElementById("menuTitle").value = menuData.title || ""
+        document.getElementById("menuDescription").value = menuData.description || ""
+
+        const container = document.getElementById("categoriesContainer")
+        container.innerHTML = ""
+
+        menuData.categories.forEach((category, categoryIndex) => {
+          const categoryCard = createCategoryCard(category, categoryIndex)
+          container.appendChild(categoryCard)
+        })
+      }
+
+      function createCategoryCard(category, categoryIndex) {
+        const card = document.createElement("div")
+        card.className = "category-card bg-white rounded-lg p-6 shadow-sm"
+        card.setAttribute("draggable", "true")
+        card.dataset.categoryIndex = categoryIndex
+
+        card.addEventListener("dragstart", handleCategoryDragStart)
+        card.addEventListener("dragover", handleCategoryDragOver)
+        card.addEventListener("drop", handleCategoryDrop)
+        card.addEventListener("dragend", handleCategoryDragEnd)
+
+        const escapedName = escapeHtml(category.name)
+        card.innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-blue-600 cursor-pointer" ondblclick="editCategory(${categoryIndex})">
+                        ${escapedName}
+                    </h2>
+                    <div class="flex gap-2">
+                        <button onclick="addCommand(${categoryIndex})" class="btn btn-secondary text-sm">
+                            ➕ 添加命令
+                        </button>
+                        <button onclick="deleteCategory(${categoryIndex})" class="btn btn-danger text-sm">
+                            🗑️ 删除分类
+                        </button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-4" id="commands-${categoryIndex}">
+                    ${category.commands.map((cmd, cmdIndex) => createCommandHTML(cmd, categoryIndex, cmdIndex)).join("")}
+                </div>
+            `
+
+        return card
+      }
+
+      function createCommandHTML(command, categoryIndex, commandIndex) {
+        const escapedCmd = escapeHtml(command.cmd)
+        const escapedDesc = escapeHtml(command.desc)
+        return `
+                <div class="command-item bg-gray-50 p-4 rounded-md border border-gray-200" 
+                     draggable="true"
+                     data-category-index="${categoryIndex}"
+                     data-command-index="${commandIndex}"
+                     ondblclick="editCommand(${categoryIndex}, ${commandIndex})"
+                     ondragstart="handleCommandDragStart(event)"
+                     ondragover="handleCommandDragOver(event)"
+                     ondrop="handleCommandDrop(event)"
+                     ondragend="handleCommandDragEnd(event)">
+                    <code class="command text-sm font-mono block mb-2">${escapedCmd}</code>
+                    <p class="text-gray-700 text-sm">${escapedDesc}</p>
+                    <button onclick="deleteCommand(${categoryIndex}, ${commandIndex}); event.stopPropagation();" 
+                            class="mt-2 text-red-500 text-xs hover:text-red-700">
+                        删除
+                    </button>
+                </div>
+            `
+      }
+
+      let draggedCategory = null
+      function handleCategoryDragStart(e) {
+        draggedCategory = this
+        this.classList.add("dragging")
+      }
+
+      function handleCategoryDragOver(e) {
+        e.preventDefault()
+        if (this !== draggedCategory) {
+          this.classList.add("drag-over")
+        }
+      }
+
+      function handleCategoryDrop(e) {
+        e.preventDefault()
+        this.classList.remove("drag-over")
+
+        if (this !== draggedCategory) {
+          const fromIndex = parseInt(draggedCategory.dataset.categoryIndex)
+          const toIndex = parseInt(this.dataset.categoryIndex)
+
+          const [movedItem] = menuData.categories.splice(fromIndex, 1)
+          menuData.categories.splice(toIndex, 0, movedItem)
+
+          renderMenu()
+        }
+      }
+
+      function handleCategoryDragEnd(e) {
+        this.classList.remove("dragging")
+        document.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"))
+      }
+
+      let draggedCommand = null
+      function handleCommandDragStart(e) {
+        draggedCommand = e.target
+        e.target.classList.add("dragging")
+        e.stopPropagation()
+      }
+
+      function handleCommandDragOver(e) {
+        e.preventDefault()
+        e.stopPropagation()
+        if (
+          e.target.closest(".command-item") &&
+          e.target.closest(".command-item") !== draggedCommand
+        ) {
+          e.target.closest(".command-item").classList.add("drag-over")
+        }
+      }
+
+      function handleCommandDrop(e) {
+        e.preventDefault()
+        e.stopPropagation()
+
+        const targetItem = e.target.closest(".command-item")
+        if (targetItem && targetItem !== draggedCommand) {
+          targetItem.classList.remove("drag-over")
+
+          const fromCategoryIndex = parseInt(draggedCommand.dataset.categoryIndex)
+          const fromCommandIndex = parseInt(draggedCommand.dataset.commandIndex)
+          const toCategoryIndex = parseInt(targetItem.dataset.categoryIndex)
+          const toCommandIndex = parseInt(targetItem.dataset.commandIndex)
+
+          if (fromCategoryIndex === toCategoryIndex) {
+            const commands = menuData.categories[fromCategoryIndex].commands
+            const [movedItem] = commands.splice(fromCommandIndex, 1)
+            commands.splice(toCommandIndex, 0, movedItem)
+          } else {
+            const [movedItem] = menuData.categories[fromCategoryIndex].commands.splice(
+              fromCommandIndex,
+              1,
+            )
+            menuData.categories[toCategoryIndex].commands.splice(toCommandIndex, 0, movedItem)
+          }
+
+          renderMenu()
+        }
+      }
+
+      function handleCommandDragEnd(e) {
+        e.target.classList.remove("dragging")
+        document.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"))
+      }
+
+      function editCategory(index) {
+        editingCategoryIndex = index
+        document.getElementById("categoryName").value = menuData.categories[index].name
+        document.getElementById("categoryModal").classList.add("show")
+      }
+
+      function closeCategoryModal() {
+        document.getElementById("categoryModal").classList.remove("show")
+        editingCategoryIndex = -1
+      }
+
+      function saveCategoryEdit() {
+        if (editingCategoryIndex >= 0) {
+          menuData.categories[editingCategoryIndex].name =
+            document.getElementById("categoryName").value
+          renderMenu()
+          closeCategoryModal()
+        }
+      }
+
+      function addCategory() {
+        menuData.categories.push({
+          name: "新分类",
+          commands: [],
+        })
+        renderMenu()
+      }
+
+      function deleteCategory(index) {
+        if (confirm("确定要删除这个分类吗？")) {
+          menuData.categories.splice(index, 1)
+          renderMenu()
+        }
+      }
+
+      function editCommand(categoryIndex, commandIndex) {
+        currentCategoryIndex = categoryIndex
+        editingCommandIndex = commandIndex
+        const command = menuData.categories[categoryIndex].commands[commandIndex]
+        document.getElementById("commandCmd").value = command.cmd
+        document.getElementById("commandDesc").value = command.desc
+        document.getElementById("commandModal").classList.add("show")
+      }
+
+      function closeCommandModal() {
+        document.getElementById("commandModal").classList.remove("show")
+        editingCommandIndex = -1
+        currentCategoryIndex = -1
+      }
+
+      function saveCommandEdit() {
+        if (currentCategoryIndex >= 0 && editingCommandIndex >= 0) {
+          menuData.categories[currentCategoryIndex].commands[editingCommandIndex] = {
+            cmd: document.getElementById("commandCmd").value,
+            desc: document.getElementById("commandDesc").value,
+          }
+          renderMenu()
+          closeCommandModal()
+        }
+      }
+
+      function addCommand(categoryIndex) {
+        menuData.categories[categoryIndex].commands.push({
+          cmd: "新命令",
+          desc: "命令说明",
+        })
+        renderMenu()
+      }
+
+      function deleteCommand(categoryIndex, commandIndex) {
+        menuData.categories[categoryIndex].commands.splice(commandIndex, 1)
+        renderMenu()
+      }
+
+      async function saveMenu() {
+        menuData.title = document.getElementById("menuTitle").value
+        menuData.description = document.getElementById("menuDescription").value
+
+        try {
+          const response = await fetch("/api/config/menu", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data: menuData }),
+          })
+          const result = await response.json()
+          if (result.success) {
+            alert("✅ 保存成功！")
+          } else {
+            alert("❌ 保存失败: " + result.error)
+          }
+        } catch (error) {
+          alert("❌ 保存失败: " + error.message)
+        }
+      }
+
+      function previewMenu() {
+        const previewFrame = document.getElementById("previewFrame")
+        const menuHtml = generatePreviewHTML()
+
+        previewFrame.srcdoc = menuHtml
+        document.getElementById("previewModal").classList.add("show")
+      }
+
+      function closePreviewModal() {
+        document.getElementById("previewModal").classList.remove("show")
+      }
+
+      function generatePreviewHTML() {
+        const categoriesHTML = menuData.categories
+          .map(cat => {
+            const commandsHTML = cat.commands
+              .map(
+                cmd => `
+                    <div class="bg-gray-50 p-4 rounded-md">
+                        <code class="command">${escapeHtml(cmd.cmd)}</code>
+                        <p class="text-sm text-gray-700 mt-2">${escapeHtml(cmd.desc)}</p>
+                    </div>
+                `,
+              )
+              .join("")
+
+            return `
+                    <div class="mb-6">
+                        <h2 class="text-xl font-bold text-blue-600 mb-4">${escapeHtml(cat.name)}</h2>
+                        <div class="grid grid-cols-3 gap-4">
+                            ${commandsHTML}
+                        </div>
+                    </div>
+                `
+          })
+          .join("")
+
+        return `<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>预览</title>
+    <script src="https://cdn.tailwindcss.com"><\/script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Fira+Code:wght@500&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: "Inter", sans-serif; background-color: #f0f2f5; padding: 20px; }
+        .command { font-family: "Fira Code", monospace; background-color: rgba(255, 255, 255, 0.5); padding: 4px 8px; border-radius: 6px; font-size: 0.9em; display: inline-block; }
+    </style>
+</head>
+<body>
+    <div class="max-w-4xl mx-auto bg-white rounded-lg p-6">
+        <h1 class="text-3xl font-bold text-center mb-2">${escapeHtml(menuData.title)}</h1>
+        <p class="text-center text-gray-600 mb-6">${escapeHtml(menuData.description)}</p>
+        ${categoriesHTML}
+    </div>
+</body>
+</html>`
+      }
+
+      function escapeHtml(text) {
+        const div = document.createElement("div")
+        div.textContent = text
+        return div.innerHTML
+      }
+
+      init()
+
+      function createSakura() {
+        const container = document.getElementById("sakuraContainer")
+        if (!container) return
+
+        const sakura = document.createElement("div")
+        sakura.className = "sakura"
+
+        sakura.style.left = Math.random() * 100 + "%"
+
+        const size = Math.random() * 10 + 5
+        sakura.style.width = size + "px"
+        sakura.style.height = size + "px"
+
+        const duration = Math.random() * 10 + 10
+        sakura.style.animationDuration = duration + "s"
+
+        sakura.style.animationDelay = Math.random() * 5 + "s"
+
+        container.appendChild(sakura)
+
+        setTimeout(
+          () => {
+            sakura.remove()
+          },
+          (duration + 5) * 1000,
+        )
+      }
+
+      setInterval(createSakura, 300)
+
+      for (let i = 0; i < 20; i++) {
+        setTimeout(createSakura, i * 100)
+      }
+    </script>
+  </body>
+</html>
