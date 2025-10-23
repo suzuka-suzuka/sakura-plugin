@@ -39,8 +39,13 @@ export class Permission extends plugin {
     if (isNaN(targetQQ)) {
       return false
     }
-    const targetMember = e.group.pickMember(targetQQ)
-    const memberInfo = await targetMember.getInfo(true)
+    let memberInfo
+    try {
+      memberInfo = await e.group.pickMember(targetQQ).getInfo(true)
+    } catch {
+      memberInfo = (await e.group.pickMember(targetQQ)).info
+    }
+
     const memberName = memberInfo?.card || memberInfo?.nickname || targetQQ
     const config = this.appconfig
 

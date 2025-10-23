@@ -6,7 +6,7 @@ import axios from 'axios';
 import _ from 'lodash';
 import crypto from 'crypto';
 import { buildStickerMsg } from '../lib/ImageUtils/ImageUtils.js';
-
+import adapter from "../lib/adapter.js"
 export class TextMsg extends plugin {
   constructor() {
     super({
@@ -25,6 +25,14 @@ export class TextMsg extends plugin {
 
     this.rootDir = path.join(plugindata, `EmojiThief`);
     this.jsonDbPath = path.join(this.rootDir, 'EmojiThief.json');
+  }
+
+  sendImage(file) {
+    if (adapter === 0) {
+      return segment.image(file)
+    } else {
+      return buildStickerMsg(file)
+    }
   }
 
   task = {
@@ -67,7 +75,7 @@ export class TextMsg extends plugin {
     let hasNewEmoji = false;
 
     for (const item of e.message) {
-      if ((item.type === 'image' && item.sub_type === 1) || item.type === 'mface') {
+      if (item.type === 'image' && (item.sub_type === 1 || item.emoji_id)) {
         try {
           const response = await axios.get(item.url, { responseType: 'arraybuffer', timeout: 10000 });
           const buffer = response.data;
@@ -119,7 +127,7 @@ export class TextMsg extends plugin {
           return false
         }
         logger.info(`触发表情包`);
-        await e.reply(buildStickerMsg(emojiPath));
+        await e.reply(this.sendImage(emojiPath));
       } catch (error) {
         logger.error(`表情包发送失败: ${error}`);
       }

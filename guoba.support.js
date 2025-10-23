@@ -238,34 +238,6 @@ export function supportGuoba() {
           },
         },
         {
-          field: "Channels.vertex",
-          label: "Vertex",
-          bottomHelpMessage: "Vertex AI 类型的渠道。",
-          component: "GSubForm",
-          required: false,
-          componentProps: {
-            multiple: true,
-            schemas: [
-              { field: "name", label: "渠道名称", component: "Input", required: true },
-              { field: "model", label: "模型名称", component: "Input", required: true },
-            ],
-          },
-        },
-        {
-          field: "Vertex.PROJECT_ID",
-          label: "项目id",
-          bottomHelpMessage: "GCP的项目id，用于Vertex AI",
-          component: "Input",
-          required: true,
-        },
-        {
-          field: "Vertex.LOCATION",
-          label: "地区",
-          component: "Input",
-          bottomHelpMessage: "Vertex AI的地区",
-          required: true,
-        },
-        {
           label: "AI设定",
           component: "SOFT_GROUP_BEGIN",
         },
@@ -327,6 +299,36 @@ export function supportGuoba() {
           required: true,
           bottomHelpMessage:
             "启用后，每个用户处理完当前消息前，不会处理该用户的后续消息，直到当前消息处理完毕",
+        },
+        {
+          field: "AI.toolschannel",
+          label: "工具渠道",
+          component: "Input",
+          required: false,
+          bottomHelpMessage: "用于工具功能的AI渠道",
+        },
+        {
+          field: "AI.appschannel",
+          label: "应用渠道",
+          component: "Input",
+          required: false,
+          bottomHelpMessage: "用于应用功能的AI渠道",
+        },
+        {
+          field: "AI.defaultchannel",
+          label: "默认渠道",
+          component: "Input",
+          required: false,
+          bottomHelpMessage: "当指定渠道不可用时使用的备用渠道",
+        },
+        {
+          field: "mimic.Groups",
+          label: "伪人启用群",
+          component: "GSelectGroup",
+          required: false,
+          componentProps: {
+            multiple: true,
+          },
         },
         {
           field: "mimic.Channel",
@@ -446,6 +448,26 @@ export function supportGuoba() {
         {
           label: "其他",
           component: "SOFT_GROUP_BEGIN",
+        },
+        {
+          label: "web编辑器",
+          component: "Divider",
+        },
+        {
+          field: "webeditor.port",
+          label: "端口",
+          component: "InputNumber",
+          required: true,
+          componentProps: {
+            min: 1,
+            max: 65535,
+          },
+        },
+        {
+          field: "webeditor.password",
+          label: "密码",
+          component: "Input",
+          required: true,
         },
         {
           label: "戳一戳回复",

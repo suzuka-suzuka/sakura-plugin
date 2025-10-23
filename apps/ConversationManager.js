@@ -11,7 +11,6 @@ import {
   clearAllConversationHistories,
 } from "../lib/AIUtils/ConversationHistory.js"
 import { makeForwardMsg } from "../lib/utils.js"
-
 export class Conversationmanagement extends plugin {
   constructor() {
     super({
@@ -116,23 +115,28 @@ export class Conversationmanagement extends plugin {
           senderName: e.sender.card || e.sender.nickname || e.user_id,
         })
       } else if (item.role === "model") {
-        const botUin = e.self_id || e.bot?.uin
         let name
         if (e.isGroup) {
-          const info = await e.group.pickMember(botUin).getInfo(true)
+          let info
+          try {
+            info = await e.group.pickMember(e.self_id).getInfo(true)
+          } catch {
+            info = (await e.group.pickMember(Number(e.self_id))).info
+          }
           name = info?.card || info?.nickname
         } else {
           name = e.bot.nickname
         }
         messagesWithSender.push({
           text: `${item.parts[0].text}`,
-          senderId: botUin,
+          senderId: e.self_id,
           senderName: name,
         })
       }
     }
 
     await makeForwardMsg(e, messagesWithSender, `「${profileName}」对话历史`)
+
     return true
   }
 
@@ -281,15 +285,20 @@ export class Conversationmanagement extends plugin {
         avatar: `http://q1.qlogo.cn/g?b=qq&nk=${e.user_id}&s=640`,
       }
 
-      const botUin = e.self_id || e.bot?.uin
+      
       let botName = e.bot.nickname
       if (e.isGroup) {
-        const info = await e.group.pickMember(botUin).getInfo(true)
+        let info
+        try {
+          info = await e.group.pickMember(e.self_id).getInfo(true)
+        } catch {
+          info = (await e.group.pickMember(Number(e.self_id))).info
+        }
         botName = info?.card || info?.nickname || botName
       }
       const bot = {
         name: botName,
-        avatar: `http://q1.qlogo.cn/g?b=qq&nk=${botUin}&s=640`,
+        avatar: `http://q1.qlogo.cn/g?b=qq&nk=${e.self_id}&s=640`,
       }
 
       const templatePath = path.join(pluginresources, "AI", "chat_history.html")

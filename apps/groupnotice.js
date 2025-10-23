@@ -1,7 +1,7 @@
 import { getAI } from "../lib/AIUtils/getAI.js"
 import { parseAtMessage } from "../lib/AIUtils/messaging.js"
+import Setting from "../lib/setting.js"
 
-const AI_CHANNEL = "2.5"
 const AI_PROMPT =
   "你是一个QQ群的成员。你的任务是根据群成员的变动（新成员加入或成员离开）以及最近的群聊记录，生成一个自然、得体的回应。当有新人加入时，你可以根据最近的聊天内容，简单告知新人大家在聊什么，并表示欢迎。当有成员离开时，你可以根据聊天内容推测可能的原因（如果可能的话），或者仅仅表达惋惜。你的回应应该简短、友好，并像一个真正的群成员一样融入对话。下面是具体的情景和聊天记录："
 const USE_GROUP_CONTEXT = true
@@ -129,7 +129,7 @@ export class groupNoticeAI extends plugin {
     const query = `新成员 ${name}(QQ:${mockE.user_id})刚刚加入了群聊。请根据聊天上下文，写一句欢迎词欢迎他。`
     try {
       const aiResponse = await getAI(
-        AI_CHANNEL,
+        Setting.getConfig("AI").appschannel,
         mockE,
         [{ text: query }],
         AI_PROMPT,
@@ -160,7 +160,7 @@ export class groupNoticeAI extends plugin {
     const query = `成员${name}(QQ:${mockE.user_id}) 刚刚离开了群聊。请根据聊天上下文，写一句简短的告别。`
     try {
       const aiResponse = await getAI(
-        AI_CHANNEL,
+        Setting.getConfig("AI").appschannel,
         mockE,
         [{ text: query }],
         AI_PROMPT,

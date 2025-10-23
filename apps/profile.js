@@ -2,6 +2,7 @@ import { getAI } from "../lib/AIUtils/getAI.js"
 import { marked } from "marked"
 import puppeteer from "puppeteer"
 import { makeForwardMsg } from "../lib/utils.js"
+import Setting from "../lib/setting.js"
 
 export class UserProfilePlugin extends plugin {
   constructor() {
@@ -49,8 +50,13 @@ export class UserProfilePlugin extends plugin {
                   return "@全体成员"
                 }
                 try {
-                  const info = await e.group.pickMember(part.qq).getInfo(true)
-                  const atNickname = info.card || info.nickname || part.qq
+                  let info
+                  try {
+                    info = await e.group.pickMember(part.qq).getInfo(true)
+                  } catch {
+                    info = (await e.group.pickMember(Number(part.qq))).info
+                  }
+                  const atNickname = info?.card || info?.nickname || part.qq
                   return `@${atNickname}`
                 } catch (err) {
                   logger.error(`获取用户 ${part.qq} 的信息失败:`, err)
@@ -78,7 +84,7 @@ ${rawChatHistory}`
 
       try {
         const queryParts = [{ text: aiPrompt }]
-        const Channel = "2.5"
+        const Channel = Setting.getConfig("AI").appschannel || "2.5"
         const result = await getAI(Channel, e, queryParts, null, false, false, [])
 
         if (result && result.text) {

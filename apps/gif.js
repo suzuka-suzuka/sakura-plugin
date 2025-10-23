@@ -1,5 +1,6 @@
 import { getgif,buildStickerMsg } from '../lib/ImageUtils/ImageUtils.js';
 import Setting from "../lib/setting.js"
+import adapter from "../lib/adapter.js"
 export class gifPlugin extends plugin {
 	constructor() {
 		super({
@@ -26,7 +27,11 @@ export class gifPlugin extends plugin {
 			const apiUrl = `https://tenor.googleapis.com/v2/search?key=${config.apiKey}&q=${encodeURIComponent(keyword)}&media_filter=gif&random=true&limit=1`;
 			const imageUrl = await getgif(apiUrl);
 			if (imageUrl) {
-				await e.reply(buildStickerMsg(imageUrl));
+				if (adapter === 0) {
+					await e.reply(segment.image(imageUrl));
+				} else {
+					await e.reply(buildStickerMsg(imageUrl));
+				}
 			} else {
 				await e.reply("找不到相关的表情包呢~", true);
 			}

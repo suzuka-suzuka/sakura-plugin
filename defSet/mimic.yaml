@@ -6,3 +6,4 @@ triggerWords:
 alternatePromptProbability: 0.1
 Channel: "2.5"
 enableGroupLock: false
+Groups: []

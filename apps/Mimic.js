@@ -46,6 +46,10 @@ export class Mimic extends plugin {
   }
 
   async doMimic(e) {
+    if (!this.appconfig.Groups.includes(e.group_id)) {
+      return false
+    }
+
     let contentParts = []
     if (e.message && Array.isArray(e.message) && e.message.length > 0) {
       e.message.forEach(msgPart => {
@@ -82,7 +86,12 @@ export class Mimic extends plugin {
     let isNewMember = false
     if (e.isGroup) {
       try {
-        const memberInfo = await e.group.pickMember(e.user_id).getInfo(true)
+        let memberInfo
+        try {
+          memberInfo = await e.group.pickMember(e.user_id).getInfo(true)
+        } catch {
+          memberInfo = (await e.group.pickMember(Number(e.user_id))).info
+        }
         if (memberInfo?.join_time) {
           const joinTime = memberInfo.join_time
           const currentTime = Math.floor(Date.now() / 1000)

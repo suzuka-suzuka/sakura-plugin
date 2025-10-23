@@ -10,7 +10,7 @@ const configSchema = {
     {
       name: "AI渠道",
       icon: "🤖",
-      configs: ["Channels", "Vertex"],
+      configs: ["Channels"],
     },
     {
       name: "AI设定",
@@ -59,7 +59,6 @@ const configSchema = {
     summary: "图片外显",
     teatime: "下午茶",
     tenor: "Tenor表情",
-    Vertex: "Vertex AI",
     webeditor: "配置面板",
   },
 
@@ -196,16 +195,6 @@ const configSchema = {
         },
       },
     },
-    "Channels.vertex": {
-      label: "Vertex",
-      type: "array",
-      itemType: "object",
-      help: "Vertex AI 类型的渠道",
-      schema: {
-        name: { label: "渠道名称", type: "text", required: true },
-        model: { label: "模型名称", type: "text", required: true },
-      },
-    },
     openai: {
       label: "OpenAI渠道",
       type: "array",
@@ -237,20 +226,6 @@ const configSchema = {
         },
       },
     },
-    vertex: {
-      label: "Vertex渠道",
-      type: "array",
-      itemType: "object",
-      schema: {
-        name: { label: "渠道名称", type: "text", required: true },
-        model: { label: "模型名称", type: "text", required: true },
-      },
-    },
-
-    "Vertex.PROJECT_ID": { label: "项目id", type: "text", help: "GCP的项目id，用于Vertex AI" },
-    "Vertex.LOCATION": { label: "地区", type: "text", help: "Vertex AI的地区" },
-    PROJECT_ID: { label: "项目ID", type: "text", help: "GCP项目ID" },
-    LOCATION: { label: "地区", type: "text", help: "Vertex AI地区，如us-central1" },
 
     "AI.profiles": {
       label: "角色配置",
@@ -288,6 +263,21 @@ const configSchema = {
       type: "boolean",
       help: "启用后，每个用户处理完当前消息前，不会处理该用户的后续消息，直到当前消息处理完毕",
     },
+    "AI.toolschannel": {
+      label: "工具渠道",
+      type: "text",
+      help: "用于AI工具的渠道，必须是gemini渠道",
+    },
+    "AI.appschannel": {
+      label: "应用渠道",
+      type: "text",
+      help: "用于杂项功能(戳一戳，画像，早晚安，进退群等)的渠道",
+    },
+    "AI.defaultchannel": {
+      label: "默认渠道",
+      type: "text",
+      help: "当指定渠道不可用时使用的备用渠道，建议设为gemini渠道",
+    },
     profiles: {
       label: "角色配置",
       type: "array",
@@ -305,6 +295,7 @@ const configSchema = {
     groupContextLength: { label: "群聊上下文长度", type: "number", min: 1 },
     enableUserLock: { label: "启用用户锁", type: "boolean", help: "防止用户消息并发处理" },
 
+    "mimic.Groups": { label: "启用群", type: "groupSelect" },
     "mimic.Channel": { label: "伪人渠道", type: "text" },
     "mimic.Prompt": { label: "伪人预设", type: "textarea", help: "默认预设" },
     "mimic.alternatePrompt": {

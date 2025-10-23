@@ -7,6 +7,7 @@ import { getgif, yandeimage, buildStickerMsg } from "../lib/ImageUtils/ImageUtil
 import Setting from "../lib/setting.js"
 import _ from "lodash"
 import { getAI } from "../lib/AIUtils/getAI.js"
+import adapter from "../lib/adapter.js"
 
 let CD = false
 let CD_A = false
@@ -40,12 +41,20 @@ export class poke extends plugin {
     return Setting.getConfig("poke")
   }
 
+  sendImage(file) {
+    if (adapter === 0) {
+      return segment.image(file)
+    } else {
+      return buildStickerMsg(file)
+    }
+  }
+
   async sendgif(e) {
     const config = Setting.getConfig("tenor")
     const apiUrl = `https://tenor.googleapis.com/v2/search?key=${config.apiKey}&q=anime&media_filter=gif&random=true&limit=1`
     const imageUrl = await getgif(apiUrl)
     if (imageUrl) {
-      await e.reply(buildStickerMsg(imageUrl))
+      await e.reply(this.sendImage(imageUrl))
     }
   }
 
@@ -54,8 +63,18 @@ export class poke extends plugin {
   }
 
   async checkAndMute(e, duration) {
-    const bot = await e.group.pickMember(e.self_id).getInfo(true)
-    const member = await e.group.pickMember(e.operator_id).getInfo(true)
+    let bot
+    try {
+      bot = await e.group.pickMember(e.self_id).getInfo(true)
+    } catch {
+      bot = (await e.group.pickMember(Number(e.self_id))).info
+    }
+    let member
+    try {
+      member = await e.group.pickMember(e.operator_id).getInfo(true)
+    } catch {
+      member = (await e.group.pickMember(Number(e.operator_id))).info
+    }
 
     if (bot.role !== "admin" && bot.role !== "owner") {
       return false
@@ -82,7 +101,7 @@ export class poke extends plugin {
     }
 
     const queryParts = [{ text: promptText }]
-    const Channel = "2.5"
+    const Channel = Setting.getConfig("AI").appschannel
     try {
       const result = await getAI(Channel, e, queryParts, systemInstruction, false, false, [])
       return result.text || "唔...被戳的坏掉了"
@@ -127,7 +146,7 @@ export class poke extends plugin {
     if (shouldReply[e.operator_id]) {
       e.reply("姑且还是理你一下吧...")
       await common.sleep(500)
-      e.reply(buildStickerMsg(this.getPokeImagePath("5.gif")))
+      e.reply(this.sendImage(this.getPokeImagePath("5.gif")))
       delete shouldReply[e.operator_id]
       return false
     }
@@ -148,18 +167,28 @@ export class poke extends plugin {
           let msg = _.sample(pokeConfig.MASTER_REPLIES)
           await e.reply(msg)
         } else if (retype === 2) {
-          const bot = await e.group.pickMember(e.self_id).getInfo(true)
+          let bot
+          try {
+            bot = await e.group.pickMember(e.self_id).getInfo(true)
+          } catch {
+            bot = (await e.group.pickMember(Number(e.self_id))).info
+          }
 
           if (bot && bot.role !== "member") {
-            const member = await e.group.pickMember(e.operator_id).getInfo(true)
-            const Name = member.card || member.nickname
+            let member
+            try {
+              member = await e.group.pickMember(e.operator_id).getInfo(true)
+            } catch {
+              member = (await e.group.pickMember(Number(e.operator_id))).info
+            }
+            const Name = member?.card || member?.nickname || member.user_id
 
             const queryParts = [
               {
                 text: `请把“${Name}”这个名字变得更中二病一些，请只输出一个新名字。`,
               },
             ]
-            const Channel = "2.5"
+            const Channel = Setting.getConfig("AI").appschannel
             const result = await getAI(Channel, e, queryParts, null, false, false, [])
             const newCard = result.text
             await e.group.setCard(e.operator_id, newCard)
@@ -222,10 +251,10 @@ export class poke extends plugin {
 
         switch (counter) {
           case "1":
-            e.reply(buildStickerMsg(this.getPokeImagePath("1.gif")))
+            e.reply(this.sendImage(this.getPokeImagePath("1.gif")))
             break
           case "5":
-            e.reply(buildStickerMsg(this.getPokeImagePath("2.gif")))
+            e.reply(this.sendImage(this.getPokeImagePath("2.gif")))
             await common.sleep(500)
             await this.checkAndMute(e, 60 * (usercount + 1))
             await common.sleep(1000)
@@ -239,7 +268,7 @@ export class poke extends plugin {
           case "10":
             e.reply("你好烦呀,不想理你了!")
             await common.sleep(500)
-            e.reply(buildStickerMsg(this.getPokeImagePath("3.gif")))
+            e.reply(this.sendImage(this.getPokeImagePath("3.gif")))
             ignoreList[e.operator_id] = true
             const userIdToIgnore = e.operator_id
             const ignoreDuration = 60000 * (usercount + 1)
@@ -256,7 +285,7 @@ export class poke extends plugin {
             }, ignoreDuration)
             break
           case "15":
-            e.reply(buildStickerMsg(this.getPokeImagePath("1.jpg")))
+            e.reply(this.sendImage(this.getPokeImagePath("1.jpg")))
             await common.sleep(500)
             if (await this.checkAndMute(e, 60 * (usercount + 1))) {
               await common.sleep(1000)
@@ -264,7 +293,7 @@ export class poke extends plugin {
             }
             break
           case "25":
-            e.reply(buildStickerMsg(this.getPokeImagePath("2.jpg")))
+            e.reply(this.sendImage(this.getPokeImagePath("2.jpg")))
             await common.sleep(500)
             if (await this.checkAndMute(e, 60 * (usercount + 1))) {
               await common.sleep(1000)
@@ -273,7 +302,7 @@ export class poke extends plugin {
             break
           case "30":
             e.reply("被戳、戳晕了...")
-            e.reply(buildStickerMsg(this.getPokeImagePath("4.gif")))
+            e.reply(this.sendImage(this.getPokeImagePath("4.gif")))
             ignorePoke[e.group_id] = true
             setTimeout(() => {
               ignorePoke[e.group_id] = false
@@ -354,16 +383,16 @@ export class poke extends plugin {
                 case 1:
                   e.reply("再戳小叶就用小拳拳捶你了(ꐦ°᷄д°᷅)")
                   await common.sleep(500)
-                  e.reply(buildStickerMsg(this.getPokeImagePath("14.jpg")))
+                  e.reply(this.sendImage(this.getPokeImagePath("14.jpg")))
                   break
                 case 2:
                   e.reply("救命啊，有变态>_<！！！")
-                  e.reply(buildStickerMsg(this.getPokeImagePath("6.gif")))
+                  e.reply(this.sendImage(this.getPokeImagePath("6.gif")))
                   break
                 case 3:
                   e.reply("咳哈哈哈哈——！")
                   await common.sleep(500)
-                  e.reply(buildStickerMsg(this.getPokeImagePath("7.gif")))
+                  e.reply(this.sendImage(this.getPokeImagePath("7.gif")))
                   await common.sleep(500)
                   e.reply("别挠我痒痒了！")
                   await common.sleep(500)
@@ -372,7 +401,7 @@ export class poke extends plugin {
                 case 4:
                   e.reply("混乱中，无法理解的行动。请不要戳我，发生故障。")
                   await common.sleep(500)
-                  e.reply(buildStickerMsg(this.getPokeImagePath("8.gif")))
+                  e.reply(this.sendImage(this.getPokeImagePath("8.gif")))
                   nextreply[e.operator_id] = true
                   const userIdForNextReply = e.operator_id
                   setTimeout(() => {
@@ -385,7 +414,7 @@ export class poke extends plugin {
                 case 5:
                   e.reply("就、就算那样戳我，也不会掉落什么哦……")
                   await common.sleep(500)
-                  e.reply(buildStickerMsg(this.getPokeImagePath("9.gif")))
+                  e.reply(this.sendImage(this.getPokeImagePath("9.gif")))
                   await common.sleep(500)
                   e.reply("小叶又不是怪物！")
                   break
@@ -458,7 +487,7 @@ export class poke extends plugin {
                   await common.sleep(1000)
                   e.reply("超级加倍！让你见识一下小叶的厉害！")
                   await common.sleep(1000)
-                  e.reply(buildStickerMsg(this.getPokeImagePath("10.gif")))
+                  e.reply(this.sendImage(this.getPokeImagePath("10.gif")))
                   break
                 case 3:
                   let msg_text = _.sample(pokeConfig.POKE_BACK_TEXT_REPLIES)

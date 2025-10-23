@@ -8,3 +8,6 @@ profiles:
     Tool: true
 groupContextLength: 20
 enableUserLock: false
+toolschannel: "default"
+appschannel: "2.5"
+defaultchannel: "default"
