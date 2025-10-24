@@ -57,23 +57,48 @@ export class bilibili extends plugin {
               const rawUrl = innerJsonData?.meta?.detail_1?.qqdocurl
               if (rawUrl) {
                 url = rawUrl.replace(/\\/g, "")
+                logger.info(`从JSON消息提取到URL: ${url}`)
               }
             } catch (error) {}
+          }
+
+          if (!url) {
+            for (const msg of e.message) {
+              if (msg.type === "text" && msg.text) {
+                const genericMatches = msg.text.match(/https?:\/\/\S+/g)
+                if (genericMatches && genericMatches.length > 0) {
+                  for (const candidate of genericMatches) {
+                    if (candidate.includes("b23.tv") || candidate.includes("bilibili.com")) {
+                      url = candidate
+                      break
+                    }
+                  }
+                  if (url) break
+                }
+              }
+            }
           }
         }
 
         if (!url && e.msg) {
-          const urlMatch = e.msg.match(/(https?:\/\/[^\s]+(b23.tv|bilibili.com)[^\s]*)/)
-          if (urlMatch) {
-            url = urlMatch[0]
+          const genericMatches = e.msg.match(/https?:\/\/\S+/g)
+          if (genericMatches && genericMatches.length > 0) {
+            for (const candidate of genericMatches) {
+              if (candidate.includes("b23.tv") || candidate.includes("bilibili.com")) {
+                url = candidate
+                break
+              }
+            }
           }
         }
 
         if (!url) {
+          logger.warn("未能提取到URL")
           return false
         }
 
         bvId = await this.getBvIdFromUrl(url)
+        logger.info(`从URL获取到BV: ${bvId}`)
       }
 
       if (!bvId) {
@@ -84,14 +109,19 @@ export class bilibili extends plugin {
 
       const videoInfo = await this.getVideoInfo(bvId)
       if (!videoInfo) {
+        logger.warn("获取视频信息失败")
         return false
       }
+      logger.info(`视频信息获取成功: 标题=${videoInfo.title}, 时长=${videoInfo.duration}`)
 
       const comments = await this.getComments(videoInfo.aid)
 
       await this.sendVideoInfoCard(videoInfo, comments)
 
       if (videoInfo.duration > MAX_VIDEO_DURATION) {
+        logger.info(
+          `视频时长 ${videoInfo.duration} 超过最大限制 ${MAX_VIDEO_DURATION}，跳过发送视频`,
+        )
         return false
       }
 
@@ -103,10 +133,13 @@ export class bilibili extends plugin {
 
       const playUrls = await this.getPlayUrls(bvId, videoInfo.cid, videoInfo.duration)
       if (!playUrls) {
+        logger.warn("获取播放URL失败")
         return false
       }
+      logger.info("获取播放URL成功，开始处理视频")
       await this.processAndSendVideo(bvId, playUrls)
       lastVideoSentTimestamp = Date.now()
+      logger.info("视频处理并发送完成")
     } catch (error) {
       logger.error("处理过程中发生未知错误:", error)
     }
