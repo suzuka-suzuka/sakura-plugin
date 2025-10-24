@@ -9,5 +9,5 @@ profiles:
 groupContextLength: 20
 enableUserLock: false
 toolschannel: "default"
-appschannel: "2.5"
+appschannel: "default"
 defaultchannel: "default"
