@@ -604,6 +604,12 @@ export function supportGuoba() {
             multiple: true,
           },
         },
+        {
+          field: "groupnotice.enable",
+          label: "进退群通知",
+          component: "Switch",
+          required: false,
+        },
       ],
 
       getConfigData() {

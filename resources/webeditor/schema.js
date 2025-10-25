@@ -34,6 +34,7 @@ const configSchema = {
         "AutoCleanup",
         "Permission",
         "webeditor",
+        "groupnotice",
       ],
     },
   ],
@@ -60,6 +61,7 @@ const configSchema = {
     teatime: "下午茶",
     tenor: "Tenor表情",
     webeditor: "配置面板",
+    groupnotice: "进退群通知",
   },
 
   fields: {
@@ -469,6 +471,8 @@ const configSchema = {
       type: "text",
       help: "sakura登录密码，修改后需重启生效",
     },
+
+    "groupnotice.enable": { label: "启用", type: "boolean" },
     port: { label: "端口", type: "number", min: 1024, max: 65535 },
 
     baseURL: { label: "API地址", type: "text" },

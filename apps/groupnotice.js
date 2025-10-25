@@ -103,6 +103,8 @@ export class groupNoticeAI extends plugin {
   async accept() {
     if (this.e.user_id === this.e.self_id) return
 
+    if (!Setting.getConfig("groupnotice").enable) return
+
     const cd = 30
     const key = `sakura:group_notice:cd:${this.e.group_id}`
     if (await redis.get(key)) {
