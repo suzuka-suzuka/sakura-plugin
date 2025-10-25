@@ -51,7 +51,7 @@ export class greeting extends plugin {
   async getAIReply(e, promptText) {
     let systemInstruction = `你是一个元气萝莉，有点小迷糊但很热情。你的核心任务是判断我发的消息（如'早'、'晚安'）是否符合当前时间。如果符合，就正常地用元气满满的口语回复；如果不符合，就要根据当前时间用俏皮、疑惑或吐槽的语气来回应这不合时宜的问候。回复必须非常简短。当前时间是：${moment().format("HH:mm")}。`
     const queryParts = [{ text: promptText }]
-    const Channel = Setting.getConfig("AI").appschannel || "2.5"
+    const Channel = Setting.getConfig("AI").appschannel
     try {
       const result = await getAI(Channel, e, queryParts, systemInstruction, false, false, [])
       return result.text || "嗯嗯~"

@@ -84,7 +84,7 @@ ${rawChatHistory}`
 
       try {
         const queryParts = [{ text: aiPrompt }]
-        const Channel = Setting.getConfig("AI").appschannel || "2.5"
+        const Channel = Setting.getConfig("AI").appschannel
         const result = await getAI(Channel, e, queryParts, null, false, false, [])
 
         if (result && result.text) {

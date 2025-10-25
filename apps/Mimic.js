@@ -29,7 +29,6 @@ export class Mimic extends plugin {
     if (this.appconfig.enableGroupLock && e.isGroup) {
       const lockKey = `sakura:mimic:lock:${e.group_id}`
       if (await redis.get(lockKey)) {
-        logger.info(`[Mimic] 群 ${e.group_id} 正在处理中，跳过此次触发`)
         return false
       }
       await redis.set(lockKey, "1", { EX: 120 })
