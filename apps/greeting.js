@@ -62,12 +62,13 @@ export class greeting extends plugin {
   }
 
   async nightinfo(e) {
-    const userId = e.user_id
-
-    let userdata = (await this.readUserData(userId)) || {}
-
-    const Member = e.bot.pickMember(e.group_id, userId)
-    const Info = await Member.getInfo(true)
+    let userdata = (await this.readUserData(e.user_id)) || {}
+    let Info
+    try {
+      Info = e.group.pickMember(e.user_id).getInfo(true)
+    } catch (error) {
+      Info = (await e.group.pickMember(Number(e.user_id))).info
+    }
     const nickname = Info?.card || Info?.nickname || senderId || "未知用户"
 
     let sexDisplay = "魅魔小萝莉"
@@ -153,12 +154,8 @@ export class greeting extends plugin {
       monightlist[groupId].mlist.push(userId)
 
       let msg = ""
-      if (
-        daydata.ntime &&
-        (moment(daydata.ntime).date() === moment().subtract(1, "d").date() ||
-          moment(daydata.ntime).date() === moment().date())
-      ) {
-        msg = `早安成功！你的睡眠时长为${this.update(daydata.ntime, moment().toISOString())},`
+      if (lastNtime) {
+        msg = `早安成功！你的睡眠时长为${this.update(lastNtime, moment().toISOString())},`
       }
       return e.reply(msg + `你是本群今天第${monightlist[groupId].mnum}个起床的！`, true)
     }
