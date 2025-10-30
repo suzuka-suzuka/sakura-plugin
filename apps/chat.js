@@ -53,7 +53,15 @@ export class AIChat extends plugin {
       return false
     }
 
-    const matchedProfile = config.profiles.find(p => messageText.startsWith(p.prefix))
+    let textToMatch = messageText
+    if (e.message?.[0]?.type === "at") {
+      const atText = `@${e.message[0].qq}`
+      if (textToMatch.startsWith(atText)) {
+        textToMatch = textToMatch.substring(atText.length).trim()
+      }
+    }
+
+    const matchedProfile = config.profiles.find(p => textToMatch.startsWith(p.prefix))
 
     if (!matchedProfile) {
       return false
@@ -61,7 +69,7 @@ export class AIChat extends plugin {
 
     const { prefix, Channel, Prompt, GroupContext, History, Tool } = matchedProfile
 
-    let query = messageText.substring(prefix.length).trim()
+    let query = textToMatch.substring(prefix.length).trim()
 
     const imageUrls = await getImg(e)
     if (!query && (!imageUrls || imageUrls.length === 0)) {
