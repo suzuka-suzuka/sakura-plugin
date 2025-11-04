@@ -4,6 +4,7 @@ alternatePrompt: 你的名字是小叶，你是一个雌小鬼。你通过尖锐
 triggerWords:
   - 小叶
 alternatePromptProbability: 0.1
+recalltime: 10
 Channel: "2.5"
 enableGroupLock: false
 Groups: []

@@ -386,7 +386,17 @@ export function supportGuoba() {
           component: "Switch",
           required: true,
           bottomHelpMessage:
-            "启用后，伪人模式的每个群处理完当前消息前，不会处理该群的后续消息，直到当前消息处理完毕",
+            "启用后,伪人模式的每个群处理完当前消息前,不会处理该群的后续消息,直到当前消息处理完毕",
+        },
+        {
+          field: "mimic.recalltime",
+          label: "撤回时间(秒)",
+          component: "InputNumber",
+          required: true,
+          componentProps: {
+            min: 0,
+          },
+          bottomHelpMessage: "反差预设触发时,消息撤回的延迟时间,单位为秒。设为0则不撤回",
         },
         {
           label: "菜单",

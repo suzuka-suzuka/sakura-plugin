@@ -317,7 +317,13 @@ const configSchema = {
     "mimic.enableGroupLock": {
       label: "是否启用群聊锁",
       type: "boolean",
-      help: "启用后，伪人模式的每个群处理完当前消息前，不会处理该群的后续消息，直到当前消息处理完毕",
+      help: "启用后,伪人模式的每个群处理完当前消息前,不会处理该群的后续消息,直到当前消息处理完毕",
+    },
+    "mimic.recalltime": {
+      label: "撤回时间(秒)",
+      type: "number",
+      min: 0,
+      help: "反差预设触发时,消息撤回的延迟时间,单位为秒。设为0则不撤回",
     },
     Prompt: { label: "预设提示词", type: "textarea" },
     alternatePrompt: { label: "反差预设", type: "textarea" },
