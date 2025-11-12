@@ -16,7 +16,7 @@ export class Favorability extends plugin {
       name: "好感度",
       dsc: "记录群友之间的好感度",
       event: "message.group",
-      priority: 5000,
+      priority: 35,
       rule: [
         {
           reg: "^#?好感度.*$",

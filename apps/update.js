@@ -15,7 +15,7 @@ export class Update extends plugin {
     super({
       name: `更新`,
       event: "message",
-      priority: 1000,
+      priority: 1135,
       rule: [
         {
           reg: `^#?(sakura|樱花)(插件)?(强制)?更新$`,

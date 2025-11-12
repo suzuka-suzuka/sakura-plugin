@@ -4,7 +4,7 @@ export class News60s extends plugin {
   constructor() {
     super({
       name: "60sNews",
-      priority: 35,
+      priority: 1135,
     })
   }
 
