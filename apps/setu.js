@@ -13,7 +13,7 @@ export class setuPlugin extends plugin {
     super({
       name: "setu",
       dsc: "获取图片",
-      event: "message.group",
+      event: "message",
       priority: 1135,
       rule: [
         { reg: REGEX_CONFIG.lolisuki, fnc: "handleApiRequest", log: false },

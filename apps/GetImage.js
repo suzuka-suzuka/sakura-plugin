@@ -18,7 +18,7 @@ export class GetImagePlugin extends plugin {
     super({
       name: "GetImage",
       dsc: "获取 yande/konachan 的图片",
-      event: "message.group",
+      event: "message",
       priority: 1135,
       rule: [
         {

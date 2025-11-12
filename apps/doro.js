@@ -3,7 +3,7 @@ export class DoroEnding extends plugin {
     super({
       name: 'DoroEnding',
       dsc: 'Doro结局图片',
-      event: 'message.group' ,
+      event: 'message' ,
       priority: 1135,
       rule: [
         {

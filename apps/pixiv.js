@@ -8,7 +8,7 @@ export class pixivSearch extends plugin {
     super({
       name: "pixiv搜图",
       dsc: "Ppxiv搜图",
-      event: "message.group",
+      event: "message",
       priority: 1135,
       rule: [
         {

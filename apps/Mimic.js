@@ -77,13 +77,14 @@ export class Mimic extends plugin {
       return false
     }
 
-    // 检查是否被艾特
-    const isAt = e.atBot || e.atme || (e.message && e.message.some(msg => msg.type === 'at' && String(msg.qq) === String(e.self_id)))
-    
-    // 检查是否触发关键词
+    const isAt =
+      e.atBot ||
+      e.atme ||
+      (e.message &&
+        e.message.some(msg => msg.type === "at" && String(msg.qq) === String(e.self_id)))
+
     const hasKeyword = this.appconfig.triggerWords.some(word => messageText.includes(word))
 
-    // 判断是否需要回复：艾特回复和关键词回复只需触发一个
     let mustReply = false
     if (this.appconfig.enableAtReply && isAt) {
       mustReply = true

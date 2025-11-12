@@ -6,7 +6,7 @@ export class gifPlugin extends plugin {
 		super({
 			name: 'gifPlugin',
 			dsc: '发送带gif表情包',
-			event: 'message.group',
+			event: 'message',
 			priority: 1135,
 			rule: [
 				{
