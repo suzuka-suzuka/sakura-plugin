@@ -306,6 +306,11 @@ const configSchema = {
       help: "伪人有概率触发的其他预设",
     },
     "mimic.triggerWords": { label: "伪人必定触发词", type: "array", itemType: "text" },
+    "mimic.enableAtReply": {
+      label: "伪人艾特回复",
+      type: "boolean",
+      help: "启用后,被艾特时会触发伪人回复",
+    },
     "mimic.replyProbability": { label: "回复概率", type: "number", min: 0, max: 1, step: 0.01 },
     "mimic.alternatePromptProbability": {
       label: "反差回复概率",

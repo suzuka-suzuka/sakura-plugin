@@ -225,7 +225,7 @@ export class bilibili extends plugin {
         `点赞：${formatNum(stat.like)} | 投币：${formatNum(stat.coin)} | 收藏：${formatNum(
           stat.favorite,
         )}`,
-        ...(desc ? [`简介：${desc.substring(0, 50)}${desc.length > 50 ? "..." : ""}`] : []),
+        ...(desc ? [`简介：${desc.substring(0, 100)}${desc.length > 100 ? "..." : ""}`] : []),
       ].join("\n")
 
       await this.e.reply([segment.image(pic), infoText])

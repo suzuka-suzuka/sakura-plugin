@@ -361,6 +361,13 @@ export function supportGuoba() {
           },
         },
         {
+          field: "mimic.enableAtReply",
+          label: "伪人艾特回复",
+          component: "Switch",
+          required: true,
+          bottomHelpMessage: "启用后,被艾特时会触发伪人回复",
+        },
+        {
           field: "mimic.replyProbability",
           label: "回复概率",
           component: "InputNumber",
