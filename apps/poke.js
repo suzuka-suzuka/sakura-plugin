@@ -396,7 +396,8 @@ export class poke extends plugin {
       const msg = _.sample(pokeConfig.genericTextReplies)
       await e.reply(msg.replace(/_botname_/g, this.botname))
     } else if (retype === 2) {
-      const msg = await this.getAIReply(e, "(戳你一下)")
+      const promptText = cfg.masterQQ.includes(e.operator_id) ? "(主人戳你一下)" : "(其他人戳你一下)"
+      const msg = await this.getAIReply(e, promptText)
       if (msg !== false) {
         const replyMsg = [segment.at(e.operator_id), msg]
         await e.reply(replyMsg)
