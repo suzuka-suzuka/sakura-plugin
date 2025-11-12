@@ -76,6 +76,10 @@ export class Favorability extends plugin {
   }
 
   async accept(e) {
+    if (/^#?好感度.*$/.test(e.msg)) {
+      return false
+    }
+
     const groupId = e.group_id.toString()
     const currentSender = e.user_id.toString()
 
