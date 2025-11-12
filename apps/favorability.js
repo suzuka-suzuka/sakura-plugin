@@ -10,6 +10,8 @@ if (!fs.existsSync(dataPath)) {
   fs.mkdirSync(dataPath, { recursive: true })
 }
 
+const lastSender = new Map()
+
 export class Favorability extends plugin {
   constructor() {
     super({
@@ -24,8 +26,6 @@ export class Favorability extends plugin {
         },
       ],
     })
-
-    this.lastSender = new Map()
   }
 
   getDataFile(groupId) {
@@ -121,8 +121,7 @@ export class Favorability extends plugin {
               shouldAddFavorability = true
             }
           }
-        } catch (err) {
-        }
+        } catch (err) {}
       }
     }
 
@@ -131,14 +130,14 @@ export class Favorability extends plugin {
         this.addFavorability(groupId, currentSender, targetUser, 2)
       }
     } else {
-      const lastSender = this.lastSender.get(groupId)
+      const lastSenderInGroup = lastSender.get(groupId)
 
-      if (lastSender && lastSender !== currentSender) {
-        this.addFavorability(groupId, currentSender, lastSender, 1)
+      if (lastSenderInGroup && lastSenderInGroup !== currentSender) {
+        this.addFavorability(groupId, currentSender, lastSenderInGroup, 1)
       }
     }
 
-    this.lastSender.set(groupId, currentSender)
+    lastSender.set(groupId, currentSender)
 
     return false
   }
