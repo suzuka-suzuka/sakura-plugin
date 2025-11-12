@@ -73,6 +73,7 @@ const configSchema = {
 
     "summary.enable": { label: "启用", type: "boolean" },
     "poke.enable": { label: "戳一戳总开关", type: "boolean" },
+    "poke.botname": { label: "机器人昵称", type: "text", help: "用于回复中的机器人名称" },
     "repeat.enable": { label: "复读", type: "boolean" },
     "recall.enable": { label: "防撤回", type: "boolean" },
     "r18.enable": { label: "启用群", type: "groupSelect", help: "影响所有图片功能" },
@@ -376,23 +377,23 @@ const configSchema = {
       },
     },
 
-    "poke.MASTER_REPLIES": { label: "戳主人回复", type: "textarea", help: "一行一个回复" },
-    "poke.GENERIC_TEXT_REPLIES": {
+    "poke.masterReplies": { label: "戳主人回复", type: "textarea", help: "一行一个回复" },
+    "poke.genericTextReplies": {
       label: "戳一戳通用回复",
       type: "textarea",
       help: "一行一个回复",
     },
-    "poke.COUNT_REPLIES_GROUP": {
+    "poke.countRepliesGroup": {
       label: "群计数回复",
       type: "textarea",
       help: "一行一个回复。回复中的 _num_ 会被替换为实际数字",
     },
-    "poke.COUNT_REPLIES_USER": {
+    "poke.countRepliesUser": {
       label: "个人计数回复",
       type: "textarea",
       help: "一行一个回复。回复中的 _num_ 会被替换为实际数字",
     },
-    "poke.POKE_BACK_TEXT_REPLIES": { label: "戳回去回复", type: "textarea", help: "一行一个回复" },
+    "poke.pokeBackTextReplies": { label: "戳回去回复", type: "textarea", help: "一行一个回复" },
     "poke.personas": {
       label: "戳一戳设定",
       type: "array",
@@ -403,15 +404,16 @@ const configSchema = {
         Prompt: { label: "预设提示词", type: "textarea", required: true, help: "角色的核心设定" },
       },
     },
-    MASTER_REPLIES: { label: "戳主人回复", type: "textarea", help: "一行一个回复" },
-    GENERIC_TEXT_REPLIES: { label: "通用文本回复", type: "textarea", help: "一行一个回复" },
-    COUNT_REPLIES_GROUP: { label: "群计数回复", type: "textarea", help: "_num_会被替换为实际数字" },
-    COUNT_REPLIES_USER: {
+    masterReplies: { label: "戳主人回复", type: "textarea", help: "一行一个回复" },
+    genericTextReplies: { label: "通用文本回复", type: "textarea", help: "一行一个回复" },
+    countRepliesGroup: { label: "群计数回复", type: "textarea", help: "_num_会被替换为实际数字" },
+    countRepliesUser: {
       label: "用户计数回复",
       type: "textarea",
       help: "_num_会被替换为实际数字",
     },
-    POKE_BACK_TEXT_REPLIES: { label: "戳回去回复", type: "textarea", help: "一行一个回复" },
+    pokeBackTextReplies: { label: "戳回去回复", type: "textarea", help: "一行一个回复" },
+    botname: { label: "bot名字", type: "text", help: "用于回复中的bot名称，回复中的 _botname_ 会被替换为这里的名字" },
     personas: {
       label: "人设配置",
       type: "array",

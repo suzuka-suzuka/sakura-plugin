@@ -2,24 +2,13 @@ import cfg from "../../../lib/config/config.js"
 import common from "../../../lib/common/common.js"
 import moment from "moment"
 import path from "path"
-import { pluginresources } from "../lib/path.js"
-import { getgif, yandeimage, buildStickerMsg } from "../lib/ImageUtils/ImageUtils.js"
+import { pluginresources, plugindata } from "../lib/path.js"
+import { yandeimage, buildStickerMsg } from "../lib/ImageUtils/ImageUtils.js"
 import Setting from "../lib/setting.js"
 import _ from "lodash"
 import { getAI } from "../lib/AIUtils/getAI.js"
 import adapter from "../lib/adapter.js"
-
-let CD = false
-let CD_A = false
-let ignoreList = {}
-let shouldReply = {}
-let ignorePoke = {}
-let nextreply = {}
-
-const reply_sp = 0.12
-const reply_poke = 0.08
-const reply_text = 0.38
-const reply_num = 0.02
+import fsp from "fs/promises"
 
 export class poke extends plugin {
   constructor() {
@@ -37,8 +26,52 @@ export class poke extends plugin {
       ],
     })
   }
+
   get appconfig() {
     return Setting.getConfig("poke")
+  }
+
+  get botname() {
+    return this.appconfig.botname
+  }
+
+  async checkCD(key, duration) {
+    const exists = await redis.get(key)
+    if (exists) return true
+    await redis.set(key, "1", { EX: duration })
+    return false
+  }
+
+  async setIgnore(userId, duration) {
+    await redis.set(`Mz:poke:ignore:${userId}`, "1", { EX: duration / 1000 })
+  }
+
+  async checkIgnore(userId) {
+    return await redis.get(`Mz:poke:ignore:${userId}`)
+  }
+
+  async setShouldReply(userId, duration) {
+    await redis.set(`Mz:poke:shouldReply:${userId}`, "1", { EX: duration / 1000 })
+  }
+
+  async checkShouldReply(userId) {
+    return await redis.get(`Mz:poke:shouldReply:${userId}`)
+  }
+
+  async setIgnorePoke(groupId, duration) {
+    await redis.set(`Mz:poke:ignorePoke:${groupId}`, "1", { EX: duration / 1000 })
+  }
+
+  async checkIgnorePoke(groupId) {
+    return await redis.get(`Mz:poke:ignorePoke:${groupId}`)
+  }
+
+  async getMemberInfo(e, userId) {
+    try {
+      return await e.group.pickMember(userId).getInfo(true)
+    } catch {
+      return (await e.group.pickMember(Number(userId))).info
+    }
   }
 
   sendImage(file) {
@@ -49,32 +82,13 @@ export class poke extends plugin {
     }
   }
 
-  async sendgif(e) {
-    const config = Setting.getConfig("tenor")
-    const apiUrl = `https://tenor.googleapis.com/v2/search?key=${config.apiKey}&q=anime&media_filter=gif&random=true&limit=1`
-    const imageUrl = await getgif(apiUrl)
-    if (imageUrl) {
-      await e.reply(this.sendImage(imageUrl))
-    }
-  }
-
   getPokeImagePath(filename) {
     return path.join(pluginresources, "poke", filename)
   }
 
   async checkAndMute(e, duration) {
-    let bot
-    try {
-      bot = await e.group.pickMember(e.self_id).getInfo(true)
-    } catch {
-      bot = (await e.group.pickMember(Number(e.self_id))).info
-    }
-    let member
-    try {
-      member = await e.group.pickMember(e.operator_id).getInfo(true)
-    } catch {
-      member = (await e.group.pickMember(Number(e.operator_id))).info
-    }
+    const bot = await this.getMemberInfo(e, e.self_id)
+    const member = await this.getMemberInfo(e, e.operator_id)
 
     if (bot.role !== "admin" && bot.role !== "owner") {
       return false
@@ -104,10 +118,14 @@ export class poke extends plugin {
     const Channel = Setting.getConfig("AI").appschannel
     try {
       const result = await getAI(Channel, e, queryParts, systemInstruction, false, false, [])
-      return result.text || "唔...被戳的坏掉了"
+      if (!result.text || result.text.trim() === "") {
+        logger.warn("[戳一戳] AI 返回空回复")
+        return false
+      }
+      return result.text
     } catch (error) {
       logger.error(`[戳一戳] AI 调用失败: ${error}`)
-      return "唔...被戳的坏掉了"
+      return false
     }
   }
 
@@ -119,11 +137,11 @@ export class poke extends plugin {
     }
 
     const replyKeys = [
-      "MASTER_REPLIES",
-      "GENERIC_TEXT_REPLIES",
-      "COUNT_REPLIES_GROUP",
-      "COUNT_REPLIES_USER",
-      "POKE_BACK_TEXT_REPLIES",
+      "masterReplies",
+      "genericTextReplies",
+      "pokeBackTextReplies",
+      "countRepliesGroup",
+      "countRepliesUser",
     ]
     for (const key of replyKeys) {
       if (typeof pokeConfig[key] === "string") {
@@ -134,452 +152,447 @@ export class poke extends plugin {
     if (!pokeConfig.enable) {
       return false
     }
+
     logger.info(`[戳一戳] 群 ${e.group_id} 中 ${e.operator_id} 戳了戳 ${e.target_id}`)
-    if (ignorePoke[e.group_id]) {
+
+    if (await this.checkIgnorePoke(e.group_id)) {
       return false
     }
 
-    if (ignoreList[e.operator_id]) {
+    if (await this.checkIgnore(e.operator_id)) {
       return false
     }
 
-    if (shouldReply[e.operator_id]) {
-      e.reply("姑且还是理你一下吧...")
+    if (await this.checkShouldReply(e.operator_id)) {
+      await e.reply("姑且还是理你一下吧...")
       await common.sleep(500)
-      e.reply(this.sendImage(this.getPokeImagePath("5.gif")))
-      delete shouldReply[e.operator_id]
+      await e.reply(this.sendImage(this.getPokeImagePath("5.gif")))
+      await redis.del(`Mz:poke:shouldReply:${e.operator_id}`)
       return false
     }
 
-    if (cfg.masterQQ.includes(e.operator_id) && e.target_id == e.self_id) {
-      let msg = await this.getAIReply(e, "(主人戳你一下)")
-      await e.reply(msg)
-    } else if (cfg.masterQQ.includes(e.target_id)) {
-      if (CD) {
-        return false
-      } else {
-        CD = true
-        setTimeout(function () {
-          CD = false
-        }, 40000)
-        let retype = _.random(1, 3)
-        if (retype === 1) {
-          let msg = _.sample(pokeConfig.MASTER_REPLIES)
-          await e.reply(msg)
-        } else if (retype === 2) {
-          let bot
-          try {
-            bot = await e.group.pickMember(e.self_id).getInfo(true)
-          } catch {
-            bot = (await e.group.pickMember(Number(e.self_id))).info
+    if (cfg.masterQQ.includes(e.target_id)) {
+      return await this.handlePokeMaster(e, pokeConfig)
+    }
+
+    if (e.target_id == e.self_id) {
+      return await this.handlePokeBot(e, pokeConfig)
+    }
+
+    return false
+  }
+
+  async handlePokeMaster(e, pokeConfig) {
+    if (await this.checkCD(`Mz:poke:cd:master:${e.group_id}`, 60)) {
+      return false
+    }
+
+    const retype = _.random(1, 2)
+    let success = false
+
+    if (retype === 1) {
+      const msg = await this.getAIReply(e, "(其他人戳一下主人)")
+      if (msg !== false) {
+        const replyMsg = [segment.at(e.operator_id), msg]
+        await e.reply(replyMsg)
+        success = true
+      }
+    } else {
+      const bot = await this.getMemberInfo(e, e.self_id)
+
+      if (bot && bot.role !== "member") {
+        const member = await this.getMemberInfo(e, e.operator_id)
+        const Name = member?.card || member?.nickname || member.user_id
+
+        const queryParts = [
+          {
+            text: `请把"${Name}"这个名字变得更中二病一些，请只输出一个新名字。`,
+          },
+        ]
+        const Channel = Setting.getConfig("AI").appschannel
+        try {
+          const result = await getAI(Channel, e, queryParts, null, false, false, [])
+          if (result.text && result.text.trim() !== "") {
+            const newCard = result.text
+            await e.group.setCard(e.operator_id, newCard)
+            success = true
+          } else {
+            logger.warn("[戳一戳] AI 返回空名字")
           }
+        } catch (error) {
+          logger.error(`[戳一戳] 改名 AI 调用失败: ${error}`)
+        }
+      }
+    }
+
+    if (!success) {
+      const msg = _.sample(pokeConfig.masterReplies)
+      await e.reply(msg)
+    }
+
+    return false
+  }
+
+  async handlePokeBot(e, pokeConfig) {
+    if (await this.checkCD(`Mz:poke:cd:bot:${e.group_id}`, 3)) {
+      return false
+    }
+
+    let time = moment(Date.now()).add(1, "days").format("YYYY-MM-DD 00:00:00")
+    let exTime = Math.round((new Date(time).getTime() - new Date().getTime()) / 1000)
+
+    let count = await redis.get(`Mz:pokecount:${e.group_id}`)
+    count = count ? parseInt(count) + 1 : 1
+    await redis.set(`Mz:pokecount:${e.group_id}`, count, { EX: exTime })
+
+    let usercount = await redis.get(`Mz:pokecount:${e.group_id}:${e.operator_id}`)
+    usercount = usercount ? parseInt(usercount) + 1 : 1
+    await redis.set(`Mz:pokecount:${e.group_id}:${e.operator_id}`, usercount, { EX: exTime })
+
+    let time_A = moment(Date.now()).add(20, "minutes").format("YYYY-MM-DD HH:mm:ss")
+    let exTime_A = Math.round((new Date(time_A).getTime() - new Date().getTime()) / 1000)
+
+    let counter = await redis.get(`Mz:pokecount_A:${e.group_id}`)
+    counter = counter ? parseInt(counter) + 1 : 1
+    await redis.set(`Mz:pokecount_A:${e.group_id}`, counter, { EX: exTime_A })
+
+    switch (counter) {
+      case 1:
+        const type = _.random(1, 2)
+        if (type === 1) {
+          await e.reply(this.sendImage(this.getPokeImagePath("1.gif")))
+        } else {
+          await e.reply(this.sendImage(this.getPokeImagePath("2.gif")))
+        }
+        return false
+      case 5:
+        await e.reply(this.sendImage(this.getPokeImagePath("3.gif")))
+        await common.sleep(500)
+        await this.checkAndMute(e, 60 * usercount)
+        await common.sleep(1000)
+        await e.reply("不~")
+        await common.sleep(1000)
+        await e.reply("准~")
+        await common.sleep(1000)
+        await e.reply("戳~！")
+        return false
+
+      case 10:
+        await e.reply("你好烦呀,不想理你了!")
+        await common.sleep(500)
+        await e.reply(this.sendImage(this.getPokeImagePath("4.gif")))
+        const ignoreDuration = 60000 * usercount
+        await this.setIgnore(e.operator_id, ignoreDuration)
+        await this.setShouldReply(e.operator_id, ignoreDuration + 600000)
+        return false
+
+      case 20:
+        const muteSuccess = await this.checkAndMute(e, 60 * usercount)
+        if (muteSuccess) {
+          await e.reply(`这就是欺负${this.botname}的下场!`)
+          await common.sleep(500)
+          await e.reply(this.sendImage(this.getPokeImagePath("6.gif")))
+        } else {
+          const bot = await this.getMemberInfo(e, e.self_id)
 
           if (bot && bot.role !== "member") {
-            let member
-            try {
-              member = await e.group.pickMember(e.operator_id).getInfo(true)
-            } catch {
-              member = (await e.group.pickMember(Number(e.operator_id))).info
-            }
-            const Name = member?.card || member?.nickname || member.user_id
+            const member = await this.getMemberInfo(e, e.operator_id)
+            const currentName = member?.card || member?.nickname || member.user_id
 
             const queryParts = [
               {
-                text: `请把“${Name}”这个名字变得更中二病一些，请只输出一个新名字。`,
+                text: `请把"${currentName}"这个名字变得更笨、更傻、更蠢一些，要带有贬义和嘲讽意味，请只输出一个新名字。`,
               },
             ]
             const Channel = Setting.getConfig("AI").appschannel
-            const result = await getAI(Channel, e, queryParts, null, false, false, [])
-            const newCard = result.text
-            await e.group.setCard(e.operator_id, newCard)
+            try {
+              const result = await getAI(Channel, e, queryParts, null, false, false, [])
+              if (result.text && result.text.trim() !== "") {
+                const newCard = result.text.trim()
+                await e.group.setCard(e.operator_id, newCard)
+                await e.reply(`这就是欺负${this.botname}的下场！`)
+                await common.sleep(500)
+                await e.reply(this.sendImage(this.getPokeImagePath("6.gif")))
+              } else {
+                logger.warn("[戳一戳] AI 返回空名字，回退到文本回复")
+                await this.replyWithText(e, pokeConfig)
+              }
+            } catch (error) {
+              logger.error(`[戳一戳] 改名 AI 调用失败: ${error}，回退到文本回复`)
+              await this.replyWithText(e, pokeConfig)
+            }
           } else {
-            let msg = _.sample(pokeConfig.MASTER_REPLIES)
-            await e.reply(msg)
+            await this.replyWithText(e, pokeConfig)
           }
-        } else {
-          let msg = await this.getAIReply(e, "(其他人戳一下主人)")
-          const qq = e.operator_id
-          const replyMsg = [segment.at(qq), msg]
-          await e.reply(replyMsg)
         }
-      }
-      return false
-    } else if (e.target_id == e.self_id) {
-      if (CD_A) {
+
         return false
+
+      case 30:
+        await e.reply("被戳、戳晕了...")
+        await e.reply(this.sendImage(this.getPokeImagePath("7.gif")))
+        await this.setIgnorePoke(e.group_id, 600000)
+        return false
+
+      case 31:
+        await e.reply("突然惊醒！")
+        await common.sleep(500)
+        await e.reply(this.sendImage(this.getPokeImagePath("8.gif")))
+        return false
+
+      case 40:
+        await e.reply("被戳、戳坏掉了...")
+        await common.sleep(500)
+        await e.reply("可能再也不会醒来了...")
+        await common.sleep(500)
+        await e.reply(this.sendImage(this.getPokeImagePath("9.gif")))
+        return false
+
+      case 41:
+      case 42:
+      case 43:
+      case 44:
+      case 45:
+      case 46:
+      case 47:
+      case 48:
+      case 49:
+      case 50:
+        return false
+
+      case 51:
+        await e.reply("居然把我给戳醒了，接下来再戳会发生什么可不关我事哟~")
+        return false
+
+      case 60:
+        await e.reply(`${this.botname}彻底被玩坏了...`)
+        await common.sleep(500)
+        await e.reply("可能永远都不会醒来了...")
+        await this.setIgnorePoke(e.group_id, 1200000)
+        return false
+    }
+
+    const random = _.random(1, 100)
+
+    if (random <= 35) {
+      await this.replyWithText(e, pokeConfig)
+    } else if (random <= 60) {
+      await this.replyWithImage(e)
+    } else if (random <= 80) {
+      await this.replyWithPokeBack(e, pokeConfig)
+    } else if (random <= 90) {
+      await this.replyWithSpecialEasterEgg(e)
+    } else {
+      await this.replyWithCount(e, pokeConfig, count, usercount)
+    }
+
+    return false
+  }
+
+  async replyWithText(e, pokeConfig) {
+    const retype = _.random(1, 3)
+
+    if (retype === 1) {
+      const msg = _.sample(pokeConfig.genericTextReplies)
+      await e.reply(msg.replace(/_botname_/g, this.botname))
+    } else if (retype === 2) {
+      const msg = await this.getAIReply(e, "(戳你一下)")
+      if (msg !== false) {
+        const replyMsg = [segment.at(e.operator_id), msg]
+        await e.reply(replyMsg)
       } else {
-        CD_A = true
-        setTimeout(function () {
-          CD_A = false
-        }, 3000)
+        await e.reply(this.sendImage(this.getPokeImagePath("12.gif")))
+      }
+    } else {
+      try {
+        const response = await fetch("https://60s.viki.moe/v2/fabing")
+        const result = await response.json()
 
-        if (nextreply[e.operator_id]) {
-          e.reply("我已经理解了，你现在没有什么要做的事了，很有空闲呢。")
-          delete nextreply[e.operator_id]
-          return false
-        }
-
-        let count = await redis.get(`Mz:pokecount:${e.group_id}`)
-        let usercount = await redis.get(`Mz:pokecount:${e.group_id}` + e.operator_id + ":")
-        let time = moment(Date.now()).add(1, "days").format("YYYY-MM-DD 00:00:00")
-        let exTime = Math.round((new Date(time).getTime() - new Date().getTime()) / 1000)
-        if (!count) {
-          await redis.set(`Mz:pokecount:${e.group_id}`, 1 * 1, { EX: exTime })
-          count = 1
+        if (result && result.code === 200 && result.data && result.data.saying) {
+          await e.reply(result.data.saying)
         } else {
-          await redis.set(`Mz:pokecount:${e.group_id}`, ++count, { EX: exTime })
+          const msg = _.sample(pokeConfig.genericTextReplies)
+          await e.reply(msg.replace(/_botname_/g, this.botname))
         }
-        if (!usercount) {
-          await redis.set(`Mz:pokecount:${e.group_id}` + e.operator_id + ":", 1 * 1, { EX: exTime })
-          usercount = 1
-        } else {
-          await redis.set(`Mz:pokecount:${e.group_id}` + e.operator_id + ":", ++usercount, {
-            EX: exTime,
-          })
-        }
-
-        let counter = await redis.get(`Mz:pokecount_A:${e.group_id}`)
-        let time_A = moment(Date.now()).add(20, "minutes").format("YYYY-MM-DD HH:mm:ss")
-        let exTime_A = Math.round((new Date(time_A).getTime() - new Date().getTime()) / 1000)
-        if (!counter) {
-          await redis.set(`Mz:pokecount_A:${e.group_id}`, 1 * 1, { EX: exTime_A })
-          counter = "1"
-        } else {
-          await redis.set(`Mz:pokecount_A:${e.group_id}`, ++counter, { EX: exTime_A })
-          counter = String(counter)
-        }
-
-        switch (counter) {
-          case "1":
-            e.reply(this.sendImage(this.getPokeImagePath("1.gif")))
-            break
-          case "5":
-            e.reply(this.sendImage(this.getPokeImagePath("2.gif")))
-            await common.sleep(500)
-            await this.checkAndMute(e, 60 * (usercount + 1))
-            await common.sleep(1000)
-            e.reply("不~")
-            await common.sleep(1000)
-            e.reply("准~")
-            await common.sleep(1000)
-            e.reply("戳~！")
-
-            break
-          case "10":
-            e.reply("你好烦呀,不想理你了!")
-            await common.sleep(500)
-            e.reply(this.sendImage(this.getPokeImagePath("3.gif")))
-            ignoreList[e.operator_id] = true
-            const userIdToIgnore = e.operator_id
-            const ignoreDuration = 60000 * (usercount + 1)
-            setTimeout(() => {
-              delete ignoreList[userIdToIgnore]
-              shouldReply[userIdToIgnore] = true
-              logger.info(`[戳一戳]  ${userIdToIgnore} 忽略结束，shouldReply 标记已设置.`)
-              setTimeout(() => {
-                if (shouldReply[userIdToIgnore]) {
-                  delete shouldReply[userIdToIgnore]
-                  logger.info(`[戳一戳]  ${userIdToIgnore} 的 shouldReply 标记已过期.`)
-                }
-              }, 600000)
-            }, ignoreDuration)
-            break
-          case "15":
-            e.reply(this.sendImage(this.getPokeImagePath("1.jpg")))
-            await common.sleep(500)
-            if (await this.checkAndMute(e, 60 * (usercount + 1))) {
-              await common.sleep(1000)
-              e.reply("别得寸进尺啊你")
-            }
-            break
-          case "25":
-            e.reply(this.sendImage(this.getPokeImagePath("2.jpg")))
-            await common.sleep(500)
-            if (await this.checkAndMute(e, 60 * (usercount + 1))) {
-              await common.sleep(1000)
-              e.reply("这就是欺负小叶的下场!")
-            }
-            break
-          case "30":
-            e.reply("被戳、戳晕了...")
-            e.reply(this.sendImage(this.getPokeImagePath("4.gif")))
-            ignorePoke[e.group_id] = true
-            setTimeout(() => {
-              ignorePoke[e.group_id] = false
-            }, 600000)
-            break
-          case "31":
-            e.reply(this.getPokeImagePath("3.jpg"))
-            await common.sleep(500)
-            e.reply("突然惊醒！")
-            break
-          case "40":
-            e.reply("被戳、戳坏掉了...")
-            await common.sleep(500)
-            e.reply(this.getPokeImagePath("4.jpg"))
-            await common.sleep(1000)
-            e.reply("可能再也不会醒来了...")
-            ignorePoke[e.group_id] = true
-            setTimeout(() => {
-              ignorePoke[e.group_id] = false
-            }, 1200000)
-            break
-
-          case "41":
-          case "42":
-          case "43":
-          case "44":
-          case "45":
-          case "46":
-          case "47":
-          case "48":
-          case "49":
-          case "50":
-            return false
-          case "51":
-            e.reply("居然把我给戳醒了，接下来再戳会发生什么可不关我事哟~")
-            break
-          case "52":
-            e.reply(this.getPokeImagePath("5.jpg"))
-            break
-          case "53":
-            e.reply(this.getPokeImagePath("6.jpg"))
-            break
-          case "54":
-            e.reply(this.getPokeImagePath("7.jpg"))
-            break
-          case "55":
-            e.reply(this.getPokeImagePath("8.jpg"))
-            break
-          case "56":
-            e.reply(this.getPokeImagePath("9.jpg"))
-            break
-          case "57":
-            e.reply(this.getPokeImagePath("10.jpg"))
-            break
-          case "58":
-            e.reply(this.getPokeImagePath("11.jpg"))
-            break
-          case "59":
-            e.reply(this.getPokeImagePath("12.jpg"))
-            break
-          case "60":
-            e.reply("小叶彻底被玩坏了...")
-            await common.sleep(500)
-            e.reply(this.getPokeImagePath("13.jpg"))
-            await common.sleep(1000)
-            e.reply("可能再也不会醒来了...")
-            ignorePoke[e.group_id] = true
-            setTimeout(() => {
-              ignorePoke[e.group_id] = false
-            }, 1200000)
-            break
-
-          default:
-            let random_type = _.random(0, 1, true)
-            if (random_type < reply_sp) {
-              let retype = _.random(1, 9)
-              switch (retype) {
-                case 1:
-                  e.reply("再戳小叶就用小拳拳捶你了(ꐦ°᷄д°᷅)")
-                  await common.sleep(500)
-                  e.reply(this.sendImage(this.getPokeImagePath("14.jpg")))
-                  break
-                case 2:
-                  e.reply("救命啊，有变态>_<！！！")
-                  e.reply(this.sendImage(this.getPokeImagePath("6.gif")))
-                  break
-                case 3:
-                  e.reply("咳哈哈哈哈——！")
-                  await common.sleep(500)
-                  e.reply(this.sendImage(this.getPokeImagePath("7.gif")))
-                  await common.sleep(500)
-                  e.reply("别挠我痒痒了！")
-                  await common.sleep(500)
-                  e.reply("好痒啊！")
-                  break
-                case 4:
-                  e.reply("混乱中，无法理解的行动。请不要戳我，发生故障。")
-                  await common.sleep(500)
-                  e.reply(this.sendImage(this.getPokeImagePath("8.gif")))
-                  nextreply[e.operator_id] = true
-                  const userIdForNextReply = e.operator_id
-                  setTimeout(() => {
-                    if (nextreply[userIdForNextReply]) {
-                      delete nextreply[userIdForNextReply]
-                      logger.info(`[戳一戳]  ${userIdForNextReply} 的 nextreply 标记已过期.`)
-                    }
-                  }, 300000)
-                  break
-                case 5:
-                  e.reply("就、就算那样戳我，也不会掉落什么哦……")
-                  await common.sleep(500)
-                  e.reply(this.sendImage(this.getPokeImagePath("9.gif")))
-                  await common.sleep(500)
-                  e.reply("小叶又不是怪物！")
-                  break
-                case 6:
-                  e.reply("这样几次挠我痒痒会很困扰的呢。")
-                  await common.sleep(500)
-                  e.reply("您啊，意外地喜欢恶作剧吧？")
-                  break
-                case 7:
-                  e.reply("戳中宝藏啦！是一张涩图！")
-                  const apiUrl = "https://yande.re/post.json?tags=loli+-rating:e+-nipples&limit=500"
-                  const imageUrl = await yandeimage(apiUrl)
-                  if (imageUrl) {
-                    try {
-                      await e.reply(segment.image(imageUrl))
-                    } catch (error) {
-                      logger.error(`[戳一戳] 发送图片失败: ${error}`)
-                      e.reply("嘻嘻，骗你的，其实根本没有涩图~")
-                    }
-                  }
-                  break
-                case 8:
-                  e.reply("把嘴张开（抬起脚）")
-                  const feet_apiUrl =
-                    "https://yande.re/post.json?tags=feet+-rating:e+-nipples&limit=500"
-                  const feet_imageUrl = await yandeimage(feet_apiUrl)
-                  if (feet_imageUrl) {
-                    try {
-                      await e.reply(segment.image(feet_imageUrl))
-                    } catch (error) {
-                      logger.error(`[戳一戳] 发送图片失败: ${error}`)
-                      e.reply("你还真张嘴了啊（收起脚），想得美~")
-                    }
-                  }
-                  break
-                case 9:
-                  e.reply("在这里无意义地消耗着时间，这……")
-                  await common.sleep(3000)
-                  e.reply("没、没有，我并没有讨厌……")
-                  break
-              }
-            } else if (random_type < reply_sp + reply_poke) {
-              let retype = _.random(1, 6)
-              switch (retype) {
-                case 1:
-                  e.reply("戳回去(=°ω°)ノ")
-                  await common.sleep(500)
-                  await e.group.pokeMember(e.operator_id)
-                  setTimeout(
-                    function () {
-                      const POKE_BACK_FOLLOW_UP_REPLIES_LOCAL = [
-                        buildStickerMsg(this.getPokeImagePath("15.jpg")),
-                        buildStickerMsg(this.getPokeImagePath("16.jpg")),
-                        buildStickerMsg(this.getPokeImagePath("11.gif")),
-                        "小叶可不是好欺负的!",
-                        "哼(￢︿̫̿￢☆)",
-                        "(ˉ▽￣～) 切~~",
-                      ]
-                      let msg = _.sample(POKE_BACK_FOLLOW_UP_REPLIES_LOCAL)
-                      e.reply(msg)
-                    }.bind(this),
-                    500,
-                  )
-                  break
-                case 2:
-                  for (let i = 0; i < 10; i++) {
-                    await e.group.pokeMember(e.operator_id)
-                    await common.sleep(500)
-                  }
-                  await common.sleep(1000)
-                  e.reply("超级加倍！让你见识一下小叶的厉害！")
-                  await common.sleep(1000)
-                  e.reply(this.sendImage(this.getPokeImagePath("10.gif")))
-                  break
-                case 3:
-                  let msg_text = _.sample(pokeConfig.POKE_BACK_TEXT_REPLIES)
-                  e.reply(msg_text)
-                  await common.sleep(500)
-                  await e.group.pokeMember(e.operator_id)
-                  break
-                case 4:
-                  e.reply("嗯？什么？戳戳对方的游戏？")
-                  await common.sleep(500)
-                  await e.group.pokeMember(e.operator_id)
-                  await common.sleep(500)
-                  await e.group.pokeMember(e.operator_id)
-                  await common.sleep(500)
-                  e.reply("我也不会输哦！")
-                  await common.sleep(500)
-                  await e.group.pokeMember(e.operator_id)
-                  await common.sleep(500)
-                  await e.group.pokeMember(e.operator_id)
-                  await common.sleep(500)
-                  e.reply("喝！")
-                  await common.sleep(500)
-                  await e.group.pokeMember(e.operator_id)
-                  await common.sleep(500)
-                  await e.group.pokeMember(e.operator_id)
-                  await common.sleep(500)
-                  e.reply("哈！")
-                  await common.sleep(500)
-                  await e.group.pokeMember(e.operator_id)
-                  await common.sleep(500)
-                  await e.group.pokeMember(e.operator_id)
-                  break
-                case 5:
-                  e.reply("觉得我不会反击就为所欲为……做好觉悟吧！")
-                  await common.sleep(500)
-                  for (let i = 0; i < 11; i++) {
-                    await e.group.pokeMember(e.operator_id)
-                    await common.sleep(500)
-                  }
-                  break
-                case 6:
-                  e.reply("呜呜呜……这样到处摸的话……")
-                  await common.sleep(500)
-                  await e.group.pokeMember(e.operator_id)
-                  await common.sleep(500)
-                  e.reply("我也会把你摸回来的！")
-                  break
-              }
-            } else if (random_type < reply_sp + reply_poke + reply_text) {
-              const retype = _.random(1, 3)
-              if (retype === 1) {
-                let msg = _.sample(pokeConfig.GENERIC_TEXT_REPLIES)
-                e.reply(msg)
-              } else if (retype === 2) {
-                let msg = await this.getAIReply(e, "(不是主人的人戳你一下)")
-                const qq = e.operator_id
-                const replyMsg = [segment.at(qq), msg]
-                e.reply(replyMsg)
-              } else {
-                try {
-                  const response = await fetch("https://60s.viki.moe/v2/fabing")
-                  const result = await response.json()
-
-                  if (result && result.code === 200 && result.data && result.data.saying) {
-                    const saying = result.data.saying
-                    e.reply(saying)
-                  } else {
-                    let msg = _.sample(pokeConfig.GENERIC_TEXT_REPLIES)
-                    e.reply(msg)
-                  }
-                } catch (error) {
-                  logger.error("请求 API 时出错, 已回退:", error)
-                  let msg = _.sample(pokeConfig.GENERIC_TEXT_REPLIES)
-                  e.reply(msg)
-                }
-              }
-            } else if (random_type < reply_sp + reply_poke + reply_text + reply_num) {
-              let retype = _.random(1, 2)
-              if (retype === 1) {
-                let ciku_ = _.sample(pokeConfig.COUNT_REPLIES_GROUP)
-                e.reply(ciku_.replace("_num_", count))
-              } else {
-                let ciku_ = _.sample(pokeConfig.COUNT_REPLIES_USER)
-                e.reply(ciku_.replace("_num_", usercount))
-              }
-            } else {
-              await this.sendgif(e)
-            }
-            break
-        }
+      } catch (error) {
+        logger.error("请求 API 时出错, 已回退:", error)
+        const msg = _.sample(pokeConfig.genericTextReplies)
+        await e.reply(msg.replace(/_botname_/g, this.botname))
       }
     }
-    return false
+  }
+
+  async replyWithImage(e) {
+    try {
+      const emojiRootDir = path.join(plugindata, "EmojiThief")
+      let emojiPath
+
+      const groupDirs = (await fsp.readdir(emojiRootDir, { withFileTypes: true }))
+        .filter(dirent => dirent.isDirectory())
+        .map(dirent => dirent.name)
+
+      if (groupDirs.length > 0) {
+        const randomGroupDir = groupDirs[_.random(0, groupDirs.length - 1)]
+        const groupDirPath = path.join(emojiRootDir, randomGroupDir)
+        const files = await fsp.readdir(groupDirPath)
+        if (files.length > 0) {
+          const randomIndex = _.random(0, files.length - 1)
+          emojiPath = path.join(groupDirPath, files[randomIndex])
+        }
+      }
+
+      if (emojiPath) {
+        await e.reply(this.sendImage(emojiPath))
+      } else {
+        await this.replyWithText(e, pokeConfig)
+      }
+    } catch (error) {
+      await this.replyWithText(e, pokeConfig)
+    }
+  }
+
+  async replyWithPokeBack(e, pokeConfig) {
+    const retype = _.random(1, 6)
+
+    switch (retype) {
+      case 1:
+        await e.reply("戳回去(=°ω°)ノ")
+        await common.sleep(500)
+        await e.group.pokeMember(e.operator_id)
+        setTimeout(() => {
+          const followUpReplies = [`${this.botname}可不是好欺负的!`, "哼(￢︿̫̿￢☆)", "(ˉ▽￣～) 切~~"]
+          const msg = _.sample(followUpReplies)
+          e.reply(msg)
+        }, 500)
+        break
+      case 2:
+        for (let i = 0; i < 10; i++) {
+          await e.group.pokeMember(e.operator_id)
+          await common.sleep(500)
+        }
+        await e.reply(`超级加倍！让你见识一下${this.botname}的厉害！`)
+        await common.sleep(1000)
+        break
+      case 3:
+        const msg_text = _.sample(pokeConfig.pokeBackTextReplies)
+        await e.reply(msg_text.replace(/_botname_/g, this.botname))
+        await common.sleep(500)
+        await e.group.pokeMember(e.operator_id)
+        break
+      case 4:
+        await e.reply("嗯？什么？戳戳对方的游戏？")
+        await common.sleep(500)
+        await e.group.pokeMember(e.operator_id)
+        await common.sleep(500)
+        await e.group.pokeMember(e.operator_id)
+        await common.sleep(500)
+        await e.reply("我也不会输哦！")
+        await common.sleep(500)
+        await e.group.pokeMember(e.operator_id)
+        await common.sleep(500)
+        await e.group.pokeMember(e.operator_id)
+        await common.sleep(500)
+        await e.reply("喝！")
+        await common.sleep(500)
+        await e.group.pokeMember(e.operator_id)
+        await common.sleep(500)
+        await e.group.pokeMember(e.operator_id)
+        await common.sleep(500)
+        await e.reply("哈！")
+        await common.sleep(500)
+        await e.group.pokeMember(e.operator_id)
+        await common.sleep(500)
+        await e.group.pokeMember(e.operator_id)
+        break
+      case 5:
+        await e.reply("觉得我不会反击就为所欲为……做好觉悟吧！")
+        await common.sleep(500)
+        for (let i = 0; i < 11; i++) {
+          await e.group.pokeMember(e.operator_id)
+          await common.sleep(500)
+        }
+        break
+      case 6:
+        await e.reply("呜呜呜……这样到处摸的话……")
+        await common.sleep(500)
+        await e.group.pokeMember(e.operator_id)
+        await common.sleep(500)
+        await e.reply("我也会把你摸回来的！")
+        break
+    }
+  }
+
+  async replyWithSpecialEasterEgg(e) {
+    const retype = _.random(1, 7)
+
+    switch (retype) {
+      case 1:
+        await e.reply("救命啊，有变态>_<！！！")
+        await common.sleep(500)
+        await e.reply(this.sendImage(this.getPokeImagePath("10.gif")))
+        break
+      case 2:
+        await e.reply("咳哈哈哈哈——！")
+        await common.sleep(500)
+        await e.reply(this.sendImage(this.getPokeImagePath("11.gif")))
+        await common.sleep(500)
+        await e.reply("别挠我痒痒了！")
+        await common.sleep(500)
+        await e.reply("好痒啊！")
+        break
+      case 3:
+        await e.reply("就、就算那样戳我，也不会掉落什么哦……")
+        await common.sleep(500)
+        await e.reply(`${this.botname}又不是怪物！`)
+        break
+      case 4:
+        await e.reply("这样几次挠我痒痒会很困扰的呢。")
+        await common.sleep(500)
+        await e.reply("你啊，意外地喜欢恶作剧吧？")
+        break
+      case 5:
+        await e.reply("戳中宝藏啦！是一张涩图！")
+        const apiUrl = "https://yande.re/post.json?tags=loli+-rating:e+-nipples&limit=500"
+        const imageUrl = await yandeimage(apiUrl)
+        if (imageUrl) {
+          try {
+            await e.reply(segment.image(imageUrl))
+          } catch (error) {
+            logger.error(`[戳一戳] 发送图片失败: ${error}`)
+            await e.reply("嘻嘻，骗你的，其实根本没有涩图~")
+          }
+        }
+        break
+      case 6:
+        await e.reply("把嘴张开（抬起脚）")
+        const feet_apiUrl = "https://yande.re/post.json?tags=feet+-rating:e+-nipples&limit=500"
+        const feet_imageUrl = await yandeimage(feet_apiUrl)
+        if (feet_imageUrl) {
+          try {
+            await e.reply(segment.image(feet_imageUrl))
+          } catch (error) {
+            logger.error(`[戳一戳] 发送图片失败: ${error}`)
+            await e.reply("你还真张嘴了啊（收起脚），想得美~")
+          }
+        }
+        break
+      case 7:
+        await e.reply("在这里无意义地消耗着时间，这……")
+        await common.sleep(5000)
+        await e.reply("没、没有，我并没有讨厌……")
+        break
+    }
+  }
+
+  async replyWithCount(e, pokeConfig, count, usercount) {
+    const retype = _.random(1, 2)
+
+    if (retype === 1) {
+      const msg = _.sample(pokeConfig.countRepliesGroup)
+      await e.reply(msg.replace("_num_", count).replace(/_botname_/g, this.botname))
+    } else {
+      const msg = _.sample(pokeConfig.countRepliesUser)
+      await e.reply(msg.replace("_num_", usercount).replace(/_botname_/g, this.botname))
+    }
   }
 }
