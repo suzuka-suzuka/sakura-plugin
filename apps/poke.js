@@ -315,14 +315,14 @@ export class poke extends plugin {
                 await e.reply(this.sendImage(this.getPokeImagePath("6.gif")))
               } else {
                 logger.warn("[戳一戳] AI 返回空名字，回退到文本回复")
-                await this.replyWithText(e, pokeConfig)
+                await this.replyWithText(e, pokeConfig, count, usercount)
               }
             } catch (error) {
               logger.error(`[戳一戳] 改名 AI 调用失败: ${error}，回退到文本回复`)
-              await this.replyWithText(e, pokeConfig)
+              await this.replyWithText(e, pokeConfig, count, usercount)
             }
           } else {
-            await this.replyWithText(e, pokeConfig)
+            await this.replyWithText(e, pokeConfig, count, usercount)
           }
         }
 
@@ -375,28 +375,28 @@ export class poke extends plugin {
     const random = _.random(1, 100)
 
     if (random <= 35) {
-      await this.replyWithText(e, pokeConfig)
+      await this.replyWithText(e, pokeConfig, count, usercount)
     } else if (random <= 60) {
-      await this.replyWithImage(e)
+      await this.replyWithImage(e, pokeConfig, count, usercount)
     } else if (random <= 80) {
       await this.replyWithPokeBack(e, pokeConfig)
-    } else if (random <= 90) {
-      await this.replyWithSpecialEasterEgg(e)
     } else {
-      await this.replyWithCount(e, pokeConfig, count, usercount)
+      await this.replyWithSpecialEasterEgg(e)
     }
 
     return false
   }
 
-  async replyWithText(e, pokeConfig) {
-    const retype = _.random(1, 3)
+  async replyWithText(e, pokeConfig, count, usercount) {
+    const retype = _.random(1, 4)
 
     if (retype === 1) {
       const msg = _.sample(pokeConfig.genericTextReplies)
       await e.reply(msg.replace(/_botname_/g, this.botname))
     } else if (retype === 2) {
-      const promptText = cfg.masterQQ.includes(e.operator_id) ? "(主人戳你一下)" : "(其他人戳你一下)"
+      const promptText = cfg.masterQQ.includes(e.operator_id)
+        ? "(主人戳你一下)"
+        : "(其他人戳你一下)"
       const msg = await this.getAIReply(e, promptText)
       if (msg !== false) {
         const replyMsg = [segment.at(e.operator_id), msg]
@@ -404,7 +404,7 @@ export class poke extends plugin {
       } else {
         await e.reply(this.sendImage(this.getPokeImagePath("12.gif")))
       }
-    } else {
+    } else if (retype === 3) {
       try {
         const response = await fetch("https://60s.viki.moe/v2/fabing")
         const result = await response.json()
@@ -420,10 +420,19 @@ export class poke extends plugin {
         const msg = _.sample(pokeConfig.genericTextReplies)
         await e.reply(msg.replace(/_botname_/g, this.botname))
       }
+    } else {
+      const countType = _.random(1, 2)
+      if (countType === 1) {
+        const msg = _.sample(pokeConfig.countRepliesGroup)
+        await e.reply(msg.replace("_num_", count).replace(/_botname_/g, this.botname))
+      } else {
+        const msg = _.sample(pokeConfig.countRepliesUser)
+        await e.reply(msg.replace("_num_", usercount).replace(/_botname_/g, this.botname))
+      }
     }
   }
 
-  async replyWithImage(e) {
+  async replyWithImage(e, pokeConfig, count, usercount) {
     try {
       const emojiRootDir = path.join(plugindata, "EmojiThief")
       let emojiPath
@@ -445,10 +454,10 @@ export class poke extends plugin {
       if (emojiPath) {
         await e.reply(this.sendImage(emojiPath))
       } else {
-        await this.replyWithText(e, pokeConfig)
+        await this.replyWithText(e, pokeConfig, count, usercount)
       }
     } catch (error) {
-      await this.replyWithText(e, pokeConfig)
+      await this.replyWithText(e, pokeConfig, count, usercount)
     }
   }
 
@@ -582,18 +591,6 @@ export class poke extends plugin {
         await common.sleep(5000)
         await e.reply("没、没有，我并没有讨厌……")
         break
-    }
-  }
-
-  async replyWithCount(e, pokeConfig, count, usercount) {
-    const retype = _.random(1, 2)
-
-    if (retype === 1) {
-      const msg = _.sample(pokeConfig.countRepliesGroup)
-      await e.reply(msg.replace("_num_", count).replace(/_botname_/g, this.botname))
-    } else {
-      const msg = _.sample(pokeConfig.countRepliesUser)
-      await e.reply(msg.replace("_num_", usercount).replace(/_botname_/g, this.botname))
     }
   }
 }
