@@ -103,8 +103,8 @@ export class groupNoticeAI extends plugin {
   async accept() {
     if (this.e.user_id === this.e.self_id) return
 
-    if (!Setting.getConfig("groupnotice").enable) return
-
+    const config = Setting.getConfig("groupnotice")
+    
     const cd = 30
     const key = `sakura:group_notice:cd:${this.e.group_id}`
     if (await redis.get(key)) {
@@ -114,8 +114,10 @@ export class groupNoticeAI extends plugin {
     await redis.set(key, "1", { EX: cd })
 
     if (this.e.sub_type === "increase") {
+      if (!config.joinEnable) return
       await this.handleIncrease()
     } else if (this.e.sub_type === "decrease") {
+      if (!config.leaveEnable) return
       await this.handleDecrease()
     }
   }

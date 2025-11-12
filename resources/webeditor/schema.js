@@ -485,7 +485,8 @@ const configSchema = {
       help: "sakura登录密码，修改后需重启生效",
     },
 
-    "groupnotice.enable": { label: "启用", type: "boolean" },
+    "groupnotice.joinEnable": { label: "进群通知", type: "boolean" },
+    "groupnotice.leaveEnable": { label: "退群通知", type: "boolean" },
     port: { label: "端口", type: "number", min: 1024, max: 65535 },
 
     baseURL: { label: "API地址", type: "text" },

@@ -629,8 +629,14 @@ export function supportGuoba() {
           },
         },
         {
-          field: "groupnotice.enable",
-          label: "进退群通知",
+          field: "groupnotice.joinEnable",
+          label: "进群通知",
+          component: "Switch",
+          required: false,
+        },
+        {
+          field: "groupnotice.leaveEnable",
+          label: "退群通知",
           component: "Switch",
           required: false,
         },
