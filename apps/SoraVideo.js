@@ -3,6 +3,8 @@ import SoraClient from "../lib/AIUtils/SoraClient.js"
 import { connect } from "puppeteer-real-browser"
 import { getImg } from "../lib/utils.js"
 
+let isGenerating = false
+
 export class SoraVideo extends plugin {
   constructor() {
     super({
@@ -54,6 +56,11 @@ export class SoraVideo extends plugin {
     let browser = null
 
     try {
+      if (isGenerating) {
+        await e.reply("⏳ 当前有视频生成任务正在进行中，请稍后再试...", false, { recallMsg: 10 })
+        return true
+      }
+
       const prompt = e.msg.replace(/^#v/, "").trim()
 
       if (!prompt) {
@@ -62,6 +69,8 @@ export class SoraVideo extends plugin {
 
       const imgs = await getImg(e)
       const hasImage = imgs && imgs.length > 0
+
+      isGenerating = true
 
       await e.reply("🎬 开始生成视频...", false, { recallMsg: 10 })
 
@@ -95,6 +104,8 @@ export class SoraVideo extends plugin {
       await e.reply(`❌ 视频生成失败: ${error.message}`, false, { recallMsg: 10 })
       return true
     } finally {
+      isGenerating = false
+      
       if (browser) {
         try {
           await browser.close()
