@@ -173,7 +173,9 @@ export class Favorability extends plugin {
       msg => msg.type === "at" && msg.qq && !isNaN(msg.qq) && msg.qq !== e.self_id,
     )
     if (atMsgs && atMsgs.length > 0) {
-      targetUsers = [...new Set(atMsgs.map(msg => msg.qq.toString()))].filter(qq => qq !== currentSender)
+      targetUsers = [...new Set(atMsgs.map(msg => msg.qq.toString()))].filter(
+        qq => qq !== currentSender,
+      )
 
       if (targetUsers.length > 0) {
         shouldAddFavorability = true
@@ -209,16 +211,17 @@ export class Favorability extends plugin {
     }
 
     const lastSenderInGroup = lastSender.get(groupId)
-    if (lastSenderInGroup === currentSender && !shouldAddFavorability) {
-      this.applyConsecutiveMessagePenalty(groupId, currentSender)
-    }
 
-    if (shouldAddFavorability && targetUsers.length > 0) {
-      for (const targetUser of targetUsers) {
-        this.addFavorability(groupId, currentSender, targetUser, 2)
+    if (lastSenderInGroup === currentSender) {
+      this.applyConsecutiveMessagePenalty(groupId, currentSender)
+    } else {
+      if (shouldAddFavorability && targetUsers.length > 0) {
+        for (const targetUser of targetUsers) {
+          this.addFavorability(groupId, currentSender, targetUser, 2)
+        }
+      } else if (lastSenderInGroup) {
+        this.addFavorability(groupId, currentSender, lastSenderInGroup, 1)
       }
-    } else if (lastSenderInGroup && lastSenderInGroup !== currentSender) {
-      this.addFavorability(groupId, currentSender, lastSenderInGroup, 1)
     }
 
     lastSender.set(groupId, currentSender)
@@ -239,7 +242,6 @@ export class Favorability extends plugin {
     if (!targetUser) {
       return false
     }
-
 
     const favorabilityAtoB = this.getFavorability(groupId, currentUser, targetUser)
     const favorabilityBtoA = this.getFavorability(groupId, targetUser, currentUser)
