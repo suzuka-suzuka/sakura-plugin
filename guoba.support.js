@@ -659,14 +659,10 @@ export function supportGuoba() {
           field: "SoraVideo.video.orientation",
           label: "视频方向",
           bottomHelpMessage: "视频的方向：landscape(横向)、portrait(竖向)、square(方形)",
-          component: "Select",
+          component: "Input",
           required: true,
           componentProps: {
-            options: [
-              { label: "横向 (landscape)", value: "landscape" },
-              { label: "竖向 (portrait)", value: "portrait" },
-              { label: "方形 (square)", value: "square" },
-            ],
+            placeholder: "landscape / portrait / square",
           },
         },
       ],

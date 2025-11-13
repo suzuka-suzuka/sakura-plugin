@@ -497,13 +497,8 @@ const configSchema = {
     },
     "SoraVideo.video.orientation": {
       label: "视频方向",
-      type: "select",
+      type: "text",
       help: "视频的方向：landscape(横向)、portrait(竖向)、square(方形)",
-      options: [
-        { label: "横向 (landscape)", value: "landscape" },
-        { label: "竖向 (portrait)", value: "portrait" },
-        { label: "方形 (square)", value: "square" },
-      ],
     },
     
     port: { label: "端口", type: "number", min: 1024, max: 65535 },

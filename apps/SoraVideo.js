@@ -76,19 +76,10 @@ export class SoraVideo extends plugin {
         const imageBuffer = await this.downloadImage(imageUrl)
 
         result = await client.imageToVideo(prompt, imageBuffer, {
-          orientation: "landscape",
-          nFrames: 300,
-          maxWaitTime: 1500,
-          pollInterval: 5,
           filename: "input.png",
         })
       } else {
-        result = await client.textToVideo(prompt, {
-          orientation: "landscape",
-          nFrames: 300,
-          maxWaitTime: 1500,
-          pollInterval: 5,
-        })
+        result = await client.textToVideo(prompt)
       }
 
       if (!result || !result.url) {
