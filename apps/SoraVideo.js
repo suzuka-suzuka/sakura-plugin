@@ -23,14 +23,21 @@ export class SoraVideo extends plugin {
   async initClient() {
     let browser
     try {
+      const isLinux = process.platform === "linux"
+
       const { page, browser: realBrowser } = await connect({
-        headless: "auto",
-        args: [],
+        headless: false,
+        args: isLinux
+          ? ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+          : [],
         turnstile: true,
         customConfig: {},
         connectOption: {},
         disableXvfb: false,
         ignoreAllFlags: false,
+        ...(isLinux && {
+          xvfbsession: true,
+        }),
       })
 
       browser = realBrowser
