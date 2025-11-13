@@ -1,8 +1,7 @@
 import plugin from "../../../lib/plugins/plugin.js"
-import { segment } from "icqq"
 import SoraClient from "../lib/AIUtils/SoraClient.js"
 import { connect } from "puppeteer-real-browser"
-import { getImg, Recall } from "../lib/utils.js"
+import { getImg } from "../lib/utils.js"
 
 export class SoraVideo extends plugin {
   constructor() {
