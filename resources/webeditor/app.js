@@ -410,6 +410,22 @@ function renderField(key, value, path) {
 
   if (type === "string") {
     const isMultiline = fieldType === "textarea" || value.includes("\n") || value.length > 100
+    
+    if (fieldType === "select") {
+      const options = fieldSchema.options || []
+      return `
+            <div class="form-group">
+                <label>${label}${fieldSchema.required ? ' <span style="color: #ff4d4f;">*</span>' : ""}</label>
+                <div class="form-control-wrapper">
+                    <select data-path="${path}" onchange="updateValue(this)" style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
+                        ${options.map(opt => `<option value="${opt.value}" ${value === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                    </select>
+                    ${fieldSchema.help ? `<p style="color: #999; font-size: 12px; margin-top: 4px;">${fieldSchema.help}</p>` : ""}
+                </div>
+            </div>
+        `
+    }
+    
     return `
             <div class="form-group">
                 <label>${label}${fieldSchema.required ? ' <span style="color: #ff4d4f;">*</span>' : ""}</label>
@@ -932,6 +948,19 @@ function renderObjectEditorForm() {
                     </div>
                 </div>
             `
+      } else if (fieldType === "select") {
+        const options = fieldSchema.options || []
+        return `
+                <div class="form-group">
+                    <label>${label}${fieldSchema.required ? ' <span style="color: #ff4d4f;">*</span>' : ""}</label>
+                    <div class="form-control-wrapper">
+                        <select data-obj-key="${key}" onchange="updateObjectValue(this)" style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
+                            ${options.map(opt => `<option value="${opt.value}" ${value === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                        </select>
+                        ${fieldSchema.help ? `<p style="color: #999; font-size: 12px; margin-top: 4px;">${fieldSchema.help}</p>` : ""}
+                    </div>
+                </div>
+            `
       } else if (fieldType === "groupSelect") {
         return `
                 <div class="form-group">
@@ -1269,6 +1298,19 @@ function renderModalForm(obj, prefix) {
                     <label>${label}${fieldSchema.required ? ' <span style="color: #ff4d4f;">*</span>' : ""}</label>
                     <div class="form-control-wrapper">
                         <textarea data-modal-path="${key}" onchange="updateModalValue(this)" rows="4">${escapeHtml(String(value))}</textarea>
+                        ${fieldSchema.help ? `<p style="color: #999; font-size: 12px; margin-top: 4px;">${fieldSchema.help}</p>` : ""}
+                    </div>
+                </div>
+            `
+      } else if (type === "select") {
+        const options = fieldSchema.options || []
+        return `
+                <div class="form-group">
+                    <label>${label}${fieldSchema.required ? ' <span style="color: #ff4d4f;">*</span>' : ""}</label>
+                    <div class="form-control-wrapper">
+                        <select data-modal-path="${key}" onchange="updateModalValue(this)" style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
+                            ${options.map(opt => `<option value="${opt.value}" ${value === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                        </select>
                         ${fieldSchema.help ? `<p style="color: #999; font-size: 12px; margin-top: 4px;">${fieldSchema.help}</p>` : ""}
                     </div>
                 </div>
