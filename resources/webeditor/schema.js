@@ -35,6 +35,7 @@ const configSchema = {
         "Permission",
         "webeditor",
         "groupnotice",
+        "SoraVideo",
       ],
     },
   ],
@@ -62,6 +63,7 @@ const configSchema = {
     tenor: "Tenor表情",
     webeditor: "配置面板",
     groupnotice: "进退群通知",
+    SoraVideo: "Sora视频生成",
   },
 
   fields: {
@@ -487,6 +489,13 @@ const configSchema = {
 
     "groupnotice.joinEnable": { label: "进群通知", type: "boolean" },
     "groupnotice.leaveEnable": { label: "退群通知", type: "boolean" },
+    
+    "SoraVideo.sora.access_token": {
+      label: "OpenAI Access Token",
+      type: "textarea",
+      help: "从 ChatGPT 获取的 Access Token，用于 Sora 视频生成",
+    },
+    
     port: { label: "端口", type: "number", min: 1024, max: 65535 },
 
     baseURL: { label: "API地址", type: "text" },

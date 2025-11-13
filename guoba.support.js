@@ -640,6 +640,21 @@ export function supportGuoba() {
           component: "Switch",
           required: false,
         },
+        {
+          label: "Sora视频生成",
+          component: "Divider",
+        },
+        {
+          field: "SoraVideo.sora.access_token",
+          label: "OpenAI Access Token",
+          bottomHelpMessage: "从 ChatGPT 获取的 Access Token",
+          component: "InputTextArea",
+          required: true,
+          componentProps: {
+            placeholder: "请输入 OpenAI Access Token",
+            rows: 3,
+          },
+        },
       ],
 
       getConfigData() {

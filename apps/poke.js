@@ -374,11 +374,11 @@ export class poke extends plugin {
 
     const random = _.random(1, 100)
 
-    if (random <= 35) {
+    if (random <= 40) {
       await this.replyWithText(e, pokeConfig, count, usercount)
-    } else if (random <= 60) {
+    } else if (random <= 70) {
       await this.replyWithImage(e, pokeConfig, count, usercount)
-    } else if (random <= 80) {
+    } else if (random <= 85) {
       await this.replyWithPokeBack(e, pokeConfig)
     } else {
       await this.replyWithSpecialEasterEgg(e)

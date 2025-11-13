@@ -1,0 +1,20 @@
+
+sora:
+  access_token: "your_access_token_here"
+  
+  base_url: "https://sora.chatgpt.com/backend"
+  
+  timeout: 120
+
+video:
+  orientation: "landscape"
+  
+  size: "small"
+  
+  n_frames: 300
+  
+  model: "sy_8"
+  
+  max_wait_time: 1500
+  
+  poll_interval: 5
