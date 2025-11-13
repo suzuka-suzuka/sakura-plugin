@@ -173,7 +173,7 @@ export class Favorability extends plugin {
       msg => msg.type === "at" && msg.qq && !isNaN(msg.qq) && msg.qq !== e.self_id,
     )
     if (atMsgs && atMsgs.length > 0) {
-      targetUsers = atMsgs.map(msg => msg.qq.toString()).filter(qq => qq !== currentSender)
+      targetUsers = [...new Set(atMsgs.map(msg => msg.qq.toString()))].filter(qq => qq !== currentSender)
 
       if (targetUsers.length > 0) {
         shouldAddFavorability = true
