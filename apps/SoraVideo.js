@@ -111,21 +111,16 @@ export class SoraVideo extends plugin {
         result = await client.textToVideo(prompt, videoOptions)
       }
 
-      if (!result || !result.url) {
-        await this.reply("❌ 视频生成失败，未获取到视频链接", false, { recallMsg: 10 })
-        return true
-      }
-
       await e.reply(segment.video(result.url))
 
       return true
     } catch (error) {
       logger.error(`[SoraVideo] 生成视频失败: ${error.message}`)
-      await this.reply(`❌ 视频生成失败: ${error.message}`, false, { recallMsg: 10 })
+      await this.reply(`❌ 视频生成失败: ${error.message}`, true, { recallMsg: 10 })
       return true
     } finally {
       isGenerating = false
-      
+
       if (browser) {
         try {
           await browser.close()
