@@ -8,4 +8,5 @@ alternatePromptProbability: 0.1
 recalltime: 10
 Channel: "2.5"
 enableGroupLock: false
+splitMessage: true
 Groups: []

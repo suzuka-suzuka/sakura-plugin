@@ -495,11 +495,6 @@ const configSchema = {
       type: "textarea",
       help: "从 ChatGPT 获取的 Access Token，用于 Sora 视频生成",
     },
-    "SoraVideo.video.orientation": {
-      label: "视频方向",
-      type: "text",
-      help: "视频的方向：landscape(横向)、portrait(竖向)、square(方形)",
-    },
     
     port: { label: "端口", type: "number", min: 1024, max: 65535 },
 

@@ -12,42 +12,36 @@ export class EditImage extends plugin {
       dsc: "使用AI模型修改或生成图片",
       event: "message",
       priority: 1135,
-      rule: [],
+      rule: [
+        {
+          reg: ".*",
+          fnc: "dispatchHandler",
+          log: false,
+        },
+      ],
     })
     this.task = Setting.getConfig("EditImage")
-    this.generateRules()
   }
 
-  generateRules() {
-    const rules = [
-      {
-        reg: "^#i([\\s\\S]*)$",
-        fnc: "editImageHandler",
-        log: false,
-      },
-    ]
+  async dispatchHandler(e) {
+    if (!e.msg) return false
 
-    let tasks = this.task?.tasks || (Array.isArray(this.task) ? this.task : []);
+    if (/^#i/.test(e.msg)) {
+      return this.editImageHandler(e)
+    }
+
+    const tasks = this.task?.tasks || (Array.isArray(this.task) ? this.task : [])
     if (tasks && Array.isArray(tasks)) {
-      for (const task of tasks) {
-        if (task.reg && task.prompt) {
-          rules.push({
-            reg: task.reg,
-            fnc: "dynamicImageHandler",
-            log: false,
-          })
-        }
+      const matchedTask = tasks.find(t => t.reg && t.reg === e.msg)
+      if (matchedTask) {
+        return this.dynamicImageHandler(e, matchedTask)
       }
     }
-    this.rule = rules
+
+    return false
   }
 
-  async dynamicImageHandler(e) {
-    let tasks = this.task?.tasks || (Array.isArray(this.task) ? this.task : []);
-    if (!tasks || !Array.isArray(tasks)) return false
-    
-    const matchedTask = tasks.find(t => new RegExp(t.reg).test(e.msg))
-    if (!matchedTask) return false
+  async dynamicImageHandler(e, matchedTask) {
 
     let imageUrls = await getImg(e)
     if (!imageUrls || imageUrls.length === 0) {

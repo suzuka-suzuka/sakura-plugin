@@ -47,14 +47,14 @@ export class Favorability extends plugin {
   readData(groupId) {
     const file = this.getDataFile(groupId)
     if (!fs.existsSync(file)) {
-      return { favorability: {}, lastUpdate: {} }
+      return { favorability: {} }
     }
     try {
       const data = fs.readFileSync(file, "utf-8")
       return JSON.parse(data)
     } catch (err) {
       logger.error(`[好感度] 读取数据失败: ${err}`)
-      return { favorability: {}, lastUpdate: {} }
+      return { favorability: {} }
     }
   }
 
@@ -73,9 +73,6 @@ export class Favorability extends plugin {
     if (!data.favorability) {
       data.favorability = {}
     }
-    if (!data.lastUpdate) {
-      data.lastUpdate = {}
-    }
 
     if (!data.favorability[from]) {
       data.favorability[from] = {}
@@ -87,11 +84,6 @@ export class Favorability extends plugin {
 
     data.favorability[from][to] += value
 
-    if (!data.lastUpdate[from]) {
-      data.lastUpdate[from] = {}
-    }
-    data.lastUpdate[from][to] = Date.now()
-
     this.saveData(groupId, data)
   }
 
@@ -100,39 +92,7 @@ export class Favorability extends plugin {
     return data.favorability[from]?.[to] || 0
   }
 
-  checkAndDecayFavorability(groupId) {
-    const data = this.readData(groupId)
 
-    if (!data.favorability) {
-      data.favorability = {}
-    }
-    if (!data.lastUpdate) {
-      data.lastUpdate = {}
-    }
-
-    const now = Date.now()
-    const oneDayMs = 24 * 60 * 60 * 1000
-    let hasChange = false
-
-    for (const from in data.favorability) {
-      if (!data.lastUpdate[from]) {
-        data.lastUpdate[from] = {}
-      }
-
-      for (const to in data.favorability[from]) {
-        const lastUpdate = data.lastUpdate[from][to] || 0
-        if (now - lastUpdate > oneDayMs) {
-          data.favorability[from][to] -= 10
-          data.lastUpdate[from][to] = now
-          hasChange = true
-        }
-      }
-    }
-
-    if (hasChange) {
-      this.saveData(groupId, data)
-    }
-  }
 
   applyConsecutiveMessagePenalty(groupId, userId) {
     const data = this.readData(groupId)
@@ -163,8 +123,6 @@ export class Favorability extends plugin {
 
     const groupId = e.group_id.toString()
     const currentSender = e.user_id.toString()
-
-    this.checkAndDecayFavorability(groupId)
 
     let targetUsers = []
     let shouldAddFavorability = false
@@ -217,10 +175,10 @@ export class Favorability extends plugin {
     } else {
       if (shouldAddFavorability && targetUsers.length > 0) {
         for (const targetUser of targetUsers) {
-          this.addFavorability(groupId, currentSender, targetUser, 2)
+          this.addFavorability(groupId, currentSender, targetUser, 3)
         }
       } else if (lastSenderInGroup) {
-        this.addFavorability(groupId, currentSender, lastSenderInGroup, 1)
+        this.addFavorability(groupId, currentSender, lastSenderInGroup, 2)
       }
     }
 

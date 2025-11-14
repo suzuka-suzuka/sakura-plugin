@@ -203,7 +203,17 @@ export class Mimic extends plugin {
       }
 
       const recalltime = this.appconfig.recalltime
-      await splitAndReplyMessages(e, finalResponseText, shouldRecall, recalltime)
+      if (this.appconfig.splitMessage) {
+        await splitAndReplyMessages(e, finalResponseText, shouldRecall, recalltime)
+      } else {
+        const parsedResponse = parseAtMessage(finalResponseText)
+        const reply = await e.reply(parsedResponse, true)
+        if (shouldRecall && reply && reply.message_id) {
+          setTimeout(() => {
+            e.recall(reply.message_id)
+          }, recalltime * 1000)
+        }
+      }
     } catch (error) {
       logger.error(`处理过程中出现错误: ${error.message}`)
       return false

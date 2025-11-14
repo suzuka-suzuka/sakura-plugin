@@ -2,6 +2,7 @@ import plugin from "../../../lib/plugins/plugin.js"
 import SoraClient from "../lib/AIUtils/SoraClient.js"
 import { connect } from "puppeteer-real-browser"
 import { getImg } from "../lib/utils.js"
+import Setting from "../lib/setting.js"
 
 let isGenerating = false
 
@@ -11,10 +12,10 @@ export class SoraVideo extends plugin {
       name: "Sora视频生成",
       dsc: "使用Sora生成视频",
       event: "message",
-      priority: 5000,
+      priority: 1135,
       rule: [
         {
-          reg: "^#v(.+)",
+          reg: "^([lps])?\\s*#v(.+)",
           fnc: "generateVideo",
           log: false,
         },
@@ -44,7 +45,10 @@ export class SoraVideo extends plugin {
 
       browser = realBrowser
 
-      const client = new SoraClient(page)
+      const config = Setting.getConfig("SoraVideo")
+      const accessToken = config.access_token
+
+      const client = new SoraClient(page, accessToken)
       return { client, browser }
     } catch (error) {
       logger.error(`[SoraVideo] 初始化客户端失败: ${error.message}`)
@@ -57,11 +61,24 @@ export class SoraVideo extends plugin {
 
     try {
       if (isGenerating) {
-        await e.reply("⏳ 当前有视频生成任务正在进行中，请稍后再试...", false, { recallMsg: 10 })
+        await this.reply("⏳ 当前有视频生成任务正在进行中，请稍后再试...", false, { recallMsg: 10 })
         return true
       }
 
-      const prompt = e.msg.replace(/^#v/, "").trim()
+      const match = e.msg.match(/^([lps])?\s*#v(.+)/s)
+      if (!match) {
+        return false
+      }
+
+      const orientationPrefix = match[1]
+      const prompt = match[2].trim()
+
+      let orientation = "portrait" // 默认竖向
+      if (orientationPrefix === "l") {
+        orientation = "landscape"
+      } else if (orientationPrefix === "s") {
+        orientation = "square"
+      }
 
       if (!prompt) {
         return false
@@ -72,12 +89,14 @@ export class SoraVideo extends plugin {
 
       isGenerating = true
 
-      await e.reply("🎬 开始生成视频...", false, { recallMsg: 10 })
+      await this.reply("🎬 开始生成视频...", false, { recallMsg: 10 })
 
       const { client, browser: browserInstance } = await this.initClient()
       browser = browserInstance
 
       let result
+
+      const videoOptions = { orientation }
 
       if (hasImage) {
         const imageUrl = imgs[0]
@@ -85,14 +104,15 @@ export class SoraVideo extends plugin {
         const imageBuffer = await this.downloadImage(imageUrl)
 
         result = await client.imageToVideo(prompt, imageBuffer, {
+          ...videoOptions,
           filename: "input.png",
         })
       } else {
-        result = await client.textToVideo(prompt)
+        result = await client.textToVideo(prompt, videoOptions)
       }
 
       if (!result || !result.url) {
-        await e.reply("❌ 视频生成失败，未获取到视频链接", false, { recallMsg: 10 })
+        await this.reply("❌ 视频生成失败，未获取到视频链接", false, { recallMsg: 10 })
         return true
       }
 
@@ -101,7 +121,7 @@ export class SoraVideo extends plugin {
       return true
     } catch (error) {
       logger.error(`[SoraVideo] 生成视频失败: ${error.message}`)
-      await e.reply(`❌ 视频生成失败: ${error.message}`, false, { recallMsg: 10 })
+      await this.reply(`❌ 视频生成失败: ${error.message}`, false, { recallMsg: 10 })
       return true
     } finally {
       isGenerating = false

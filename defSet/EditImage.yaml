@@ -1,4 +1,4 @@
-- reg: ^手办化$
+- reg: 手办化
   prompt: Please turn this photo into a figure. Behind it, there should be a
     packaging box with a large clear front window, printed character artwork,
     the product name, logo, barcode, and a small specs or authenticity panel,
@@ -8,7 +8,7 @@
     version of the photo I gave you, and the figure must be three-dimensional.
     I’d like the PVC material to be clearly represented. It would be even better
     if the background is indoors.
-- reg: ^毛绒化$
+- reg: 毛绒化
   prompt: Turn the subject from the provided photo into a plush toy made of soft
     minky and short faux fur, with embroidered eyes and mouth, visible seams and
     a small fabric tag,placed on a round display stand in the foreground; behind
