@@ -128,7 +128,7 @@ export class Favorability extends plugin {
     let shouldAddFavorability = false
 
     const atMsgs = e.message?.filter(
-      msg => msg.type === "at" && msg.qq && !isNaN(msg.qq) && msg.qq !== e.self_id,
+      msg => msg.type === "at" && msg.qq && !isNaN(msg.qq) && msg.qq != e.self_id,
     )
     if (atMsgs && atMsgs.length > 0) {
       targetUsers = [...new Set(atMsgs.map(msg => msg.qq.toString()))].filter(
