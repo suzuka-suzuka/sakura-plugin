@@ -406,6 +406,13 @@ export function supportGuoba() {
           bottomHelpMessage: "反差预设触发时,消息撤回的延迟时间,单位为秒。设为0则不撤回",
         },
         {
+          field: "mimic.splitMessage",
+          label: "分割长消息",
+          component: "Switch",
+          required: true,
+          bottomHelpMessage: "是否将长消息分割发送",
+        },
+        {
           label: "菜单",
           component: "SOFT_GROUP_BEGIN",
         },
@@ -645,7 +652,7 @@ export function supportGuoba() {
           component: "Divider",
         },
         {
-          field: "SoraVideo.sora.access_token",
+          field: "SoraVideo.access_token",
           label: "OpenAI Access Token",
           bottomHelpMessage: "从 ChatGPT 获取的 Access Token",
           component: "InputTextArea",
@@ -653,16 +660,6 @@ export function supportGuoba() {
           componentProps: {
             placeholder: "请输入 OpenAI Access Token",
             rows: 3,
-          },
-        },
-        {
-          field: "SoraVideo.video.orientation",
-          label: "视频方向",
-          bottomHelpMessage: "视频的方向：landscape(横向)、portrait(竖向)、square(方形)",
-          component: "Input",
-          required: true,
-          componentProps: {
-            placeholder: "landscape / portrait / square",
           },
         },
       ],
