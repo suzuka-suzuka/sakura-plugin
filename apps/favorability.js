@@ -7,10 +7,6 @@ import FavorabilityImageGenerator from "../lib/favorability/ImageGenerator.js"
 
 const dataPath = path.join(plugindata, "favorability")
 
-if (!fs.existsSync(dataPath)) {
-  fs.mkdirSync(dataPath, { recursive: true })
-}
-
 const lastSender = new Map()
 
 export class Favorability extends plugin {
@@ -92,19 +88,17 @@ export class Favorability extends plugin {
     return data.favorability[from]?.[to] || 0
   }
 
-
-
   applyConsecutiveMessagePenalty(groupId, userId) {
     const data = this.readData(groupId)
-
-    if (!data.favorability[userId]) {
-      return
-    }
-
     let hasChange = false
-    for (const targetUser in data.favorability[userId]) {
-      data.favorability[userId][targetUser] -= 1
-      hasChange = true
+
+    if (data.favorability) {
+      for (const fromUser in data.favorability) {
+        if (data.favorability[fromUser][userId] !== undefined) {
+          data.favorability[fromUser][userId] -= 1
+          hasChange = true
+        }
+      }
     }
 
     if (hasChange) {
@@ -113,6 +107,10 @@ export class Favorability extends plugin {
   }
 
   async accept(e) {
+    if (!fs.existsSync(dataPath)) {
+      fs.mkdirSync(dataPath, { recursive: true })
+    }
+
     if (/^#?好感度.*$/.test(e.msg)) {
       return false
     }
