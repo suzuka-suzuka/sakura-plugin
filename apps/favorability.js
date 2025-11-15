@@ -173,10 +173,10 @@ export class Favorability extends plugin {
     } else {
       if (shouldAddFavorability && targetUsers.length > 0) {
         for (const targetUser of targetUsers) {
-          this.addFavorability(groupId, currentSender, targetUser, 3)
+          this.addFavorability(groupId, currentSender, targetUser, 2)
         }
       } else if (lastSenderInGroup) {
-        this.addFavorability(groupId, currentSender, lastSenderInGroup, 2)
+        this.addFavorability(groupId, currentSender, lastSenderInGroup, 1)
       }
     }
 
