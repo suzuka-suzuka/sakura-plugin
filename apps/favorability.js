@@ -8,6 +8,7 @@ import FavorabilityImageGenerator from "../lib/favorability/ImageGenerator.js"
 const dataPath = path.join(plugindata, "favorability")
 
 const lastSender = new Map()
+const penaltyTimers = new Map()
 
 export class Favorability extends plugin {
   constructor() {
@@ -162,6 +163,11 @@ export class Favorability extends plugin {
     const groupId = e.group_id.toString()
     const currentSender = e.user_id.toString()
 
+    if (penaltyTimers.has(groupId)) {
+      clearTimeout(penaltyTimers.get(groupId))
+      penaltyTimers.delete(groupId)
+    }
+
     let targetUsers = []
     let shouldAddFavorability = false
 
@@ -206,21 +212,33 @@ export class Favorability extends plugin {
       }
     }
 
-    const lastSenderInGroup = lastSender.get(groupId)
+    const lastSenderInfo = lastSender.get(groupId)
 
-    if (lastSenderInGroup === currentSender) {
-      this.applyConsecutiveMessagePenalty(groupId, currentSender)
+    if (lastSenderInfo && lastSenderInfo.userId === currentSender) {
+      const newStreak = (lastSenderInfo.streak || 1) + 1
+      lastSender.set(groupId, { userId: currentSender, streak: newStreak })
+
+      if (newStreak > 1) {
+        const timer = setTimeout(
+          () => {
+            this.applyConsecutiveMessagePenalty(groupId, currentSender)
+            penaltyTimers.delete(groupId)
+          },
+          2 * 60 * 1000,
+        )
+        penaltyTimers.set(groupId, timer)
+      }
     } else {
+      lastSender.set(groupId, { userId: currentSender, streak: 1 })
+
       if (shouldAddFavorability && targetUsers.length > 0) {
         for (const targetUser of targetUsers) {
           this.addFavorability(groupId, currentSender, targetUser, 2)
         }
-      } else if (lastSenderInGroup) {
-        this.addFavorability(groupId, currentSender, lastSenderInGroup, 1)
+      } else if (lastSenderInfo) {
+        this.addFavorability(groupId, currentSender, lastSenderInfo.userId, 1)
       }
     }
-
-    lastSender.set(groupId, currentSender)
 
     return false
   }
