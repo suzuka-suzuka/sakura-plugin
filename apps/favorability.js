@@ -36,6 +36,46 @@ export class Favorability extends plugin {
     })
   }
 
+  task = {
+    name: "清理最低好感度",
+    cron: "0 0 0 * * *",
+    fnc: () => this.cleanupFavorability(),
+    log: false,
+  }
+
+  async cleanupFavorability() {
+    const files = fs.readdirSync(dataPath).filter(file => file.endsWith(".json"))
+    for (const file of files) {
+      const groupId = path.basename(file, ".json")
+      const data = this.readData(groupId)
+
+      if (!data.favorability || Object.keys(data.favorability).length === 0) {
+        continue
+      }
+
+      let minFavorability = Infinity
+      let minFrom = null
+      let minTo = null
+
+      for (const from in data.favorability) {
+        for (const to in data.favorability[from]) {
+          if (data.favorability[from][to] < minFavorability) {
+            minFavorability = data.favorability[from][to]
+            minFrom = from
+            minTo = to
+          }
+        }
+      }
+
+      if (minFrom && minTo) {
+        delete data.favorability[minFrom][minTo]
+        if (Object.keys(data.favorability[minFrom]).length === 0) {
+          delete data.favorability[minFrom]
+        }
+        this.saveData(groupId, data)
+      }
+    }
+  }
   getDataFile(groupId) {
     return path.join(dataPath, `${groupId}.json`)
   }
