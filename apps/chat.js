@@ -5,7 +5,7 @@ import {
   saveConversationHistory,
 } from "../lib/AIUtils/ConversationHistory.js"
 import { executeToolCalls } from "../lib/AIUtils/tools/tools.js"
-import { parseAtMessage } from "../lib/AIUtils/messaging.js"
+import { parseAtMessage, splitAndReplyMessages } from "../lib/AIUtils/messaging.js"
 import { getImg } from "../lib/utils.js"
 
 export class AIChat extends plugin {
@@ -107,8 +107,36 @@ export class AIChat extends plugin {
     }
   }
 
+  /**
+   * 根据群号获取对应的 prompt
+   * 群组 prompt 优先级最高，不会被用户输入或外部因素覆盖
+   * 这是一个硬编码的安全配置，防止 prompt 注入攻击
+   */
+  getGroupPrompt(e, config, matchedProfile) {
+    // 从配置文件中读取群组 prompt
+    if (!config.groupPrompts || !Array.isArray(config.groupPrompts)) {
+      return matchedProfile.Prompt;
+    }
+
+    // 查找当前群号对应的 prompt
+    if (e.isGroup) {
+      const groupPromptConfig = config.groupPrompts.find(
+        item => String(item.groupId) === String(e.group_id)
+      );
+      if (groupPromptConfig && groupPromptConfig.prompt) {
+        logger.info(`[Chat] 群 ${e.group_id} 使用自定义预设，此预设优先级最高`);
+        return groupPromptConfig.prompt;
+      }
+    }
+
+    // 否则使用默认 prompt
+    return matchedProfile.Prompt;
+  }
+
   async doChat(e, config, matchedProfile, query) {
-    const { Channel, Prompt, GroupContext, History, Tool } = matchedProfile
+    const { Channel, GroupContext, History, Tool, prefix } = matchedProfile
+    // 根据群号获取对应的 prompt
+    const Prompt = this.getGroupPrompt(e, config, matchedProfile)
 
     logger.info(`Chat触发`)
     let finalResponseText = ""
@@ -117,11 +145,10 @@ export class AIChat extends plugin {
 
     try {
       if (History) {
-        currentFullHistory = await loadConversationHistory(e, matchedProfile.prefix)
+        currentFullHistory = await loadConversationHistory(e, prefix)
       }
 
       const queryParts = [{ text: query }]
-      const { prefix } = matchedProfile
 
       let currentAIResponse = await getAI(
         Channel,
@@ -202,8 +229,8 @@ export class AIChat extends plugin {
         await saveConversationHistory(e, historyToSave, prefix)
       }
 
-      const msg = parseAtMessage(finalResponseText)
-      await this.reply(msg)
+      // 使用 splitAndReplyMessages 来正确处理图片 URL 和其他内容
+      await splitAndReplyMessages(e, finalResponseText, false, 0)
     } catch (error) {
       logger.error(`Chat处理过程中出现错误: ${error.message}`)
       await this.reply(`处理过程中出现错误: ${error.message}`, false, { recallMsg: 10 })

@@ -10,3 +10,4 @@ Channel: "2.5"
 enableGroupLock: false
 splitMessage: true
 Groups: []
+groupPrompts: []

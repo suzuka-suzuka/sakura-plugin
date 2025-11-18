@@ -10,7 +10,7 @@ export class News60s extends plugin {
 
   task = {
     name: "60sNews定时发送",
-    cron: "0 0 8 * * *",
+    cron: "0 0 9 * * *",
     fnc: () => this.dailyNewsTask(),
     log: false,
   }

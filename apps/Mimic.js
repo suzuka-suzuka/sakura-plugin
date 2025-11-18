@@ -25,6 +25,32 @@ export class Mimic extends plugin {
     return Setting.getConfig("mimic")
   }
 
+  /**
+   * 根据群号获取对应的 prompt
+   * 群组 prompt 优先级最高，不会被用户输入或外部因素覆盖
+   */
+  getGroupPrompt(e) {
+    // 从配置文件中读取群组 prompt
+    const mimicConfig = this.appconfig;
+    if (!mimicConfig.groupPrompts || !Array.isArray(mimicConfig.groupPrompts)) {
+      return null;
+    }
+
+    // 查找当前群号对应的 prompt
+    if (e.isGroup) {
+      const groupPromptConfig = mimicConfig.groupPrompts.find(
+        item => String(item.groupId) === String(e.group_id)
+      );
+      if (groupPromptConfig && groupPromptConfig.prompt) {
+        logger.info(`[Mimic] 群 ${e.group_id} 使用自定义预设，此预设优先级最高`);
+        return groupPromptConfig.prompt;
+      }
+    }
+
+    // 否则使用默认 prompt
+    return null; // 返回 null 表示使用配置中的默认 prompt
+  }
+
   async Mimic(e) {
     if (this.appconfig.enableGroupLock && e.isGroup) {
       const lockKey = `sakura:mimic:lock:${e.group_id}`
@@ -119,17 +145,25 @@ export class Mimic extends plugin {
       }
     }
 
-    let selectedPresetPrompt = this.appconfig.Prompt
-    let shouldRecall = false
-    if (!e.isMaster && !isNewMember && Math.random() < this.appconfig.alternatePromptProbability) {
-      selectedPresetPrompt = this.appconfig.alternatePrompt
-      shouldRecall = true
+    // 首先检查是否有群组特定的 prompt
+    let selectedPresetPrompt = this.getGroupPrompt(e)
+    
+    // 如果没有群组特定的 prompt，使用配置中的默认 prompt
+    if (!selectedPresetPrompt) {
+      selectedPresetPrompt = this.appconfig.Prompt || ""
+      if (!e.isMaster && !isNewMember && Math.random() < this.appconfig.alternatePromptProbability) {
+        selectedPresetPrompt = this.appconfig.alternatePrompt || ""
+      }
     }
-    logger.info(`mimic触发`)
+    
+    let shouldRecall = false
+    logger.info(`mimic触发，使用 prompt: ${selectedPresetPrompt ? selectedPresetPrompt.substring(0, 50) : "空"}...`)
     let finalResponseText = ""
     let currentFullHistory = []
     let toolCallCount = 0
     const Channel = this.appconfig.Channel
+    logger.info(`[Mimic] Channel: ${JSON.stringify(Channel)}`)
+    logger.info(`[Mimic] selectedPresetPrompt: ${selectedPresetPrompt}`)
     try {
       const queryParts = [{ text: query }]
 
@@ -203,17 +237,8 @@ export class Mimic extends plugin {
       }
 
       const recalltime = this.appconfig.recalltime
-      if (this.appconfig.splitMessage) {
-        await splitAndReplyMessages(e, finalResponseText, shouldRecall, recalltime)
-      } else {
-        const parsedResponse = parseAtMessage(finalResponseText)
-        const reply = await e.reply(parsedResponse, true)
-        if (shouldRecall && reply && reply.message_id) {
-          setTimeout(() => {
-            e.recall(reply.message_id)
-          }, recalltime * 1000)
-        }
-      }
+      // 使用 splitAndReplyMessages 来正确处理图片 URL 和其他内容
+      await splitAndReplyMessages(e, finalResponseText, shouldRecall, recalltime)
     } catch (error) {
       logger.error(`处理过程中出现错误: ${error.message}`)
       return false

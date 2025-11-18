@@ -8,6 +8,8 @@ profiles:
     Tool: true
 groupContextLength: 20
 enableUserLock: false
+enableActiveChat: false
 toolschannel: "default"
 appschannel: "default"
 defaultchannel: "default"
+groupPrompts: []
