@@ -334,7 +334,7 @@ function renderField(key, value, path) {
   let label = fieldSchema.label
   const fieldType = fieldSchema.type || (isArray ? "array" : isObject ? "object" : type)
 
-  const isGroupField = fieldType === "groupSelect" || (/groups?|启用群|群组/i.test(key) && isArray)
+  const isGroupField = fieldType === "groupSelect" || (/^groups?$|启用群|群组/i.test(key) && isArray)
 
   if (isArray) {
     if (isGroupField) {
@@ -501,7 +501,12 @@ function renderObjectArrayCard(item, index, path) {
   let titleField = ""
   let descField = ""
 
-  if (item.sourceGroupIds && item.targetGroupIds) {
+  // 特殊处理 groupPrompts
+  if (item.groupId && item.prompt !== undefined) {
+    const group = groupList.find(g => String(g.id) === String(item.groupId))
+    titleField = group ? `${group.name} (${item.groupId})` : `群 ${item.groupId}`
+    descField = item.prompt || ""
+  } else if (item.sourceGroupIds && item.targetGroupIds) {
     const sourceIds = Array.isArray(item.sourceGroupIds)
       ? item.sourceGroupIds
       : [item.sourceGroupIds]
@@ -795,6 +800,7 @@ function closeSimpleItemModal() {
 let currentEditingObjectPath = null
 let currentEditingObjectIndex = null
 let currentEditingObjectData = null
+let currentEditingObjectSchema = null
 
 function addObjectArrayItem(path) {
   const arr = getNestedValueFromCurrent(path)
@@ -842,6 +848,11 @@ function addObjectArrayItem(path) {
   currentEditingObjectPath = path
   currentEditingObjectIndex = null
   currentEditingObjectData = template
+  
+  // 获取对象数组的 schema
+  const fieldSchema = getFieldSchema(path)
+  currentEditingObjectSchema = (fieldSchema && fieldSchema.schema) || null
+  
   openObjectEditorModal("新增项")
 }
 
@@ -852,6 +863,11 @@ function editObjectArrayItem(path, index) {
   currentEditingObjectPath = path
   currentEditingObjectIndex = index
   currentEditingObjectData = JSON.parse(JSON.stringify(arr[index]))
+  
+  // 获取对象数组的 schema
+  const fieldSchema = getFieldSchema(path)
+  currentEditingObjectSchema = (fieldSchema && fieldSchema.schema) || null
+  
   openObjectEditorModal("编辑项")
 }
 
@@ -893,7 +909,14 @@ function renderObjectEditorForm() {
 
   modalBody.innerHTML = Object.entries(currentEditingObjectData)
     .map(([key, value]) => {
-      const fieldSchema = getFieldSchema(key)
+      // 首先尝试从对象数组的 schema 中获取字段定义
+      let fieldSchema = null
+      if (currentEditingObjectSchema && currentEditingObjectSchema[key]) {
+        fieldSchema = currentEditingObjectSchema[key]
+      } else {
+        fieldSchema = getFieldSchema(key)
+      }
+      
       const label = fieldSchema.label || key
       const fieldType =
         fieldSchema.type ||
@@ -1019,6 +1042,24 @@ function renderObjectEditorForm() {
                 </div>
             `
       } else {
+        // 特殊处理 groupId 字段，提供群选择下拉框
+        if (key === "groupId" && groupList.length > 0) {
+          return `
+                <div class="form-group">
+                    <label>${label}${fieldSchema.required ? ' <span style="color: #ff4d4f;">*</span>' : ""}</label>
+                    <div class="form-control-wrapper">
+                        <select data-obj-key="${key}" onchange="updateObjectValue(this)" style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
+                            <option value="">请选择群聊</option>
+                            ${groupList.map(group => `<option value="${group.id}" ${String(value) === String(group.id) ? 'selected' : ''}>${group.name} (${group.id})</option>`).join('')}
+                        </select>
+                        ${fieldSchema.help ? `<p style="color: #999; font-size: 12px; margin-top: 4px;">${fieldSchema.help}</p>` : ""}
+                        <p style="color: #666; font-size: 12px; margin-top: 4px;">或手动输入群号：</p>
+                        <input type="text" data-obj-key="${key}" value="${escapeHtml(String(value))}" onchange="updateObjectValue(this)" placeholder="手动输入群号" style="margin-top: 4px;">
+                    </div>
+                </div>
+            `
+        }
+        
         return `
                 <div class="form-group">
                     <label>${label}${fieldSchema.required ? ' <span style="color: #ff4d4f;">*</span>' : ""}</label>
@@ -1151,6 +1192,7 @@ function closeObjectEditorModal() {
   currentEditingObjectPath = null
   currentEditingObjectIndex = null
   currentEditingObjectData = null
+  currentEditingObjectSchema = null
 }
 
 let currentModalPath = ""

@@ -43,7 +43,7 @@ export class repeatPlugin extends plugin {
       if (msg[e.group_id].times === 3) {
         await e.reply(msg[e.group_id].message)
         return false
-      } else if (msg[e.group_id].times === 5) {
+      } else if (msg[e.group_id].times === 500) {
         const breakMessages = [
           "复读机来了！",
           "复读一时爽，一直复读一直爽……才怪！",

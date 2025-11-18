@@ -1,4 +1,4 @@
-console.log("[Schema] 开始加载配置定义...")
+console.log("[Schema] 开始加载配置定义... v2.0")
 
 const configSchema = {
   categories: [
@@ -232,6 +232,11 @@ const configSchema = {
       },
     },
 
+    "AI.enableActiveChat": {
+      label: "启用消息未回复用户唤醒",
+      type: "boolean",
+      help: "启用后，机器人会回复上一条ai对话未回复的人",
+    },
     "AI.profiles": {
       label: "角色配置",
       type: "array",
@@ -283,6 +288,16 @@ const configSchema = {
       type: "text",
       help: "当指定渠道不可用时使用的备用渠道，建议设为gemini渠道",
     },
+    "AI.groupPrompts": {
+      label: "群组自定义预设",
+      type: "array",
+      itemType: "object",
+      help: "为特定群组设置自定义预设，优先级最高，不会干扰主预设。群号可直接输入或从已连接的群中选择",
+      schema: {
+        groupId: { label: "群号", type: "text", required: true, help: "输入群号（如：123456789）" },
+        prompt: { label: "自定义预设提示词", type: "textarea", required: true, help: "该群使用的自定义AI预设，会覆盖默认预设" },
+      },
+    },
     profiles: {
       label: "角色配置",
       type: "array",
@@ -332,6 +347,16 @@ const configSchema = {
       type: "number",
       min: 0,
       help: "反差预设触发时,消息撤回的延迟时间,单位为秒。设为0则不撤回",
+    },
+    "mimic.groupPrompts": {
+      label: "群组自定义预设",
+      type: "array",
+      itemType: "object",
+      help: "为特定群组设置自定义预设，优先级最高，不会干扰主预设。群号可直接输入或从已连接的群中选择",
+      schema: {
+        groupId: { label: "群号", type: "text", required: true, help: "输入群号（如：123456789）" },
+        prompt: { label: "自定义预设提示词", type: "textarea", required: true, help: "该群使用的自定义伪人预设，会覆盖默认预设" },
+      },
     },
     Prompt: { label: "预设提示词", type: "textarea" },
     alternatePrompt: { label: "反差预设", type: "textarea" },

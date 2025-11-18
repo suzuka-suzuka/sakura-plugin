@@ -17,6 +17,10 @@ export class ActiveChatScheduler extends plugin {
     })
   }
 
+  get appconfig() {
+    return Setting.getConfig("AI")
+  }
+
   task = {
     name: "AIProactiveChatTask",
     fnc: () => this.proactiveChatTask(),
@@ -25,8 +29,13 @@ export class ActiveChatScheduler extends plugin {
   }
 
   async proactiveChatTask() {
-    const config = Setting.getConfig("AI")
-    if (!config || !config.profiles || config.profiles.length === 0) {
+    const config = this.appconfig
+    // 检查是否启用了主动聊天功能
+    if (!config || !config.enableActiveChat) {
+      logger.info("[ActiveChat] 主动聊天功能已禁用")
+      return
+    }
+    if (!config.profiles || config.profiles.length === 0) {
       return
     }
 
