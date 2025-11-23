@@ -80,7 +80,7 @@ export class GrokVideo extends plugin {
       if (result.videos && result.videos.length > 0) {
         const video = result.videos[0]
         if (video.localPath) {
-          await e.reply(segment.video(video.localPath), true)
+          await e.reply(segment.video(video.localPath))
         } else {
           await this.reply("视频下载失败", true, { recallMsg: 10 })
         }
