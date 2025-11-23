@@ -121,7 +121,7 @@ export class EditImage extends plugin {
 
     const { aspectRatio, promptText } = this.parseArgs(msg)
 
-    const imageSize = "4K"
+    const imageSize = "2K"
 
     if (!promptText) {
       await this.reply("请告诉我你想如何修改图片哦~ ", true, {
