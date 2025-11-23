@@ -245,9 +245,8 @@ export class EditImage extends plugin {
         const imageData = imagePart.inlineData.data
         await this.reply(segment.image(`base64://${imageData}`))
       } else {
-        logger.error("Gemini API 未返回图片数据。Response:", JSON.stringify(response, null, 2))
         const textPart = response.candidates?.[0]?.content?.parts?.find(part => part.text)
-        const textResponse = textPart ? textPart.text : "创作失败"
+        const textResponse = textPart ? textPart.text : "请求被拦截，请更换提示词或图片"
         await this.reply(`${textResponse}`, true, { recallMsg: 10 })
       }
     } catch (error) {
