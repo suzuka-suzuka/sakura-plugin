@@ -4,13 +4,14 @@
   "type": "module",
   "author": "suzuka",
   "dependencies": {
-    "@google/genai": "^1.13.0",
-    "axios": "^1.11.0",
+    "@google/genai": "^1.30.0",
+    "@napi-rs/canvas": "^0.1.82",
+    "axios": "^1.13.2",
     "express": "^5.1.0",
-    "marked": "^16.1.2",
-    "openai": "^6.6.0",
-    "puppeteer-real-browser": "^1.4.3",
-    "sharp": "^0.33.4"
+    "marked": "^17.0.1",
+    "openai": "^6.9.1",
+    "puppeteer-real-browser": "^1.4.4",
+    "sharp": "^0.34.5"
   },
   "pnpm": {}
 }

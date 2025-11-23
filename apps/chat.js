@@ -5,8 +5,7 @@ import {
   saveConversationHistory,
 } from "../lib/AIUtils/ConversationHistory.js"
 import { executeToolCalls } from "../lib/AIUtils/tools/tools.js"
-import { parseAtMessage } from "../lib/AIUtils/messaging.js"
-import { getImg } from "../lib/utils.js"
+import { parseAtMessage, getQuoteContent } from "../lib/AIUtils/messaging.js"
 
 export class AIChat extends plugin {
   constructor() {
@@ -45,6 +44,10 @@ export class AIChat extends plugin {
           case "at":
             contentParts.push(`@${msgPart.qq}`)
             break
+          case "image":
+            const seq = e.seq || e.message_seq
+            contentParts.push(`[图片]${seq ? `(seq:${seq})` : ""}`)
+            break
         }
       })
     }
@@ -71,16 +74,13 @@ export class AIChat extends plugin {
 
     let query = textToMatch.substring(prefix.length).trim()
 
-    const imageUrls = await getImg(e)
-    if (!query && (!imageUrls || imageUrls.length === 0)) {
+    if (!query) {
       return false
     }
 
-    if (imageUrls && imageUrls.length > 0) {
-      for (const url of imageUrls) {
-        query += ` [图片: ${url}]`
-      }
-      query = query.trim()
+    const quoteContent = await getQuoteContent(e)
+    if (quoteContent) {
+      query = `(${quoteContent.trim()}) ${query}`
     }
 
     if (config.enableUserLock) {
@@ -96,7 +96,7 @@ export class AIChat extends plugin {
     }
 
     try {
-      return await this.doChat(e, config, matchedProfile, query)
+      return await this.doChat(e, matchedProfile, query)
     } finally {
       if (config.enableUserLock) {
         const lockKey = e.isGroup
@@ -107,7 +107,7 @@ export class AIChat extends plugin {
     }
   }
 
-  async doChat(e, config, matchedProfile, query) {
+  async doChat(e, matchedProfile, query) {
     const { Channel, Prompt, GroupContext, History, Tool } = matchedProfile
 
     logger.info(`Chat触发`)
@@ -143,14 +143,19 @@ export class AIChat extends plugin {
       while (true) {
         const textContent = currentAIResponse.text
         const functionCalls = currentAIResponse.functionCalls
+        const rawParts = currentAIResponse.rawParts
         let modelResponseParts = []
 
-        if (textContent) {
-          modelResponseParts.push({ text: textContent })
-        }
-        if (functionCalls && functionCalls.length > 0) {
-          for (const fc of functionCalls) {
-            modelResponseParts.push({ functionCall: fc })
+        if (rawParts && rawParts.length > 0) {
+          modelResponseParts = rawParts
+        } else {
+          if (textContent) {
+            modelResponseParts.push({ text: textContent })
+          }
+          if (functionCalls && functionCalls.length > 0) {
+            for (const fc of functionCalls) {
+              modelResponseParts.push({ functionCall: fc })
+            }
           }
         }
 

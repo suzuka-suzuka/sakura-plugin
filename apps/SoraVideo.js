@@ -73,7 +73,7 @@ export class SoraVideo extends plugin {
       const orientationPrefix = match[1]
       const prompt = match[2].trim()
 
-      let orientation = "portrait" // 默认竖向
+      let orientation = "portrait"
       if (orientationPrefix === "l") {
         orientation = "landscape"
       } else if (orientationPrefix === "s") {
@@ -84,7 +84,7 @@ export class SoraVideo extends plugin {
         return false
       }
 
-      const imgs = await getImg(e)
+      const imgs = await getImg(e, true)
       const hasImage = imgs && imgs.length > 0
 
       isGenerating = true

@@ -238,6 +238,41 @@ export function supportGuoba() {
           },
         },
         {
+          field: "Channels.grok",
+          label: "Grok",
+          bottomHelpMessage: "Grok API 类型的渠道。",
+          component: "GSubForm",
+          required: false,
+          componentProps: {
+            multiple: true,
+            schemas: [
+              { field: "name", label: "渠道名称", component: "Input", required: true },
+              { field: "model", label: "模型名称", component: "Input", required: true },
+              { field: "sso", label: "SSO Token", component: "InputTextArea", required: false },
+              { field: "cf_clearance", label: "CF Clearance", component: "InputTextArea", required: false },
+              { field: "x_statsig_id", label: "X Statsig ID", component: "InputTextArea", required: false },
+              { field: "temporary", label: "临时会话", component: "Switch", required: false },
+              { field: "dynamic_statsig", label: "动态Statsig", component: "Switch", required: false },
+            ],
+          },
+        },
+        {
+          field: "Channels.vertex",
+          label: "Vertex",
+          bottomHelpMessage: "Vertex API 类型的渠道。",
+          component: "GSubForm",
+          required: false,
+          componentProps: {
+            multiple: true,
+            schemas: [
+              { field: "name", label: "渠道名称", component: "Input", required: true },
+              { field: "model", label: "模型名称", component: "Input", required: true },
+              { field: "project", label: "项目ID", component: "Input", required: true },
+              { field: "location", label: "区域", component: "Input", required: true },
+            ],
+          },
+        },
+        {
           label: "AI设定",
           component: "SOFT_GROUP_BEGIN",
         },
@@ -609,6 +644,28 @@ export function supportGuoba() {
           label: "防撤回",
           component: "Switch",
           required: true,
+        },
+        {
+          field: "recall.Groups",
+          label: "启用群",
+          component: "GSelectGroup",
+          required: false,
+          componentProps: {
+            multiple: true,
+          },
+        },
+        {
+          label: "主动聊天",
+          component: "Divider",
+        },
+        {
+          field: "ActiveChat.Groups",
+          label: "启用群",
+          component: "GSelectGroup",
+          required: false,
+          componentProps: {
+            multiple: true,
+          },
         },
         {
           field: "60sNews.Groups",

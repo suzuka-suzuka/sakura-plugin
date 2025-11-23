@@ -26,6 +26,7 @@ export class ActiveChatScheduler extends plugin {
 
   async proactiveChatTask() {
     const config = Setting.getConfig("AI")
+    const activeChatConfig = Setting.getConfig("ActiveChat")
     if (!config || !config.profiles || config.profiles.length === 0) {
       return
     }
@@ -55,6 +56,13 @@ export class ActiveChatScheduler extends plugin {
 
             const group_id = parseInt(conversationKeyParts[0], 10)
             const user_id = parseInt(conversationKeyParts[1], 10)
+
+            if (
+              activeChatConfig?.Groups?.length > 0 &&
+              !activeChatConfig.Groups.includes(group_id)
+            ) {
+              continue
+            }
 
             logger.info(`用户 ${user_id} 在群 ${group_id} 已超过设定时间未互动，准备触发聊天`)
 

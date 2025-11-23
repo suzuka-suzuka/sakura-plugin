@@ -10,3 +10,16 @@ openai:
     baseURL: "https://api.openai.com/v1"
     api: "请在这里填写你的 OpenAI API Key"
     model: "deepseek-ai/DeepSeek-V3-0324"
+grok:
+  - name: grok
+    model: grok-2
+    sso: "请在这里填写你的 SSO Token"
+    cf_clearance: "请在这里填写你的 CF Clearance"
+    x_statsig_id: "请在这里填写你的 X Statsig ID"
+    temporary: true
+    dynamic_statsig: true
+vertex:
+  - name: vertex
+    model: gemini-1.5-pro-preview-0409
+    project: "请在这里填写你的 Google Cloud Project ID"
+    location: "us-central1"

@@ -246,7 +246,7 @@ export class bilibili extends plugin {
             }
 
             if (messageParts.length > 0) {
-              forwardMessages.push({ text: messageParts, senderId: this.e.user_id })
+              forwardMessages.push({ text: messageParts, senderId: this.e.self_id })
             }
           }
         }

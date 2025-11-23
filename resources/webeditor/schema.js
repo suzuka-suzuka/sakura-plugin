@@ -15,7 +15,7 @@ const configSchema = {
     {
       name: "AI设定",
       icon: "💬",
-      configs: ["AI", "mimic"],
+      configs: ["AI", "mimic", "ActiveChat"],
     },
     {
       name: "戳一戳",
@@ -42,6 +42,7 @@ const configSchema = {
 
   configNames: {
     "60sNews": "每日新闻",
+    ActiveChat: "主动聊天",
     AI: "AI对话",
     AutoCleanup: "自动清理",
     bilicookie: "B站Cookie",
@@ -82,6 +83,8 @@ const configSchema = {
     },
     "repeat.enable": { label: "复读", type: "boolean" },
     "recall.enable": { label: "防撤回", type: "boolean" },
+    "recall.Groups": { label: "启用群", type: "groupSelect" },
+    "ActiveChat.Groups": { label: "启用群", type: "groupSelect" },
     "r18.enable": { label: "启用群", type: "groupSelect", help: "影响所有图片功能" },
     "Permission.enable": {
       label: "已赋权QQ",
@@ -202,6 +205,33 @@ const configSchema = {
           help: "支持多个apikey轮询，一行一个",
           required: true,
         },
+      },
+    },
+    "Channels.grok": {
+      label: "Grok",
+      type: "array",
+      itemType: "object",
+      help: "Grok API 类型的渠道",
+      schema: {
+        name: { label: "渠道名称", type: "text", required: true },
+        model: { label: "模型名称", type: "text", required: true },
+        sso: { label: "SSO Token", type: "textarea", required: false },
+        cf_clearance: { label: "CF Clearance", type: "textarea", required: false },
+        x_statsig_id: { label: "X Statsig ID", type: "textarea", required: false },
+        temporary: { label: "临时会话", type: "boolean", required: false },
+        dynamic_statsig: { label: "动态Statsig", type: "boolean", required: false },
+      },
+    },
+    "Channels.vertex": {
+      label: "Vertex",
+      type: "array",
+      itemType: "object",
+      help: "Vertex API 类型的渠道",
+      schema: {
+        name: { label: "渠道名称", type: "text", required: true },
+        model: { label: "模型名称", type: "text", required: true },
+        project: { label: "项目ID", type: "text", required: true },
+        location: { label: "区域", type: "text", required: true },
       },
     },
     openai: {

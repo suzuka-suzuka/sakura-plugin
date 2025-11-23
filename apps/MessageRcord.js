@@ -28,6 +28,9 @@ export class recordMessage extends plugin {
     if (!this.appconfig.enable) {
       return false
     }
+    if (this.appconfig.Groups?.length > 0 && !this.appconfig.Groups.includes(e.group_id)) {
+      return false
+    }
     const hasContentToRecord =
       Array.isArray(e.message) &&
       e.message.some(item => item.type === "text" || item.type === "image")

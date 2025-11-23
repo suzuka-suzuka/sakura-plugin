@@ -1,7 +1,6 @@
 import { getAI } from "../lib/AIUtils/getAI.js"
 import { executeToolCalls } from "../lib/AIUtils/tools/tools.js"
-import { splitAndReplyMessages, parseAtMessage } from "../lib/AIUtils/messaging.js"
-import { getImg } from "../lib/utils.js"
+import { splitAndReplyMessages, parseAtMessage, getQuoteContent } from "../lib/AIUtils/messaging.js"
 import Setting from "../lib/setting.js"
 
 export class Mimic extends plugin {
@@ -59,6 +58,10 @@ export class Mimic extends plugin {
           case "at":
             contentParts.push(`@${msgPart.qq}`)
             break
+          case "image":
+            const seq = e.seq || e.message_seq
+            contentParts.push(`[图片]${seq ? `(seq:${seq})` : ""}`)
+            break
         }
       })
     }
@@ -66,11 +69,9 @@ export class Mimic extends plugin {
 
     let query = messageText
 
-    const imageUrls = await getImg(e)
-    if (imageUrls && imageUrls.length > 0) {
-      for (const url of imageUrls) {
-        query += `[图片: ${url}]`
-      }
+    const quoteContent = await getQuoteContent(e)
+    if (quoteContent) {
+      query = `(${quoteContent.trim()}) ${query}`
     }
 
     if (!query.trim()) {
@@ -154,14 +155,19 @@ export class Mimic extends plugin {
       while (true) {
         const textContent = currentGeminiResponse.text
         const functionCalls = currentGeminiResponse.functionCalls
+        const rawParts = currentGeminiResponse.rawParts
         let modelResponseParts = []
 
-        if (textContent) {
-          modelResponseParts.push({ text: textContent })
-        }
-        if (functionCalls && functionCalls.length > 0) {
-          for (const fc of functionCalls) {
-            modelResponseParts.push({ functionCall: fc })
+        if (rawParts && rawParts.length > 0) {
+          modelResponseParts = rawParts
+        } else {
+          if (textContent) {
+            modelResponseParts.push({ text: textContent })
+          }
+          if (functionCalls && functionCalls.length > 0) {
+            for (const fc of functionCalls) {
+              modelResponseParts.push({ functionCall: fc })
+            }
           }
         }
 
