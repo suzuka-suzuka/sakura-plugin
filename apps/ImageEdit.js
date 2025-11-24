@@ -52,6 +52,7 @@ export class EditImage extends plugin {
 
   parseArgs(msg) {
     let aspectRatio = null
+    let imageSize = null
     let promptText = msg
 
     promptText = promptText.replace(/：/g, ":")
@@ -65,7 +66,14 @@ export class EditImage extends plugin {
       promptText = promptText.replace(ratioMatch[0], "").trim()
     }
 
-    return { aspectRatio, promptText }
+    const sizeRegex = /([124])k/i
+    const sizeMatch = promptText.match(sizeRegex)
+    if (sizeMatch) {
+      imageSize = sizeMatch[0].toUpperCase()
+      promptText = promptText.replace(sizeMatch[0], "").trim()
+    }
+
+    return { aspectRatio, imageSize, promptText }
   }
 
   async dynamicImageHandler(e, matchedTask, match) {
@@ -79,15 +87,21 @@ export class EditImage extends plugin {
     const matchedStr = match[0]
     const remainingMsg = e.msg.slice(matchedStr.length).trim()
 
-    let { aspectRatio: userRatio, promptText: userPrompt } = this.parseArgs(remainingMsg)
+    let {
+      aspectRatio: userRatio,
+      imageSize: userSize,
+      promptText: userPrompt,
+    } = this.parseArgs(remainingMsg)
 
-    if (!userRatio && match.length > 1) {
+    if ((!userRatio || !userSize) && match.length > 1) {
       for (let i = 1; i < match.length; i++) {
         if (match[i]) {
-          const { aspectRatio: groupRatio } = this.parseArgs(match[i])
-          if (groupRatio) {
+          const { aspectRatio: groupRatio, imageSize: groupSize } = this.parseArgs(match[i])
+          if (groupRatio && !userRatio) {
             userRatio = groupRatio
-            break
+          }
+          if (groupSize && !userSize) {
+            userSize = groupSize
           }
         }
       }
@@ -100,7 +114,7 @@ export class EditImage extends plugin {
       aspectRatio = null
     }
 
-    const imageSize = "4K"
+    const imageSize = userSize || "1K"
 
     let finalPrompt = matchedTask.prompt || ""
 
@@ -119,9 +133,9 @@ export class EditImage extends plugin {
     let msg = e.msg.replace(/^#i/, "").trim()
     let imageUrls = await getImg(e, true)
 
-    const { aspectRatio, promptText } = this.parseArgs(msg)
+    const { aspectRatio, imageSize: parsedSize, promptText } = this.parseArgs(msg)
 
-    const imageSize = "2K"
+    const imageSize = parsedSize || "1K"
 
     if (!promptText) {
       await this.reply("请告诉我你想如何修改图片哦~ ", true, {
@@ -136,7 +150,7 @@ export class EditImage extends plugin {
   async _processAndCallAPI(e, promptText, imageUrls, options = {}) {
     await this.reply("🎨 正在进行创作, 请稍候...", true, { recallMsg: 10 })
 
-    const { aspectRatio, imageSize = "4K" } = options
+    const { aspectRatio, imageSize = "1K" } = options
     const contents = []
     const hasImage = imageUrls && imageUrls.length > 0
 
