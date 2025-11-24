@@ -265,7 +265,7 @@ export class EditImage extends plugin {
       }
     } catch (error) {
       logger.error(`调用 Gemini API 失败:`, error)
-      await this.reply("创作失败，可能是配置或网络问题", true, { recallMsg: 10 })
+      await this.reply("创作失败，可能是网络问题或请求超额", true, { recallMsg: 10 })
     }
 
     return true
