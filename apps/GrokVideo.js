@@ -91,7 +91,7 @@ export class GrokVideo extends plugin {
       }
     } catch (error) {
       logger.error("[GrokVideo] 生成视频时出错:", error)
-      await e.reply(`视频生成出错: ${error.message}`, true)
+      await this.reply(`视频生成出错: ${error.message}`, true, { recallMsg: 10 })
     }
 
     return true
