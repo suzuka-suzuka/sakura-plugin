@@ -192,7 +192,7 @@ export class Favorability extends plugin {
 
         if (reply && reply.user_id) {
           const sourceUserId = reply.user_id.toString()
-          if (sourceUserId !== currentSender) {
+          if (sourceUserId !== currentSender && sourceUserId != e.self_id) {
             targetUsers.push(sourceUserId)
             shouldAddFavorability = true
           }
@@ -203,7 +203,7 @@ export class Favorability extends plugin {
 
           if (sourceMessageData?.user_id) {
             const sourceUserId = sourceMessageData.user_id.toString()
-            if (sourceUserId !== currentSender) {
+            if (sourceUserId !== currentSender && sourceUserId != e.self_id) {
               targetUsers.push(sourceUserId)
               shouldAddFavorability = true
             }
@@ -251,6 +251,11 @@ export class Favorability extends plugin {
     const atMsg = e.message?.find(msg => msg.type === "at" && msg.qq && !isNaN(msg.qq))
     if (atMsg) {
       targetUser = atMsg.qq.toString()
+    }
+
+    if (targetUser == e.self_id) {
+      await e.reply("对我产生好感是不行哦~ 笨蛋！")
+      return true
     }
 
     if (!targetUser) {
