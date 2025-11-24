@@ -12,7 +12,7 @@ export class GrokVideo extends plugin {
       priority: 1000,
       rule: [
         {
-          reg: "^#?gv\\s*(.+)",
+          reg: "^#?gv(.*)",
           fnc: "generateVideo",
           log: false,
         },
@@ -21,16 +21,16 @@ export class GrokVideo extends plugin {
   }
 
   async generateVideo(e) {
-    const match = e.msg.match(/^#?gv\s*(.+)/)
+    const match = e.msg.match(/^#?gv(.*)/)
     if (!match) return false
 
     const prompt = match[1].trim()
-    if (!prompt) {
-      await this.reply("请提供视频生成提示词", true, { recallMsg: 10 })
+    const imageUrls = await getImg(e, true)
+
+    if (!prompt && (!imageUrls || imageUrls.length === 0)) {
+      await this.reply("请提供视频生成提示词或图片", true, { recallMsg: 10 })
       return true
     }
-
-    const imageUrls = await getImg(e, true)
 
     const channelsConfig = Setting.getConfig("Channels")
     const grokChannel = channelsConfig?.grok?.find(c => c.name === "video")
@@ -45,7 +45,9 @@ export class GrokVideo extends plugin {
       if (imageUrls && imageUrls.length > 0) {
         content.push({ type: "image_url", image_url: { url: imageUrls[0] } })
       }
-      content.push({ type: "text", text: prompt })
+      if (prompt) {
+        content.push({ type: "text", text: prompt })
+      }
 
       const messages = [
         {
