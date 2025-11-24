@@ -115,7 +115,13 @@ export class ActiveChatScheduler extends plugin {
 
   async triggerProactiveChat(mockE, profile, history) {
     try {
-      const SenderInfo = await mockE.sender.getInfo(true)
+      let SenderInfo
+      try {
+        SenderInfo = await mockE.sender?.getInfo(true)
+      } catch {
+        SenderInfo = mockE.sender.info
+      }
+
       const userName = SenderInfo?.card || SenderInfo?.nickname || mockE.user_id
 
       const queryParts = [
