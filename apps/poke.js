@@ -294,6 +294,10 @@ export class poke extends plugin {
         await common.sleep(500)
         await e.reply(this.sendImage(this.getPokeImagePath("4.gif")))
 
+        const ignoreDuration = 60000 * usercount
+        await this.setIgnore(e.operator_id, ignoreDuration)
+        await this.setShouldReply(e.operator_id, ignoreDuration + 600000)
+
         const blockTime = 60 * usercount
         const blockListPath = path.join(plugindata, "blocklist.json")
 

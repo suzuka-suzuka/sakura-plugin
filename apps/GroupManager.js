@@ -1,4 +1,9 @@
 import Setting from "../lib/setting.js"
+import fs from "fs"
+import path from "path"
+import { plugindata } from "../lib/path.js"
+import cfg from "../../lib/config/config.js"
+
 const conversationStateNeverSpoken = {}
 const conversationStateInactive = {}
 const conversationStateLevel = {}
@@ -48,7 +53,12 @@ export class GroupManager extends plugin {
         },
         {
           reg: "^#?(全员禁言|全员解禁)$",
-          fnc: "handleAllMuteAction",
+          fnc: "handleMuteAll",
+          log: false,
+        },
+        {
+          reg: "^#?(拉黑|解黑)",
+          fnc: "blockUser",
           log: false,
         },
       ],
@@ -631,6 +641,99 @@ export class GroupManager extends plugin {
       }
     } catch (err) {
       logger.error("全体禁言/解禁操作失败:", err)
+    }
+  }
+
+  async blockUser(e) {
+    const cleanMsg = e.msg.replace(/^#?/, "")
+    const isBlock = cleanMsg.startsWith("拉黑")
+
+    let targetQQ, duration, unit
+
+    if (isBlock) {
+      const parsed = this.parseMuteCommand(cleanMsg)
+      targetQQ = parsed.targetQQ
+      duration = parsed.duration
+      unit = parsed.unit
+
+      if (duration === 0) {
+        duration = 300
+        unit = "5分钟"
+      }
+    } else {
+      targetQQ = cleanMsg.replace(/解黑/g, "").trim().replace("@", "") || e.at
+      duration = 0
+    }
+
+    if (!targetQQ) return false
+    targetQQ = Number(targetQQ)
+    if (isNaN(targetQQ)) return false
+
+    const senderId = e.sender.user_id
+    const senderName = e.sender?.card || e.sender?.nickname || senderId
+
+    let targetName = targetQQ
+    if (e.isGroup) {
+      try {
+        const mm = await e.group.getMemberMap(true)
+        const targetMember = mm.get(targetQQ)
+        if (targetMember) {
+          targetName = targetMember.card || targetMember.nickname || targetQQ
+        }
+      } catch (err) {}
+    }
+
+    const masterQQs = Array.isArray(cfg.masterQQ) ? cfg.masterQQ : [cfg.masterQQ]
+    const permissionConfig = Setting.getConfig("Permission")
+    const authorizedUsers = permissionConfig?.enable || []
+
+    if (masterQQs.includes(targetQQ)) {
+      return false
+    }
+
+    let hasPermission = false
+
+    if (senderId === targetQQ) {
+      hasPermission = true
+    } else if (masterQQs.includes(senderId)) {
+      hasPermission = true
+    } else if (authorizedUsers.includes(senderId)) {
+      hasPermission = true
+    }
+
+    if (!hasPermission) {
+      return false
+    }
+
+    const blockListPath = path.join(plugindata, "blocklist.json")
+    let data = {}
+    if (fs.existsSync(blockListPath)) {
+      try {
+        data = JSON.parse(fs.readFileSync(blockListPath, "utf8"))
+      } catch (err) {
+        logger.error("读取黑名单失败", err)
+      }
+    }
+
+    if (duration === 0) {
+      if (data[targetQQ]) {
+        delete data[targetQQ]
+        fs.writeFileSync(blockListPath, JSON.stringify(data, null, 2))
+        return await e.reply(`${targetName}(QQ:${targetQQ}) 已被解除拉黑。`)
+      } else {
+        return false
+      }
+    } else {
+      const expireTime = Date.now() + duration * 1000
+      data[targetQQ] = expireTime
+
+      const dir = path.dirname(blockListPath)
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true })
+      }
+
+      fs.writeFileSync(blockListPath, JSON.stringify(data, null, 2))
+      return await e.reply(`${targetName}(QQ:${targetQQ}) 已被拉黑 ${unit}，期间将无视其任何消息。`)
     }
   }
 }
