@@ -1,4 +1,4 @@
-import { GoogleGenAI, Modality } from "@google/genai"
+import { GoogleGenAI, HarmBlockThreshold, HarmCategory } from "@google/genai"
 import { getImg } from "../lib/utils.js"
 import Setting from "../lib/setting.js"
 import sharp from "sharp"
@@ -223,10 +223,22 @@ export class EditImage extends plugin {
       const ai = new GoogleGenAI({ apiKey: API_KEY })
 
       const safetySettings = [
-        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "OFF" },
-        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "OFF" },
-        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "OFF" },
-        { category: "HARM_CATEGORY_HARASSMENT", threshold: "OFF" },
+        {
+          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+          threshold: HarmBlockThreshold.BLOCK_NONE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+          threshold: HarmBlockThreshold.BLOCK_NONE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+          threshold: HarmBlockThreshold.BLOCK_NONE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+          threshold: HarmBlockThreshold.BLOCK_NONE,
+        },
       ]
 
       const config = {
@@ -256,8 +268,10 @@ export class EditImage extends plugin {
 
         let hasImage = false
         let textBuffer = ""
+        let chunkCount = 0
 
         for await (const chunk of response) {
+          chunkCount++
           const parts = chunk.candidates?.[0]?.content?.parts
           if (parts) {
             for (const part of parts) {
@@ -269,11 +283,20 @@ export class EditImage extends plugin {
                 textBuffer += part.text
               }
             }
+          } else {
+            if (chunk.promptFeedback) {
+              logger.warn(`Prompt feedback: ${JSON.stringify(chunk.promptFeedback)}`)
+            }
           }
         }
 
-        if (!hasImage && textBuffer) {
-          await this.reply(`${textBuffer}`, true, { recallMsg: 10 })
+        if (!hasImage) {
+          if (textBuffer) {
+            await this.reply(`${textBuffer}`, true, { recallMsg: 10 })
+          } else {
+            logger.warn(`Gemini流式响应结束，但未收到有效内容。收到Chunk数: ${chunkCount}`)
+            await this.reply("生成结束，但未收到有效内容，请重试。", true, { recallMsg: 10 })
+          }
         }
       } else {
         const response = await ai.models.generateContent({
