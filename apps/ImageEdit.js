@@ -4,6 +4,7 @@ import Setting from "../lib/setting.js"
 import sharp from "sharp"
 
 const channelApiKeyIndex = new Map()
+const USE_STREAM = true
 
 export class EditImage extends plugin {
   constructor() {
@@ -231,6 +232,7 @@ export class EditImage extends plugin {
       const config = {
         safetySettings: safetySettings,
         tools: [{ googleSearch: {} }],
+        responseModalities: ["IMAGE", "TEXT"],
         imageConfig: {
           imageSize: imageSize,
         },
@@ -245,23 +247,53 @@ export class EditImage extends plugin {
         config.imageConfig.aspectRatio = aspectRatio
       }
 
-      const response = await ai.models.generateContent({
-        model: GEMINI_MODEL,
-        contents: contents,
-        config: config,
-      })
+      if (USE_STREAM) {
+        const response = await ai.models.generateContentStream({
+          model: GEMINI_MODEL,
+          contents: contents,
+          config: config,
+        })
 
-      const imagePart = response.candidates?.[0]?.content?.parts?.find(
-        part => part.inlineData && part.inlineData.mimeType.startsWith("image/"),
-      )
+        let hasImage = false
+        let textBuffer = ""
 
-      if (imagePart) {
-        const imageData = imagePart.inlineData.data
-        await this.reply(segment.image(`base64://${imageData}`))
+        for await (const chunk of response) {
+          const parts = chunk.candidates?.[0]?.content?.parts
+          if (parts) {
+            for (const part of parts) {
+              if (part.inlineData) {
+                const imageData = part.inlineData.data
+                await this.reply(segment.image(`base64://${imageData}`))
+                hasImage = true
+              } else if (part.text) {
+                textBuffer += part.text
+              }
+            }
+          }
+        }
+
+        if (!hasImage && textBuffer) {
+          await this.reply(`${textBuffer}`, true, { recallMsg: 10 })
+        }
       } else {
-        const textPart = response.candidates?.[0]?.content?.parts?.find(part => part.text)
-        const textResponse = textPart ? textPart.text : "请求被拦截，请更换提示词或图片"
-        await this.reply(`${textResponse}`, true, { recallMsg: 10 })
+        const response = await ai.models.generateContent({
+          model: GEMINI_MODEL,
+          contents: contents,
+          config: config,
+        })
+
+        const imagePart = response.candidates?.[0]?.content?.parts?.find(
+          part => part.inlineData && part.inlineData.mimeType.startsWith("image/"),
+        )
+
+        if (imagePart) {
+          const imageData = imagePart.inlineData.data
+          await this.reply(segment.image(`base64://${imageData}`))
+        } else {
+          const textPart = response.candidates?.[0]?.content?.parts?.find(part => part.text)
+          const textResponse = textPart ? textPart.text : "请求被拦截，请更换提示词或图片"
+          await this.reply(`${textResponse}`, true, { recallMsg: 10 })
+        }
       }
     } catch (error) {
       logger.error(`调用 Gemini API 失败:`, error)
