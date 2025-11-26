@@ -20,6 +20,7 @@ export class Update extends plugin {
         {
           reg: `^#?(sakura|樱花)(插件)?(强制)?更新$`,
           fnc: "update",
+          log: false,
         },
       ],
     })
