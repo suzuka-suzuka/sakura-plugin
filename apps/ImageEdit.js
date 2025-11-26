@@ -4,7 +4,6 @@ import Setting from "../lib/setting.js"
 import sharp from "sharp"
 
 const channelApiKeyIndex = new Map()
-const USE_STREAM = true
 
 export class EditImage extends plugin {
   constructor() {
@@ -229,11 +228,10 @@ export class EditImage extends plugin {
           imageSize: imageSize,
         },
         safetySettings: [
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_CIVIC_INTEGRITY", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "OFF" },
+          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "OFF" },
+          { category: "HARM_CATEGORY_HARASSMENT", threshold: "OFF" },
+          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "OFF" },
         ],
       }
 
@@ -241,64 +239,23 @@ export class EditImage extends plugin {
         config.imageConfig.aspectRatio = aspectRatio
       }
 
-      if (USE_STREAM) {
-        const response = await ai.models.generateContentStream({
-          model: GEMINI_MODEL,
-          contents: contents,
-          config: config,
-        })
+      const response = await ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents: contents,
+        config: config,
+      })
 
-        let hasImage = false
-        let textBuffer = ""
-        let chunkCount = 0
+      const imagePart = response.candidates?.[0]?.content?.parts?.find(
+        part => part.inlineData && part.inlineData.mimeType.startsWith("image/"),
+      )
 
-        for await (const chunk of response) {
-          chunkCount++
-          const parts = chunk.candidates?.[0]?.content?.parts
-          if (parts) {
-            for (const part of parts) {
-              if (part.inlineData) {
-                const imageData = part.inlineData.data
-                await this.reply(segment.image(`base64://${imageData}`))
-                hasImage = true
-              } else if (part.text) {
-                textBuffer += part.text
-              }
-            }
-          } else {
-            if (chunk.promptFeedback) {
-              logger.warn(`Prompt feedback: ${JSON.stringify(chunk.promptFeedback)}`)
-            }
-          }
-        }
-
-        if (!hasImage) {
-          if (textBuffer) {
-            await this.reply(`${textBuffer}`, true, { recallMsg: 10 })
-          } else {
-            logger.warn(`流式响应结束，但未收到有效内容。收到Chunk数: ${chunkCount}`)
-            await this.reply("请求被拦截，请更换提示词或图片", true, { recallMsg: 10 })
-          }
-        }
+      if (imagePart) {
+        const imageData = imagePart.inlineData.data
+        await this.reply(segment.image(`base64://${imageData}`))
       } else {
-        const response = await ai.models.generateContent({
-          model: GEMINI_MODEL,
-          contents: contents,
-          config: config,
-        })
-
-        const imagePart = response.candidates?.[0]?.content?.parts?.find(
-          part => part.inlineData && part.inlineData.mimeType.startsWith("image/"),
-        )
-
-        if (imagePart) {
-          const imageData = imagePart.inlineData.data
-          await this.reply(segment.image(`base64://${imageData}`))
-        } else {
-          const textPart = response.candidates?.[0]?.content?.parts?.find(part => part.text)
-          const textResponse = textPart ? textPart.text : "请求被拦截，请更换提示词或图片"
-          await this.reply(`${textResponse}`, true, { recallMsg: 10 })
-        }
+        const textPart = response.candidates?.[0]?.content?.parts?.find(part => part.text)
+        const textResponse = textPart ? textPart.text : "请求被拦截，请更换提示词或图片"
+        await this.reply(`${textResponse}`, true, { recallMsg: 10 })
       }
     } catch (error) {
       logger.error(`调用 Gemini API 失败:`, error)

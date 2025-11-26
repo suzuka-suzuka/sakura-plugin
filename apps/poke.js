@@ -159,18 +159,6 @@ export class poke extends plugin {
       return false
     }
 
-    const blockListPath = path.join(plugindata, "blocklist.json")
-    try {
-      const content = await fsp.readFile(blockListPath, "utf8")
-      const data = JSON.parse(content)
-      const userId = e.operator_id?.toString()
-      if (userId && data[userId]) {
-        if (data[userId] > Date.now()) {
-          return false
-        }
-      }
-    } catch (err) {}
-
     if (await this.checkIgnore(e.operator_id)) {
       return false
     }
@@ -297,26 +285,6 @@ export class poke extends plugin {
         const ignoreDuration = 60000 * usercount
         await this.setIgnore(e.operator_id, ignoreDuration)
         await this.setShouldReply(e.operator_id, ignoreDuration + 600000)
-
-        const blockTime = 60 * usercount
-        const blockListPath = path.join(plugindata, "blocklist.json")
-
-        let data = {}
-        try {
-          const content = await fsp.readFile(blockListPath, "utf8")
-          data = JSON.parse(content)
-        } catch (err) {}
-
-        data[e.operator_id] = Date.now() + blockTime * 1000
-
-        try {
-          const dir = path.dirname(blockListPath)
-          await fsp.mkdir(dir, { recursive: true })
-          await fsp.writeFile(blockListPath, JSON.stringify(data, null, 2))
-          logger.info(`[戳一戳] 用户 ${e.operator_id} 已被拉黑 ${blockTime} 秒`)
-        } catch (err) {
-          logger.error(`[戳一戳] 写入黑名单失败: ${err}`)
-        }
 
         return false
 
