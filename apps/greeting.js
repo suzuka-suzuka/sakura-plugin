@@ -2,6 +2,7 @@ import moment from "moment"
 import _ from "lodash"
 import path from "path"
 import fs from "fs/promises"
+import { createCanvas } from "@napi-rs/canvas"
 import { plugindata } from "../lib/path.js"
 import { getAI } from "../lib/AIUtils/getAI.js"
 import Setting from "../lib/setting.js"
@@ -69,7 +70,8 @@ export class greeting extends plugin {
     } catch (error) {
       Info = (await e.group.pickMember(Number(e.user_id))).info
     }
-    const nickname = Info?.card || Info?.nickname || senderId || "未知用户"
+    const nickname =
+      Info?.card || Info?.nickname || e.sender.card || e.sender.nickname || "未知用户"
 
     let sexDisplay = "魅魔小萝莉"
     if (Info.sex === "male") {
@@ -91,17 +93,95 @@ export class greeting extends plugin {
     }
     const average = validSleepDays > 0 ? (totalSleepHours / validSleepDays).toFixed(1) : 0
 
-    let replyMsg = `【${nickname}】的睡眠信息：\n`
-    replyMsg += `性别：${sexDisplay}\n`
-    replyMsg += `过去7天睡眠时长记录：\n`
+    const width = 800
+    const height = 600
+    const canvas = createCanvas(width, height)
+    const ctx = canvas.getContext("2d")
 
-    for (let i = 0; i < daylist.length; i++) {
-      replyMsg += `${daylist[i]}: ${ntimelist[i]} 小时\n`
+    ctx.fillStyle = "#f0f2f5"
+    ctx.fillRect(0, 0, width, height)
+
+    ctx.fillStyle = "#333"
+    ctx.font = "bold 30px sans-serif"
+    ctx.textAlign = "center"
+    ctx.fillText(`${nickname} 的睡眠报告`, width / 2, 50)
+
+    ctx.font = "20px sans-serif"
+    ctx.fillStyle = "#666"
+    ctx.fillText(`性别: ${sexDisplay}   平均睡眠: ${average} 小时`, width / 2, 90)
+
+    const chartX = 80
+    const chartY = 120
+    const chartWidth = 640
+    const chartHeight = 400
+
+    ctx.beginPath()
+    ctx.strokeStyle = "#999"
+    ctx.lineWidth = 2
+    ctx.moveTo(chartX, chartY)
+    ctx.lineTo(chartX, chartY + chartHeight)
+    ctx.lineTo(chartX + chartWidth, chartY + chartHeight)
+    ctx.stroke()
+
+    const maxHour = Math.max(12, ...ntimelist) + 2
+    ctx.textAlign = "right"
+    ctx.font = "14px sans-serif"
+    ctx.fillStyle = "#666"
+    for (let i = 0; i <= maxHour; i += 2) {
+      const y = chartY + chartHeight - (i / maxHour) * chartHeight
+      ctx.fillText(i.toString(), chartX - 10, y + 5)
+      ctx.beginPath()
+      ctx.strokeStyle = "#e0e0e0"
+      ctx.lineWidth = 1
+      ctx.moveTo(chartX, y)
+      ctx.lineTo(chartX + chartWidth, y)
+      ctx.stroke()
     }
 
-    replyMsg += `平均睡眠时长：${average} 小时`
+    const barWidth = 40
+    const gap = (chartWidth - barWidth * daylist.length) / (daylist.length + 1)
 
-    e.reply(replyMsg)
+    daylist.forEach((day, index) => {
+      const hours = ntimelist[index]
+      const barHeight = (hours / maxHour) * chartHeight
+      const x = chartX + gap + index * (barWidth + gap)
+      const y = chartY + chartHeight - barHeight
+
+      if (hours < 6) ctx.fillStyle = "#ff6b6b"
+      else if (hours > 9) ctx.fillStyle = "#fcc419"
+      else ctx.fillStyle = "#51cf66"
+
+      ctx.fillRect(x, y, barWidth, barHeight)
+
+      if (hours > 0) {
+        ctx.fillStyle = "#333"
+        ctx.textAlign = "center"
+        ctx.fillText(hours.toString(), x + barWidth / 2, y - 10)
+      }
+
+      ctx.fillStyle = "#666"
+      ctx.textAlign = "center"
+      ctx.fillText(day, x + barWidth / 2, chartY + chartHeight + 25)
+    })
+
+    if (average > 0) {
+      const avgY = chartY + chartHeight - (average / maxHour) * chartHeight
+      ctx.beginPath()
+      ctx.strokeStyle = "#339af0"
+      ctx.lineWidth = 2
+      ctx.setLineDash([10, 5])
+      ctx.moveTo(chartX, avgY)
+      ctx.lineTo(chartX + chartWidth, avgY)
+      ctx.stroke()
+      ctx.setLineDash([])
+
+      ctx.fillStyle = "#339af0"
+      ctx.textAlign = "left"
+      ctx.fillText(`Avg: ${average}h`, chartX + chartWidth + 5, avgY + 5)
+    }
+
+    const buffer = await canvas.encode("png")
+    e.reply(segment.image(buffer))
   }
 
   async morning(e) {
@@ -122,34 +202,25 @@ export class greeting extends plugin {
     }
 
     let userdata = (await this.readUserData(userId)) || {}
-    const todayData = userdata[moment().format("YYYY-MM-DD")]
-    const yesterdayData = userdata[moment().subtract(1, "days").format("YYYY-MM-DD")]
-    const lastNtime = todayData?.ntime || yesterdayData?.ntime
+    const today = moment().format("YYYY-MM-DD")
+    const todayData = userdata[today] || {}
+    const yesterdayData = userdata[moment().subtract(1, "days").format("YYYY-MM-DD")] || {}
+
+    const lastNtime = userdata.last_sleep_time || todayData.ntime || yesterdayData.ntime
 
     if (lastNtime) {
       const sleepDuration = moment().diff(moment(lastNtime), "hours")
-      if (sleepDuration < 4) {
-        const cdKey = `sakura:greeting:ai_cd:${groupId}`
-        if (await redis.get(cdKey)) {
-          return
-        }
-        const aiReply = await this.getAIReply(e, e.msg)
-        await redis.set(cdKey, "1", { EX: 300 })
-        return e.reply(aiReply, true)
-      }
     }
 
-    if (e.msg === "早安" && !monightlist[groupId].mlist.includes(userId)) {
-      let userdata = (await this.readUserData(userId)) || {}
-      const today = moment().format("YYYY-MM-DD")
-
+    if (!monightlist[groupId].mlist.includes(userId)) {
       userdata[today] = {
-        ...userdata[today],
+        ...todayData,
         mtime: moment().toISOString(),
       }
+      userdata.last_wake_time = moment().toISOString()
+
       await this.saveUserData(userId, userdata)
 
-      const daydata = userdata[today]
       monightlist[groupId].mnum += 1
       monightlist[groupId].mlist.push(userId)
 
@@ -157,6 +228,13 @@ export class greeting extends plugin {
       if (lastNtime) {
         msg = `早安成功！你的睡眠时长为${this.update(lastNtime, moment().toISOString())},`
       }
+
+      if (lastNtime) {
+        const sleepHours = moment().diff(moment(lastNtime), "hours")
+        if (sleepHours < 4) {
+        }
+      }
+
       return e.reply(msg + `你是本群今天第${monightlist[groupId].mnum}个起床的！`, true)
     }
 
@@ -188,43 +266,30 @@ export class greeting extends plugin {
     }
 
     let userdata = (await this.readUserData(userId)) || {}
-    const todayData = userdata[moment().format("YYYY-MM-DD")]
-    const lastMtime = todayData?.mtime
+    const today = moment().format("YYYY-MM-DD")
+    const todayData = userdata[today] || {}
+
+    const lastMtime = userdata.last_wake_time || todayData.mtime
 
     if (lastMtime) {
       const awakeDuration = moment().diff(moment(lastMtime), "hours")
-      if (awakeDuration < 4) {
-        const cdKey = `sakura:greeting:ai_cd:${groupId}`
-        if (await redis.get(cdKey)) {
-          return
-        }
-        const aiReply = await this.getAIReply(e, e.msg)
-        await redis.set(cdKey, "1", { EX: 300 })
-        return e.reply(aiReply, true)
-      }
     }
 
-    if (e.msg === "晚安" && !monightlist[groupId].nlist.includes(userId)) {
-      let userdata = (await this.readUserData(userId)) || {}
-      const today = moment().format("YYYY-MM-DD")
-
+    if (!monightlist[groupId].nlist.includes(userId)) {
       userdata[today] = {
-        ...userdata[today],
+        ...todayData,
         ntime: moment().toISOString(),
       }
+      userdata.last_sleep_time = moment().toISOString()
+
       await this.saveUserData(userId, userdata)
 
-      const daydata = userdata[today]
       monightlist[groupId].nnum += 1
       monightlist[groupId].nlist.push(userId)
 
       let msg = ""
-      if (
-        daydata.mtime &&
-        (moment(daydata.mtime).date() === moment().date() ||
-          moment(daydata.mtime).date() === moment().add(1, "d").date())
-      ) {
-        msg = `晚安成功！你的清醒时长为${this.update(daydata.mtime, moment().toISOString())},`
+      if (lastMtime) {
+        msg = `晚安成功！你的清醒时长为${this.update(lastMtime, moment().toISOString())},`
       }
       return e.reply(msg + `你是本群今天第${monightlist[groupId].nnum}个睡觉的！`, true)
     }

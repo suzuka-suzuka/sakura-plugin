@@ -2018,13 +2018,11 @@ function getAvailableChannels() {
   const channels = []
   const channelConfigs = ["Channels.openai", "Channels.gemini", "Channels.grok"]
 
-  // 遍历所有分类缓存
   for (const categoryName in categoryCache) {
     const configs = categoryCache[categoryName]
     if (Array.isArray(configs)) {
       configs.forEach(({ name, data }) => {
         if (name === "Channels" && data) {
-          // 检查各个渠道类型
           if (Array.isArray(data.openai)) {
             data.openai.forEach(c => c.name && channels.push(c.name))
           }
@@ -2039,7 +2037,6 @@ function getAvailableChannels() {
     }
   }
 
-  // 如果缓存中没有找到（可能还没加载 AI渠道 分类），尝试从 currentData 查找（如果当前就在 AI渠道 分类）
   if (channels.length === 0 && currentData && currentConfig === "AI渠道") {
     if (Array.isArray(currentData.openai)) {
       currentData.openai.forEach(c => c.name && channels.push(c.name))

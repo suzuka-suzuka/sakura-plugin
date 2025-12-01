@@ -17,6 +17,11 @@ export class Memory extends plugin {
           log: false,
         },
         {
+          reg: "^#删除记忆.*$",
+          fnc: "deleteMemory",
+          log: false,
+        },
+        {
           reg: "^#导出记忆$",
           fnc: "exportMemory",
           log: false,
@@ -68,6 +73,50 @@ export class Memory extends plugin {
     return true
   }
 
+  async deleteMemory(e) {
+    const msg = e.msg || ""
+    const match = msg.match(/^#删除记忆\s*(\d+)$/)
+    if (!match) {
+      return false
+    }
+    const index = parseInt(match[1], 10)
+
+    const groupId = e.isGroup ? e.group_id : "private"
+    const userId = e.user_id
+    const memoryFile = path.join(
+      _path,
+      "plugins",
+      "sakura-plugin",
+      "data",
+      "mimic",
+      String(groupId),
+      `${userId}.json`,
+    )
+
+    if (!fs.existsSync(memoryFile)) {
+      return false
+    }
+
+    let memories = []
+    try {
+      memories = JSON.parse(fs.readFileSync(memoryFile, "utf8"))
+    } catch (err) {
+      logger.error(`读取记忆文件失败: ${err}`)
+      await this.reply("读取记忆失败，请稍后再试", false, { recallMsg: 10 })
+      return true
+    }
+
+    if (index < 1 || index > memories.length) {
+      await this.reply(`找不到第 ${index} 条记忆，请检查序号是否正确`, false, { recallMsg: 10 })
+      return true
+    }
+
+    const deletedMemory = memories.splice(index - 1, 1)
+    fs.writeFileSync(memoryFile, JSON.stringify(memories, null, 2))
+    await this.reply(`已删除第 ${index} 条记忆: ${deletedMemory[0]}`, false, { recallMsg: 10 })
+    return true
+  }
+
   async exportMemory(e) {
     const groupId = e.isGroup ? e.group_id : "private"
     const userId = e.user_id
@@ -91,8 +140,8 @@ export class Memory extends plugin {
         return false
       }
 
-      const messages = memories.map(m => ({
-        text: m,
+      const messages = memories.map((m, index) => ({
+        text: `${index + 1}. ${m}`,
         senderId: e.user_id,
         senderName: e.sender.card || e.sender.nickname || "",
       }))
