@@ -50,6 +50,7 @@ export class Permission extends plugin {
     const config = this.appconfig
 
     let replyMsg = ""
+    let needSave = false
     const userExists = config.enable.includes(targetQQ)
 
     const masterQQs = Array.isArray(cfg.masterQQ) ? cfg.masterQQ : [cfg.masterQQ]
@@ -62,6 +63,7 @@ export class Permission extends plugin {
       } else {
         config.enable = config.enable.filter(id => id !== targetQQ)
         replyMsg = `✅已移除「${memberName}」的权限`
+        needSave = true
       }
     } else {
       if (userExists) {
@@ -69,15 +71,19 @@ export class Permission extends plugin {
       } else {
         config.enable.push(targetQQ)
         replyMsg = `✅已赋予「${memberName}」权限`
+        needSave = true
       }
     }
 
-    const success = Setting.setConfig("Permission", config)
-
-    if (success) {
-      await this.reply(replyMsg)
+    if (needSave) {
+      const success = Setting.setConfig("Permission", config)
+      if (success) {
+        await this.reply(replyMsg)
+      } else {
+        await this.reply("❎写入配置文件时遇到问题，请检查后台日志")
+      }
     } else {
-      await this.reply("❎写入配置文件时遇到问题，请检查后台日志")
+      await this.reply(replyMsg)
     }
 
     return true
