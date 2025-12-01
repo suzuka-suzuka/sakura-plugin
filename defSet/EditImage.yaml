@@ -1,21 +1,26 @@
-- reg: 手办化
-  prompt: Please turn this photo into a figure. Behind it, there should be a
-    packaging box with a large clear front window, printed character artwork,
-    the product name, logo, barcode, and a small specs or authenticity panel,
-    with a small price tag sticker on one corner of the box. There is also a
-    computer monitor screen at the back, showing the design sketch of the
-    figure. In front of the box, on a round plastic base, place the figure
-    version of the photo I gave you, and the figure must be three-dimensional.
-    I’d like the PVC material to be clearly represented. It would be even better
-    if the background is indoors.
-- reg: 毛绒化
-  prompt: Turn the subject from the provided photo into a plush toy made of soft
-    minky and short faux fur, with embroidered eyes and mouth, visible seams and
-    a small fabric tag,placed on a round display stand in the foreground; behind
-    it, a windowed packaging box with a large clear front window, printed
-    character artwork, product name, logo, barcode,and a price tag sticker;
-    further back, a computer monitor showing the plush design blueprint; indoor
-    cozy toy-designer studio with wooden desk, sewing tools and pattern
-    papers,warm soft lighting; realistic three-dimensional plush textures,
-    accurate colors from the photo, clean product photo style, front
-    three-quarter view, shallow depth of field, no humans.
+model: gemini-3-pro-image-preview
+api: "请在这里填写你的 Gemini API Key，支持多个"
+vertex: false
+requirePermission: false
+tasks:
+  - trigger: 手办化
+    prompt: Please turn this photo into a figure. Behind it, there should be a
+      packaging box with a large clear front window, printed character artwork,
+      the product name, logo, barcode, and a small specs or authenticity panel,
+      with a small price tag sticker on one corner of the box. There is also a
+      computer monitor screen at the back, showing the design sketch of the
+      figure. In front of the box, on a round plastic base, place the figure
+      version of the photo I gave you, and the figure must be three-dimensional.
+      I’d like the PVC material to be clearly represented. It would be even better
+      if the background is indoors.
+  - trigger: 毛绒化
+    prompt: Turn the subject from the provided photo into a plush toy made of soft
+      minky and short faux fur, with embroidered eyes and mouth, visible seams and
+      a small fabric tag,placed on a round display stand in the foreground; behind
+      it, a windowed packaging box with a large clear front window, printed
+      character artwork, product name, logo, barcode,and a price tag sticker;
+      further back, a computer monitor showing the plush design blueprint; indoor
+      cozy toy-designer studio with wooden desk, sewing tools and pattern
+      papers,warm soft lighting; realistic three-dimensional plush textures,
+      accurate colors from the photo, clean product photo style, front
+      three-quarter view, shallow depth of field, no humans.

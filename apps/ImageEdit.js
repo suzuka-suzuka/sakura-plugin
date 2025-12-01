@@ -2,6 +2,7 @@ import { GoogleGenAI } from "@google/genai"
 import { getImg } from "../lib/utils.js"
 import Setting from "../lib/setting.js"
 import sharp from "sharp"
+import cfg from "../../../lib/config/config.js"
 
 const channelApiKeyIndex = new Map()
 
@@ -23,8 +24,26 @@ export class EditImage extends plugin {
     this.task = Setting.getConfig("EditImage")
   }
 
+  checkPermission(e) {
+    if (!this.task?.requirePermission) {
+      return true
+    }
+    const permissionConfig = Setting.getConfig("Permission")
+    if (
+      !permissionConfig?.enable?.includes(e.sender.user_id) &&
+      !cfg.masterQQ.includes(e.sender.user_id)
+    ) {
+      return false
+    }
+    return true
+  }
+
   async dispatchHandler(e) {
     if (!e.msg) return false
+
+    if (!this.checkPermission(e)) {
+      return false
+    }
 
     if (/^#i/.test(e.msg)) {
       return this.editImageHandler(e)
@@ -33,15 +52,15 @@ export class EditImage extends plugin {
     const tasks = this.task?.tasks || (Array.isArray(this.task) ? this.task : [])
     if (tasks && Array.isArray(tasks)) {
       for (const task of tasks) {
-        if (task.reg) {
+        if (task.trigger) {
           try {
-            const reg = new RegExp(task.reg)
+            const reg = new RegExp(task.trigger)
             const match = reg.exec(e.msg)
             if (match && match.index === 0) {
               return this.dynamicImageHandler(e, task, match)
             }
           } catch (error) {
-            logger.error(`正则匹配出错: ${task.reg}`, error)
+            logger.error(`正则匹配出错: ${task.trigger}`, error)
           }
         }
       }
@@ -80,8 +99,7 @@ export class EditImage extends plugin {
     let imageUrls = await getImg(e, true)
 
     if (!imageUrls || imageUrls.length === 0) {
-      await this.reply(`请上传需要处理的图片哦~`, true, { recallMsg: 10 })
-      return true
+      return false
     }
 
     const matchedStr = match[0]
@@ -179,47 +197,32 @@ export class EditImage extends plugin {
     }
 
     try {
-      const channelsConfig = Setting.getConfig("Channels")
-      const imageConfig = channelsConfig?.gemini?.find(c => c.name === "image")
+      const imageConfig = this.task
 
       if (!imageConfig || !imageConfig.api || !imageConfig.model) {
         throw new Error(
-          "配置错误：未在 'gemini' 配置中找到名称为 'image' 的有效配置或缺少api/model。",
+          "配置错误：未在 'EditImage' 配置中找到有效的 'gemini' 配置或缺少api/model。",
         )
       }
 
-      let API_KEY
+      let API_KEY = imageConfig.api
       const GEMINI_MODEL = imageConfig.model
-      let apiKeys = imageConfig.api
 
-      if (typeof apiKeys === "string" && apiKeys.includes("\n")) {
-        apiKeys = apiKeys
-          .split("\n")
-          .map(key => key.trim())
-          .filter(key => key)
-      }
-
-      if (Array.isArray(apiKeys) && apiKeys.length > 0) {
-        const channelName = imageConfig.name
-        let currentIndex = channelApiKeyIndex.get(channelName) || 0
-
-        if (currentIndex >= apiKeys.length) {
-          currentIndex = 0
-        }
-
-        API_KEY = apiKeys[currentIndex]
-
-        const nextIndex = (currentIndex + 1) % apiKeys.length
-        channelApiKeyIndex.set(channelName, nextIndex)
-
-        logger.info(`渠道 [${channelName}] 正在使用第 ${currentIndex + 1} 个 API Key: ${API_KEY}`)
-      } else if (typeof apiKeys === "string" && apiKeys.trim()) {
-        API_KEY = apiKeys.trim()
-      } else {
+      if (!API_KEY || typeof API_KEY !== "string" || !API_KEY.trim()) {
         throw new Error("渠道配置中的 API Key 无效。")
       }
+      API_KEY = API_KEY.trim()
 
-      const ai = new GoogleGenAI({ apiKey: API_KEY })
+      const isVertex = imageConfig.vertex === true
+      let ai
+      if (isVertex) {
+        ai = new GoogleGenAI({
+          vertexai: true,
+          apiKey: API_KEY,
+        })
+      } else {
+        ai = new GoogleGenAI({ apiKey: API_KEY })
+      }
 
       const config = {
         tools: [{ googleSearch: {} }],

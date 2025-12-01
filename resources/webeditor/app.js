@@ -305,8 +305,19 @@ function renderConfigForm(config, prefix = "") {
   }
 
   if (typeof config === "object") {
-    return Object.entries(config)
-      .map(([key, value]) => {
+    const keys = Object.keys(config).filter(key => {
+      if (!window.configSchema || !window.configSchema.fields) return true
+
+      const fullPath = prefix ? `${prefix}.${key}` : key
+      return (
+        window.configSchema.fields[fullPath] !== undefined ||
+        window.configSchema.fields[key] !== undefined
+      )
+    })
+
+    return keys
+      .map(key => {
+        const value = config[key]
         const fullPath = prefix ? `${prefix}.${key}` : key
         return renderField(key, value, fullPath)
       })
@@ -410,7 +421,7 @@ function renderField(key, value, path) {
 
   if (type === "string") {
     const isMultiline = fieldType === "textarea" || value.includes("\n") || value.length > 100
-    
+
     if (fieldType === "select") {
       const options = fieldSchema.options || []
       return `
@@ -418,14 +429,31 @@ function renderField(key, value, path) {
                 <label>${label}${fieldSchema.required ? ' <span style="color: #ff4d4f;">*</span>' : ""}</label>
                 <div class="form-control-wrapper">
                     <select data-path="${path}" onchange="updateValue(this)" style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
-                        ${options.map(opt => `<option value="${opt.value}" ${value === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                        ${options.map(opt => `<option value="${opt.value}" ${value === opt.value ? "selected" : ""}>${opt.label}</option>`).join("")}
                     </select>
                     ${fieldSchema.help ? `<p style="color: #999; font-size: 12px; margin-top: 4px;">${fieldSchema.help}</p>` : ""}
                 </div>
             </div>
         `
     }
-    
+
+    if (fieldType === "channelSelect") {
+      const channels = getAvailableChannels()
+      return `
+            <div class="form-group">
+                <label>${label}${fieldSchema.required ? ' <span style="color: #ff4d4f;">*</span>' : ""}</label>
+                <div class="form-control-wrapper">
+                    <select data-path="${path}" onchange="updateValue(this)" style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
+                        <option value="" disabled ${!value ? "selected" : ""}>请选择渠道...</option>
+                        ${channels.map(c => `<option value="${c}" ${value === c ? "selected" : ""}>${c}</option>`).join("")}
+                        ${value && !channels.includes(value) ? `<option value="${value}" selected>${value} (未找到)</option>` : ""}
+                    </select>
+                    ${fieldSchema.help ? `<p style="color: #999; font-size: 12px; margin-top: 4px;">${fieldSchema.help}</p>` : ""}
+                </div>
+            </div>
+        `
+    }
+
     return `
             <div class="form-group">
                 <label>${label}${fieldSchema.required ? ' <span style="color: #ff4d4f;">*</span>' : ""}</label>
@@ -501,7 +529,11 @@ function renderObjectArrayCard(item, index, path) {
   let titleField = ""
   let descField = ""
 
-  if (item.sourceGroupIds && item.targetGroupIds) {
+  const fieldSchema = getFieldSchema(path)
+
+  if (fieldSchema && fieldSchema.titleField && item[fieldSchema.titleField]) {
+    titleField = item[fieldSchema.titleField]
+  } else if (item.sourceGroupIds && item.targetGroupIds) {
     const sourceIds = Array.isArray(item.sourceGroupIds)
       ? item.sourceGroupIds
       : [item.sourceGroupIds]
@@ -816,6 +848,26 @@ function addObjectArrayItem(path) {
         template[key] = ""
       }
     }
+
+    const fieldSchema = getFieldSchema(path)
+    if (fieldSchema && fieldSchema.schema) {
+      for (const key in fieldSchema.schema) {
+        if (!(key in template)) {
+          const keySchema = fieldSchema.schema[key]
+          if (keySchema.type === "boolean") {
+            template[key] = false
+          } else if (keySchema.type === "number") {
+            template[key] = 0
+          } else if (keySchema.type === "array") {
+            template[key] = []
+          } else if (keySchema.type === "object") {
+            template[key] = {}
+          } else {
+            template[key] = ""
+          }
+        }
+      }
+    }
   } else {
     const fieldSchema = getFieldSchema(path)
 
@@ -891,9 +943,24 @@ function renderObjectEditorForm() {
   const modalBody = document.getElementById("objectEditorModalBody")
   if (!modalBody || !currentEditingObjectData) return
 
-  modalBody.innerHTML = Object.entries(currentEditingObjectData)
-    .map(([key, value]) => {
-      const fieldSchema = getFieldSchema(key)
+  const parentSchema = getFieldSchema(currentEditingObjectPath)
+  const itemSchema = parentSchema && parentSchema.schema ? parentSchema.schema : {}
+
+  const keys = Object.keys(currentEditingObjectData).filter(key => {
+    if (Object.keys(itemSchema).length > 0) {
+      return itemSchema[key] !== undefined
+    }
+    return true
+  })
+
+  modalBody.innerHTML = keys
+    .map(key => {
+      const value = currentEditingObjectData[key]
+      let fieldSchema = itemSchema[key]
+      if (!fieldSchema) {
+        fieldSchema = getFieldSchema(key)
+      }
+
       const label = fieldSchema.label || key
       const fieldType =
         fieldSchema.type ||
@@ -955,7 +1022,22 @@ function renderObjectEditorForm() {
                     <label>${label}${fieldSchema.required ? ' <span style="color: #ff4d4f;">*</span>' : ""}</label>
                     <div class="form-control-wrapper">
                         <select data-obj-key="${key}" onchange="updateObjectValue(this)" style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
-                            ${options.map(opt => `<option value="${opt.value}" ${value === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                            ${options.map(opt => `<option value="${opt.value}" ${value === opt.value ? "selected" : ""}>${opt.label}</option>`).join("")}
+                        </select>
+                        ${fieldSchema.help ? `<p style="color: #999; font-size: 12px; margin-top: 4px;">${fieldSchema.help}</p>` : ""}
+                    </div>
+                </div>
+            `
+      } else if (fieldType === "channelSelect") {
+        const channels = getAvailableChannels()
+        return `
+                <div class="form-group">
+                    <label>${label}${fieldSchema.required ? ' <span style="color: #ff4d4f;">*</span>' : ""}</label>
+                    <div class="form-control-wrapper">
+                        <select data-obj-key="${key}" onchange="updateObjectValue(this)" style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
+                            <option value="" disabled ${!value ? "selected" : ""}>请选择渠道...</option>
+                            ${channels.map(c => `<option value="${c}" ${value === c ? "selected" : ""}>${c}</option>`).join("")}
+                            ${value && !channels.includes(value) ? `<option value="${value}" selected>${value} (未找到)</option>` : ""}
                         </select>
                         ${fieldSchema.help ? `<p style="color: #999; font-size: 12px; margin-top: 4px;">${fieldSchema.help}</p>` : ""}
                     </div>
@@ -1166,7 +1248,28 @@ function addArrayItemWithModal(path) {
     const sample = arr[0]
     if (typeof sample === "object" && !Array.isArray(sample)) {
       currentModalTemplate = JSON.parse(JSON.stringify(sample))
-      showArrayModal(sample)
+
+      const fieldSchema = getFieldSchema(path)
+      if (fieldSchema && fieldSchema.schema) {
+        for (const key in fieldSchema.schema) {
+          if (!(key in currentModalTemplate)) {
+            const keySchema = fieldSchema.schema[key]
+            if (keySchema.type === "boolean") {
+              currentModalTemplate[key] = false
+            } else if (keySchema.type === "number") {
+              currentModalTemplate[key] = 0
+            } else if (keySchema.type === "array") {
+              currentModalTemplate[key] = []
+            } else if (keySchema.type === "object") {
+              currentModalTemplate[key] = {}
+            } else {
+              currentModalTemplate[key] = ""
+            }
+          }
+        }
+      }
+
+      showArrayModal(currentModalTemplate)
     } else {
       arr.push(typeof sample === "number" ? 0 : "")
       reloadCurrentView()
@@ -1309,9 +1412,18 @@ function renderModalForm(obj, prefix) {
                     <label>${label}${fieldSchema.required ? ' <span style="color: #ff4d4f;">*</span>' : ""}</label>
                     <div class="form-control-wrapper">
                         <select data-modal-path="${key}" onchange="updateModalValue(this)" style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
-                            ${options.map(opt => `<option value="${opt.value}" ${value === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                            ${options.map(opt => `<option value="${opt.value}" ${value === opt.value ? "selected" : ""}>${opt.label}</option>`).join("")}
                         </select>
                         ${fieldSchema.help ? `<p style="color: #999; font-size: 12px; margin-top: 4px;">${fieldSchema.help}</p>` : ""}
+                    </div>
+                </div>
+            `
+      } else if (type === "channelSelect") {
+        return `
+                <div class="form-group">
+                    <label>${label}${fieldSchema.required ? ' <span style="color: #ff4d4f;">*</span>' : ""}</label>
+                    <div class="form-control-wrapper">
+                        <p style="color: #999; font-size: 12px;">渠道选择,新增后可继续编辑</p>
                     </div>
                 </div>
             `
@@ -1901,3 +2013,44 @@ document.addEventListener("DOMContentLoaded", () => {
 
   console.log("[sakura] ========== 初始化完成 ==========")
 })
+
+function getAvailableChannels() {
+  const channels = []
+  const channelConfigs = ["Channels.openai", "Channels.gemini", "Channels.grok"]
+
+  // 遍历所有分类缓存
+  for (const categoryName in categoryCache) {
+    const configs = categoryCache[categoryName]
+    if (Array.isArray(configs)) {
+      configs.forEach(({ name, data }) => {
+        if (name === "Channels" && data) {
+          // 检查各个渠道类型
+          if (Array.isArray(data.openai)) {
+            data.openai.forEach(c => c.name && channels.push(c.name))
+          }
+          if (Array.isArray(data.gemini)) {
+            data.gemini.forEach(c => c.name && channels.push(c.name))
+          }
+          if (Array.isArray(data.grok)) {
+            data.grok.forEach(c => c.name && channels.push(c.name))
+          }
+        }
+      })
+    }
+  }
+
+  // 如果缓存中没有找到（可能还没加载 AI渠道 分类），尝试从 currentData 查找（如果当前就在 AI渠道 分类）
+  if (channels.length === 0 && currentData && currentConfig === "AI渠道") {
+    if (Array.isArray(currentData.openai)) {
+      currentData.openai.forEach(c => c.name && channels.push(c.name))
+    }
+    if (Array.isArray(currentData.gemini)) {
+      currentData.gemini.forEach(c => c.name && channels.push(c.name))
+    }
+    if (Array.isArray(currentData.grok)) {
+      currentData.grok.forEach(c => c.name && channels.push(c.name))
+    }
+  }
+
+  return [...new Set(channels)] // 去重
+}

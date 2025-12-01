@@ -5,6 +5,10 @@ gemini:
   - name: default
     model: gemini-2.5-flash-preview-05-20
     api: "请在这里填写你的 Gemini API Key，支持多个"
+  - name: vertex
+    model: gemini-1.5-pro-preview-0409
+    api: "请在这里填写你的 Vertex API Key"
+    vertex: true
 openai:
   - name: v3
     baseURL: "https://api.openai.com/v1"
@@ -18,8 +22,3 @@ grok:
     x_statsig_id: "请在这里填写你的 X Statsig ID"
     temporary: true
     dynamic_statsig: true
-vertex:
-  - name: vertex
-    model: gemini-1.5-pro-preview-0409
-    project: "请在这里填写你的 Google Cloud Project ID"
-    location: "us-central1"

@@ -4,7 +4,6 @@ import Setting from "../lib/setting.js"
 
 const AI_PROMPT =
   "你是一个QQ群的成员。你的任务是根据群成员的变动（新成员加入或成员离开）以及最近的群聊记录，生成一个自然、得体的回应。当有新人加入时，你可以根据最近的聊天内容，简单告知新人大家在聊什么，并表示欢迎。当有成员离开时，你可以根据聊天内容推测可能的原因（如果可能的话），或者仅仅表达惋惜。你的回应应该简短、友好，并像一个真正的群成员一样融入对话。下面是具体的情景和聊天记录："
-const USE_GROUP_CONTEXT = true
 
 async function createMockMessageEvent(original_e) {
   const group = Bot.pickGroup(original_e.group_id)
@@ -44,7 +43,6 @@ async function createMockMessageEvent(original_e) {
     isGroup: true,
     group_id: original_e.group_id,
     user_id: original_e.user_id,
-    group: group,
     sender: sender,
     self_id: Bot.uin,
     bot: Bot,
@@ -137,7 +135,7 @@ export class groupNoticeAI extends plugin {
         mockE,
         [{ text: query }],
         AI_PROMPT,
-        USE_GROUP_CONTEXT,
+        { noHeader: true },
         false,
         [],
       )
@@ -168,7 +166,7 @@ export class groupNoticeAI extends plugin {
         mockE,
         [{ text: query }],
         AI_PROMPT,
-        USE_GROUP_CONTEXT,
+        { noHeader: true },
         false,
         [],
       )

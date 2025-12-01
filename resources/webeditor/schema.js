@@ -140,6 +140,7 @@ const configSchema = {
       step: 0.01,
     },
     "pixiv.defaultTags": { label: "P站默认搜索标签", type: "array", itemType: "text" },
+    trigger: { label: "触发词", type: "text", required: true },
     cookie: { label: "Cookie", type: "textarea", help: "从浏览器获取的cookie" },
     proxy: { label: "反代地址", type: "text", help: "Pixiv图片反代地址" },
     excludeAI: { label: "排除AI作品", type: "boolean" },
@@ -154,22 +155,38 @@ const configSchema = {
     },
     defaultTags: { label: "默认标签", type: "array", itemType: "text" },
 
-    "EditImage.tasks": {
-      label: "修图提示词",
-      type: "array",
-      itemType: "object",
-      help: "配置自定义图片编辑指令和提示词",
+    EditImage: {
+      label: "修图API配置",
+      type: "object",
+      help: "配置用于修图的 Gemini API",
       schema: {
-        reg: { label: "触发词", type: "text", required: true },
-        prompt: { label: "描述", type: "text", required: true },
+        model: { label: "模型名称", type: "text", required: true },
+        api: { label: "API Key", type: "text", required: true },
+        vertex: { label: "Vertex AI", type: "boolean", required: false },
+        requirePermission: { label: "需要权限", type: "boolean", required: false },
+        tasks: {
+          label: "修图提示词",
+          type: "array",
+          itemType: "object",
+          titleField: "trigger",
+          schema: {
+            trigger: { label: "触发词", type: "text", required: true },
+            prompt: { label: "描述", type: "text", required: true },
+          },
+        },
       },
     },
-    tasks: {
-      label: "修图任务",
+    "EditImage.model": { label: "模型名称", type: "text", required: true },
+    "EditImage.api": { label: "API Key", type: "text", required: true },
+    "EditImage.vertex": { label: "Vertex AI", type: "boolean" },
+    "EditImage.requirePermission": { label: "需要权限", type: "boolean" },
+    "EditImage.tasks": {
+      label: "修图触发词",
       type: "array",
       itemType: "object",
+      titleField: "trigger",
       schema: {
-        reg: { label: "触发词", type: "text", required: true },
+        trigger: { label: "触发词", type: "text", required: true },
         prompt: { label: "提示词", type: "text", required: true },
       },
     },
@@ -205,6 +222,7 @@ const configSchema = {
           help: "支持多个apikey轮询，一行一个",
           required: true,
         },
+        vertex: { label: "Vertex AI", type: "boolean", required: false },
       },
     },
     "Channels.grok": {
@@ -220,18 +238,6 @@ const configSchema = {
         x_statsig_id: { label: "X Statsig ID", type: "textarea", required: false },
         temporary: { label: "临时会话", type: "boolean", required: false },
         dynamic_statsig: { label: "动态Statsig", type: "boolean", required: false },
-      },
-    },
-    "Channels.vertex": {
-      label: "Vertex",
-      type: "array",
-      itemType: "object",
-      help: "Vertex API 类型的渠道",
-      schema: {
-        name: { label: "渠道名称", type: "text", required: true },
-        model: { label: "模型名称", type: "text", required: true },
-        project: { label: "项目ID", type: "text", required: true },
-        location: { label: "区域", type: "text", required: true },
       },
     },
     openai: {
@@ -263,6 +269,7 @@ const configSchema = {
           help: "支持多个apikey轮询，一行一个",
           required: true,
         },
+        vertex: { label: "Vertex AI", type: "boolean", required: false },
       },
     },
 
@@ -281,7 +288,7 @@ const configSchema = {
         },
         Channel: {
           label: "渠道",
-          type: "text",
+          type: "channelSelect",
           required: true,
           help: "使用的渠道名称，必须与上方渠道配置中的名称一致",
         },
@@ -304,17 +311,17 @@ const configSchema = {
     },
     "AI.toolschannel": {
       label: "工具渠道",
-      type: "text",
+      type: "channelSelect",
       help: "用于AI工具的渠道，必须是gemini渠道",
     },
     "AI.appschannel": {
       label: "应用渠道",
-      type: "text",
+      type: "channelSelect",
       help: "用于杂项功能(戳一戳，画像，早晚安，进退群等)的渠道",
     },
     "AI.defaultchannel": {
       label: "默认渠道",
-      type: "text",
+      type: "channelSelect",
       help: "当指定渠道不可用时使用的备用渠道，建议设为gemini渠道",
     },
     profiles: {
@@ -335,7 +342,7 @@ const configSchema = {
     enableUserLock: { label: "启用用户锁", type: "boolean", help: "防止用户消息并发处理" },
 
     "mimic.Groups": { label: "启用群", type: "groupSelect" },
-    "mimic.Channel": { label: "伪人渠道", type: "text" },
+    "mimic.Channel": { label: "伪人渠道", type: "channelSelect" },
     "mimic.Prompt": { label: "伪人预设", type: "textarea", help: "默认预设" },
     "mimic.alternatePrompt": {
       label: "反差预设",
@@ -535,10 +542,10 @@ const configSchema = {
       help: "从 ChatGPT 获取的 Access Token，用于 Sora 视频生成",
     },
 
+    vertex: { label: "Vertex AI", type: "boolean" },
     port: { label: "端口", type: "number", min: 1024, max: 65535 },
 
     baseURL: { label: "API地址", type: "text" },
-    model: { label: "模型名称", type: "text" },
     api: { label: "API密钥", type: "textarea" },
     reg: { label: "触发词", type: "text" },
     prompt: { label: "提示词", type: "text" },

@@ -90,7 +90,6 @@ export class ActiveChatScheduler extends plugin {
               user_id: user_id,
               self_id: Bot.uin,
               bot: Bot,
-              group: group,
               sender: member,
             }
 
@@ -142,7 +141,7 @@ export class ActiveChatScheduler extends plugin {
 
       if (geminiResponse && geminiResponse.text) {
         const messageToSend = parseAtMessage(geminiResponse.text)
-        await mockE.group.sendMsg(messageToSend)
+        await Bot.pickGroup(mockE.group_id).sendMsg(messageToSend)
       } else {
         logger.warn(`主动聊天失败: AI未生成有效回复。`)
       }

@@ -178,6 +178,27 @@ export function supportGuoba() {
         },
         {
           field: "EditImage",
+          label: "修图API配置",
+          bottomHelpMessage: "配置用于修图的 Gemini API",
+          component: "GSubForm",
+          required: false,
+          componentProps: {
+            multiple: false,
+            schemas: [
+              { field: "model", label: "模型名称", component: "Input", required: true },
+              {
+                field: "api",
+                label: "API Key",
+                component: "Input",
+                required: true,
+              },
+              { field: "vertex", label: "Vertex AI", component: "Switch", required: false },
+              { field: "requirePermission", label: "需要权限", component: "Switch", required: false },
+            ],
+          },
+        },
+        {
+          field: "EditImage.tasks",
           label: "修图提示词",
           bottomHelpMessage: "配置自定义图片编辑指令和提示词",
           component: "GSubForm",
@@ -185,7 +206,7 @@ export function supportGuoba() {
           componentProps: {
             multiple: true,
             schemas: [
-              { field: "reg", label: "触发词", component: "Input", required: true },
+              { field: "trigger", label: "触发词", component: "Input", required: true },
               { field: "prompt", label: "描述", component: "Input", required: true },
             ],
           },
@@ -234,6 +255,7 @@ export function supportGuoba() {
                 required: true,
                 bottomHelpMessage: "支持多个apikey轮询，一行一个",
               },
+              { field: "vertex", label: "Vertex AI", component: "Switch", required: false },
             ],
           },
         },
@@ -253,22 +275,6 @@ export function supportGuoba() {
               { field: "x_statsig_id", label: "X Statsig ID", component: "InputTextArea", required: false },
               { field: "temporary", label: "临时会话", component: "Switch", required: false },
               { field: "dynamic_statsig", label: "动态Statsig", component: "Switch", required: false },
-            ],
-          },
-        },
-        {
-          field: "Channels.vertex",
-          label: "Vertex",
-          bottomHelpMessage: "Vertex API 类型的渠道。",
-          component: "GSubForm",
-          required: false,
-          componentProps: {
-            multiple: true,
-            schemas: [
-              { field: "name", label: "渠道名称", component: "Input", required: true },
-              { field: "model", label: "模型名称", component: "Input", required: true },
-              { field: "project", label: "项目ID", component: "Input", required: true },
-              { field: "location", label: "区域", component: "Input", required: true },
             ],
           },
         },

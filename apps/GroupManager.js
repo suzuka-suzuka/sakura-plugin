@@ -1,8 +1,4 @@
 import Setting from "../lib/setting.js"
-import fs from "fs"
-import path from "path"
-import { plugindata } from "../lib/path.js"
-import cfg from "../../../lib/config/config.js"
 
 const conversationStateNeverSpoken = {}
 const conversationStateInactive = {}

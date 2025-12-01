@@ -1,3 +1,6 @@
+import fs from "fs"
+import path from "path"
+import { _path } from "../lib/path.js"
 import { getAI } from "../lib/AIUtils/getAI.js"
 import { executeToolCalls } from "../lib/AIUtils/tools/tools.js"
 import { splitAndReplyMessages, parseAtMessage, getQuoteContent } from "../lib/AIUtils/messaging.js"
@@ -8,7 +11,7 @@ export class Mimic extends plugin {
     super({
       name: "Mimic",
       dsc: "Mimic",
-      event: "message",
+      event: "message.group",
       priority: Infinity,
       rule: [
         {
@@ -126,6 +129,34 @@ export class Mimic extends plugin {
       selectedPresetPrompt = this.appconfig.alternatePrompt
       shouldRecall = true
     }
+
+    const groupId = e.isGroup ? e.group_id : "private"
+    const userId = e.user_id
+    const userName = e.sender.card || e.sender.nickname || ""
+
+    const memoryFile = path.join(
+      _path,
+      "plugins",
+      "sakura-plugin",
+      "data",
+      "mimic",
+      String(groupId),
+      `${userId}.json`,
+    )
+
+    if (fs.existsSync(memoryFile)) {
+      try {
+        const memories = JSON.parse(fs.readFileSync(memoryFile, "utf8"))
+        if (memories && memories.length > 0) {
+          selectedPresetPrompt +=
+            `\n\n【关于当前用户的记忆】\n当前对话用户：${userName} (${userId})\n该用户曾让你记住以下信息（请将其视为关于该用户的设定或事实）：\n` +
+            memories.map(m => `- ${m}`).join("\n")
+        }
+      } catch (err) {
+        logger.error(`读取记忆文件失败: ${err}`)
+      }
+    }
+
     logger.info(`mimic触发`)
     let finalResponseText = ""
     let currentFullHistory = []
