@@ -102,7 +102,7 @@ export class groupNoticeAI extends plugin {
     if (this.e.user_id === this.e.self_id) return
 
     const config = Setting.getConfig("groupnotice")
-    
+
     const cd = 30
     const key = `sakura:group_notice:cd:${this.e.group_id}`
     if (await redis.get(key)) {
@@ -142,7 +142,7 @@ export class groupNoticeAI extends plugin {
       let responseText = aiResponse.text
       if (responseText) {
         const msg = parseAtMessage(responseText)
-        await this.reply(...msg)
+        await this.reply(msg)
       } else {
         await this.defaultWelcome()
       }

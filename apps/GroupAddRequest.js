@@ -12,6 +12,7 @@ export class groupRequestListener extends plugin {
       rule: [
         {
           fnc: "handleGroupAddRequest",
+          log: false,
         },
       ],
     })
