@@ -153,6 +153,8 @@ export class groupNoticeAI extends plugin {
   }
 
   async handleDecrease() {
+    if (this.e.operator_id !== this.e.user_id) return
+
     const mockE = await createMockMessageEvent(this.e)
     if (!mockE) {
       await this.defaultFarewell()
