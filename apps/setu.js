@@ -3,11 +3,6 @@ import common from "../../../lib/common/common.js"
 import setting from "../lib/setting.js"
 const DEFAULT_PROXY = "pixiv.manbomanbo.asia"
 
-const REGEX_CONFIG = {
-  lolisuki: "^#来张萝莉图$",
-  lolicon: "^#来张涩图(。)?(.*)$",
-}
-
 export class setuPlugin extends plugin {
   constructor() {
     super({
@@ -15,10 +10,7 @@ export class setuPlugin extends plugin {
       dsc: "获取图片",
       event: "message",
       priority: 1135,
-      rule: [
-        { reg: REGEX_CONFIG.lolisuki, fnc: "handleApiRequest", log: false },
-        { reg: REGEX_CONFIG.lolicon, fnc: "handleApiRequest", log: false },
-      ],
+      rule: [{ reg: "^#来张涩图(。)?(.*)$", fnc: "handleApiRequest", log: false }],
     })
   }
 
@@ -26,19 +18,13 @@ export class setuPlugin extends plugin {
     return setting.getConfig("r18")
   }
   async handleApiRequest(e) {
-    let apiType,
+    let apiType = "lolicon",
       tag,
       isR18 = false
 
-    if (new RegExp(REGEX_CONFIG.lolicon).test(e.msg)) {
-      const match = e.msg.match(new RegExp(REGEX_CONFIG.lolicon))
-      apiType = "lolicon"
-      isR18 = !!match?.[1]
-      tag = match?.[2]?.trim() || ""
-    } else {
-      apiType = "lolisuki"
-      tag = ""
-    }
+    const match = e.msg.match(/^#来张涩图(。)?(.*)$/)
+    isR18 = !!match?.[1]
+    tag = match?.[2]?.trim() || ""
 
     if (isR18 && !this.r18Config.enable.includes(e.group_id)) {
       return this.reply("本群未开启r18功能哦~", true, { recallMsg: 10 })
@@ -47,9 +33,7 @@ export class setuPlugin extends plugin {
     await this.reply("正在获取图片...", true, { recallMsg: 10 })
 
     try {
-      const apiFunction =
-        apiType === "lolicon" ? this.fetchLolicon.bind(this) : this.fetchLolisuki.bind(this)
-      const imageInfo = await apiFunction(tag, isR18)
+      const imageInfo = await this.fetchLolicon(tag, isR18)
 
       if (!imageInfo?.url) {
         return this.reply(tag ? `标签「${tag}」找不到对应的图片。` : "未能找到图片。", true, {
@@ -59,7 +43,7 @@ export class setuPlugin extends plugin {
 
       const messageText = `${imageInfo.id ? "pid:" + imageInfo.id : ""}${imageInfo.tags?.length ? "\n标签: " + imageInfo.tags.join(", ") : ""}`
 
-      await this.sendImageWithRetry(e, imageInfo.url, messageText, apiType === "lolicon" && isR18)
+      await this.sendImageWithRetry(e, imageInfo.url, messageText, isR18)
     } catch (err) {
       logger.error(`处理API请求时出错 (${apiType}): ${err.message}`)
       await this.reply(`获取图片时出错: ${err.message}`, true, { recallMsg: 10 })
@@ -129,24 +113,6 @@ export class setuPlugin extends plugin {
       throw new Error(`${apiName} API 返回错误或无数据: ${data.error || "空数据数组"}`)
     }
     return data.data[0]
-  }
-
-  async fetchLolisuki(tag = "") {
-    const params = new URLSearchParams({
-      num: "1",
-      size: "original",
-      taste: "1",
-      proxy: DEFAULT_PROXY,
-      ...(tag && { tag }),
-    })
-    const apiUrl = `https://lolisuki.cn/api/setu/v1?${params}`
-    const imageInfo = await this.fetchApi(apiUrl, "Lolisuki")
-
-    return {
-      url: imageInfo.urls?.original,
-      id: imageInfo.pid,
-      tags: imageInfo.tags?.slice(0, 5) || [],
-    }
   }
 
   async fetchLolicon(tag = "", isR18 = false) {
