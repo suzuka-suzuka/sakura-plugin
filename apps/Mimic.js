@@ -5,6 +5,7 @@ import { getAI } from "../lib/AIUtils/getAI.js"
 import { executeToolCalls } from "../lib/AIUtils/tools/tools.js"
 import { splitAndReplyMessages, parseAtMessage, getQuoteContent } from "../lib/AIUtils/messaging.js"
 import Setting from "../lib/setting.js"
+import { randomEmojiLike } from "../lib/utils.js"
 
 export class Mimic extends plugin {
   constructor() {
@@ -158,6 +159,7 @@ export class Mimic extends plugin {
     }
 
     logger.info(`mimic触发`)
+    await randomEmojiLike(e)
     let finalResponseText = ""
     let currentFullHistory = []
     let toolCallCount = 0

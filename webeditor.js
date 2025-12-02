@@ -141,9 +141,34 @@ class WebEditor {
       try {
         const { name } = req.params
 
-        const config = setting.getConfig(name)
+        let config = setting.getConfig(name)
         const rawConfig = setting._getRawConfig(name)
         const defConfig = setting.getdefSet(name)
+
+        if (name === 'EmojiLike') {
+          const transformGroups = (cfg) => {
+            if (cfg && cfg.groups && !Array.isArray(cfg.groups)) {
+              const groupsArray = []
+              for (const [groupId, groupCfg] of Object.entries(cfg.groups)) {
+                const usersArray = []
+                if (groupCfg.users && !Array.isArray(groupCfg.users)) {
+                  for (const [userId, emojiId] of Object.entries(groupCfg.users)) {
+                    usersArray.push({ userId, emojiId })
+                  }
+                }
+                groupsArray.push({
+                  groupId: String(groupId),
+                  replyAll: groupCfg.replyAll,
+                  default: groupCfg.default,
+                  users: usersArray
+                })
+              }
+              return { ...cfg, groups: groupsArray }
+            }
+            return cfg
+          }
+          config = transformGroups(config)
+        }
 
         res.json({
           success: true,
@@ -161,7 +186,32 @@ class WebEditor {
     this.app.post("/api/config/:name", (req, res) => {
       try {
         const { name } = req.params
-        const { data } = req.body
+        let { data } = req.body
+
+        if (name === 'EmojiLike') {
+          if (data.groups && Array.isArray(data.groups)) {
+            const groupsMap = {}
+            for (const groupItem of data.groups) {
+              if (!groupItem.groupId) continue
+              
+              const usersMap = {}
+              if (groupItem.users && Array.isArray(groupItem.users)) {
+                for (const userItem of groupItem.users) {
+                  if (userItem.userId && userItem.emojiId) {
+                    usersMap[userItem.userId] = userItem.emojiId
+                  }
+                }
+              }
+
+              groupsMap[groupItem.groupId] = {
+                replyAll: groupItem.replyAll,
+                default: groupItem.default,
+                users: usersMap
+              }
+            }
+            data.groups = groupsMap
+          }
+        }
 
         const success = setting.setConfig(name, data)
 

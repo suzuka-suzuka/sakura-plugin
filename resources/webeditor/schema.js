@@ -36,6 +36,7 @@ const configSchema = {
         "webeditor",
         "groupnotice",
         "SoraVideo",
+        "EmojiLike",
       ],
     },
   ],
@@ -65,6 +66,7 @@ const configSchema = {
     webeditor: "配置面板",
     groupnotice: "进退群通知",
     SoraVideo: "Sora视频生成",
+    EmojiLike: "表情回应",
   },
 
   fields: {
@@ -557,6 +559,31 @@ const configSchema = {
       label: "OpenAI Access Token",
       type: "textarea",
       help: "从 ChatGPT 获取的 Access Token，用于 Sora 视频生成",
+    },
+
+    "EmojiLike.configs": {
+      label: "群配置",
+      type: "array",
+      itemType: "object",
+      titleField: "group",
+      schema: {
+        group: { label: "群聊", type: "groupSelect", required: true },
+        replyAll: {
+          label: "回应所有人",
+          type: "boolean",
+          help: "开启后回应群内所有人，关闭后仅回应特定用户",
+        },
+        default: {
+          label: "默认表情ID",
+          type: "text",
+          help: "群内默认回应的表情ID，多个id用英文逗号隔开，如“11,22”,会随机选择",
+        },
+        users: {
+          label: "特定用户配置",
+          type: "textarea",
+          help: "格式: QQ:表情ID，一行一个,多个id用英文逗号隔开,如“123456789:66,181”，会随机选择",
+        },
+      },
     },
 
     vertex: { label: "Vertex AI", type: "boolean" },

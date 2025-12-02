@@ -97,8 +97,8 @@ export default class DailySign extends plugin {
 
     userData.lastSign = today
 
-    const newCoins = _.random(50, 200)
-    const newExperience = _.random(10, 50)
+    const newCoins = _.random(10, 30)
+    const newExperience = _.random(5, 15)
     userData.totalCoins += newCoins
     userData.totalExperience += newExperience
 
