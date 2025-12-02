@@ -65,7 +65,6 @@ const configSchema = {
     tenor: "Tenor表情",
     webeditor: "配置面板",
     groupnotice: "进退群通知",
-    SoraVideo: "Sora视频生成",
     EmojiLike: "表情回应",
   },
 
@@ -499,15 +498,13 @@ const configSchema = {
       schema: {
         sourceGroupIds: {
           label: "来源群号",
-          type: "array",
-          itemType: "text",
+          type: "groupSelect",
           required: true,
           help: "输入群号，可添加多个",
         },
         targetGroupIds: {
           label: "目标群号",
-          type: "array",
-          itemType: "text",
+          type: "groupSelect",
           required: true,
           help: "输入群号，可添加多个",
         },
@@ -518,8 +515,8 @@ const configSchema = {
       type: "array",
       itemType: "object",
       schema: {
-        sourceGroupIds: { label: "来源群号", type: "array", itemType: "text", required: true },
-        targetGroupIds: { label: "目标群号", type: "array", itemType: "text", required: true },
+        sourceGroupIds: { label: "来源群号", type: "groupSelect", required: true },
+        targetGroupIds: { label: "目标群号", type: "groupSelect", required: true },
       },
     },
 
