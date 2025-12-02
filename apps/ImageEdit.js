@@ -4,8 +4,6 @@ import Setting from "../lib/setting.js"
 import sharp from "sharp"
 import cfg from "../../../lib/config/config.js"
 
-const channelApiKeyIndex = new Map()
-
 export class EditImage extends plugin {
   constructor() {
     super({
@@ -213,44 +211,70 @@ export class EditImage extends plugin {
       }
       API_KEY = API_KEY.trim()
 
-      const isVertex = imageConfig.vertex === true
-      let ai
-      if (isVertex) {
-        ai = new GoogleGenAI({
-          vertexai: true,
-          apiKey: API_KEY,
+      const callAI = async (apiKey, isVertex) => {
+        let ai
+        if (isVertex) {
+          ai = new GoogleGenAI({
+            vertexai: true,
+            apiKey: apiKey,
+          })
+        } else {
+          ai = new GoogleGenAI({ apiKey: apiKey })
+        }
+
+        const config = {
+          tools: [{ googleSearch: {} }],
+          responseModalities: ["IMAGE", "TEXT"],
+          imageConfig: {
+            imageSize: imageSize,
+          },
+          safetySettings: [
+            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "OFF" },
+            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "OFF" },
+            { category: "HARM_CATEGORY_HARASSMENT", threshold: "OFF" },
+            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "OFF" },
+          ],
+        }
+
+        if (aspectRatio) {
+          config.imageConfig.aspectRatio = aspectRatio
+        }
+
+        return await ai.models.generateContent({
+          model: GEMINI_MODEL,
+          contents: contents,
+          config: config,
         })
-      } else {
-        ai = new GoogleGenAI({ apiKey: API_KEY })
       }
 
-      const config = {
-        tools: [{ googleSearch: {} }],
-        responseModalities: ["IMAGE", "TEXT"],
-        imageConfig: {
-          imageSize: imageSize,
-        },
-        safetySettings: [
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "OFF" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "OFF" },
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "OFF" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "OFF" },
-        ],
+      const tryCall = async (apiKey, isVertex) => {
+        try {
+          const res = await callAI(apiKey, isVertex)
+          const img = res.candidates?.[0]?.content?.parts?.find(
+            part => part.inlineData && part.inlineData.mimeType.startsWith("image/"),
+          )
+          return { response: res, imagePart: img, error: null }
+        } catch (e) {
+          return { response: null, imagePart: null, error: e }
+        }
       }
 
-      if (aspectRatio) {
-        config.imageConfig.aspectRatio = aspectRatio
+      const isVertexConfigured = imageConfig.vertex === true
+      let result = await tryCall(API_KEY, isVertexConfigured)
+
+      if ((result.error || !result.imagePart) && !isVertexConfigured && imageConfig.vertexApi) {
+        logger.warn(
+          `Gemini 渠道失败(${result.error?.message || "被拦截"}), 尝试切换到 Vertex 渠道重试...`,
+        )
+        result = await tryCall(imageConfig.vertexApi, true)
       }
 
-      const response = await ai.models.generateContent({
-        model: GEMINI_MODEL,
-        contents: contents,
-        config: config,
-      })
+      if (result.error) {
+        throw result.error
+      }
 
-      const imagePart = response.candidates?.[0]?.content?.parts?.find(
-        part => part.inlineData && part.inlineData.mimeType.startsWith("image/"),
-      )
+      const response = result.response
+      const imagePart = result.imagePart
 
       if (imagePart) {
         const imageData = imagePart.inlineData.data

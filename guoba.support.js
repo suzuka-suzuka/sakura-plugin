@@ -192,6 +192,13 @@ export function supportGuoba() {
                 component: "Input",
                 required: true,
               },
+              {
+                field: "vertexApi",
+                label: "Vertex API Key",
+                component: "Input",
+                required: false,
+                bottomHelpMessage: "默认渠道失败时的备用 Vertex API Key",
+              },
               { field: "vertex", label: "Vertex AI", component: "Switch", required: false },
               { field: "requirePermission", label: "需要权限", component: "Switch", required: false },
             ],

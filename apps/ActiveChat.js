@@ -58,7 +58,7 @@ export class ActiveChatScheduler extends plugin {
             const user_id = parseInt(conversationKeyParts[1], 10)
 
             if (
-              activeChatConfig?.Groups?.length > 0 &&
+              !activeChatConfig?.Groups ||
               !activeChatConfig.Groups.includes(group_id)
             ) {
               continue

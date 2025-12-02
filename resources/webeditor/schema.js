@@ -162,6 +162,12 @@ const configSchema = {
       schema: {
         model: { label: "模型名称", type: "text", required: true },
         api: { label: "API Key", type: "text", required: true },
+        vertexApi: {
+          label: "Vertex API Key",
+          type: "text",
+          required: false,
+          help: "默认渠道失败时的备用 Vertex API Key",
+        },
         vertex: { label: "Vertex AI", type: "boolean", required: false },
         requirePermission: { label: "需要权限", type: "boolean", required: false },
         tasks: {
@@ -178,7 +184,18 @@ const configSchema = {
     },
     "EditImage.model": { label: "模型名称", type: "text", required: true },
     "EditImage.api": { label: "API Key", type: "text", required: true },
-    "EditImage.vertex": { label: "Vertex AI", type: "boolean" },
+    "EditImage.vertexApi": {
+      label: "Vertex API Key",
+      type: "text",
+      required: false,
+      help: "失败时尝试使用 Vertex AI生成，为空则不尝试",
+    },
+    "EditImage.vertex": {
+      label: "Vertex AI",
+      type: "boolean",
+      required: false,
+      help: "开启后API Key只能填Vertex API Key",
+    },
     "EditImage.requirePermission": { label: "需要权限", type: "boolean" },
     "EditImage.tasks": {
       label: "修图触发词",
