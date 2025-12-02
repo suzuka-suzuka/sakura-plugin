@@ -80,9 +80,6 @@ export class EmojiLike extends plugin {
 
     try {
       await e.group?.setMsgEmojiLike?.(e.message_id, emojiId)
-      logger.info(
-        `[EmojiLike] 已对群 ${e.group_id} 用户 ${e.user_id} 的消息 ${e.message_id} 进行表情回应: ${emojiId}`,
-      )
     } catch (err) {
       logger.error(`[EmojiLike] 表情回应失败: ${err}`)
     }
