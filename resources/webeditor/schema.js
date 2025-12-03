@@ -508,6 +508,21 @@ const configSchema = {
           required: true,
           help: "输入群号，可添加多个",
         },
+        enableImage: {
+          label: "开启图片转发",
+          type: "boolean",
+          help: "是否开启图片转发",
+        },
+        enableVideo: {
+          label: "开启视频转发",
+          type: "boolean",
+          help: "是否开启视频转发",
+        },
+        enableRecord: {
+          label: "开启聊天记录转发",
+          type: "boolean",
+          help: "是否开启聊天记录转发",
+        },
       },
     },
     forwardRules: {
@@ -517,6 +532,9 @@ const configSchema = {
       schema: {
         sourceGroupIds: { label: "来源群号", type: "groupSelect", required: true },
         targetGroupIds: { label: "目标群号", type: "groupSelect", required: true },
+        enableImage: { label: "开启图片转发", type: "boolean" },
+        enableVideo: { label: "开启视频转发", type: "boolean" },
+        enableRecord: { label: "开启聊天记录转发", type: "boolean" },
       },
     },
 

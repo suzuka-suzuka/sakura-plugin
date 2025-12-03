@@ -3,3 +3,6 @@ forwardRules:
       - 123456
     targetGroupIds:
       - 1234565
+    enableImage: true
+    enableVideo: true
+    enableRecord: true

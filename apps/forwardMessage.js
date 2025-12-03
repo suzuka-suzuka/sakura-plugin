@@ -29,9 +29,20 @@ export class forwardMessage extends plugin {
       return false;
     }
 
-    const messageType = Array.isArray(e.message) && e.message.length > 0 ? e.message[0].type : null;
+    const { enableImage = true, enableVideo = true, enableRecord = true } = rule;
+    let shouldForward = false;
 
-    if (messageType !== 'forward' && messageType !== 'video') {
+    if (Array.isArray(e.message)) {
+      if (e.message.some(m => m.type === 'forward')) {
+        if (enableRecord) shouldForward = true;
+      } else if (e.message.some(m => m.type === 'video')) {
+        if (enableVideo) shouldForward = true;
+      } else if (e.message.some(m => m.type === 'image' && !(m.asface === true || m.sub_type === 1))) {
+        if (enableImage) shouldForward = true;
+      }
+    }
+
+    if (!shouldForward) {
       return false;
     }
 
