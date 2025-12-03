@@ -236,6 +236,10 @@ export class EditImage extends plugin {
           ],
         }
 
+        if (isVertex) {
+          config.imageConfig.outputMimeType = "image/png"
+        }
+
         if (aspectRatio) {
           config.imageConfig.aspectRatio = aspectRatio
         }
