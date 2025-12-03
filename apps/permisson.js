@@ -78,12 +78,12 @@ export class Permission extends plugin {
     if (needSave) {
       const success = Setting.setConfig("Permission", config)
       if (success) {
-        await this.reply(replyMsg)
+        await this.reply(replyMsg, true, { recallMsg: 10 })
       } else {
-        await this.reply("❎写入配置文件时遇到问题，请检查后台日志")
+        await this.reply("❎赋权失败F", true, { recallMsg: 10 })
       }
     } else {
-      await this.reply(replyMsg)
+      await this.reply(replyMsg, true, { recallMsg: 10 })
     }
 
     return true
