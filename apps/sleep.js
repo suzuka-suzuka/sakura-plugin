@@ -54,7 +54,7 @@ export class Sleep extends plugin {
       return false
     }
 
-    await e.reply(`晚安！你是本群第 ${order} 个睡觉的。`, true)
+    await e.reply(`晚安！你是本群第 ${order} 个睡觉的`, true)
     return false
   }
 
@@ -74,7 +74,7 @@ export class Sleep extends plugin {
     if (duration) {
       const hours = Math.floor(duration / (1000 * 60 * 60))
       const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60))
-      msg += `\n你的睡眠时间为 ${hours} 小时 ${minutes} 分钟。`
+      msg += `\n你的睡眠时间为 ${hours} 小时 ${minutes} 分钟`
     }
 
     await e.reply(msg, true)
