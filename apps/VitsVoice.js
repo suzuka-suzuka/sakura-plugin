@@ -1,7 +1,9 @@
 import axios from "axios"
-import { randomEmojiLike } from "../lib/utils.js"
+import { randomEmojiLike, makeForwardMsg } from "../lib/utils.js"
+import setting from "../lib/setting.js"
 
 const API_URL = "https://mikusfan-vits-uma-genshin-honkai.hf.space/api/predict"
+let speakersCache = []
 
 export class VitsVoice extends plugin {
   constructor() {
@@ -9,15 +11,26 @@ export class VitsVoice extends plugin {
       name: "VitsVoice",
       dsc: "VITS语音合成插件",
       event: "message",
-      priority: 5000,
+      priority: 1135,
       rule: [
         {
           reg: "^#?(.+)?说\\s+(.*)$",
           fnc: "vitsSpeak",
+          log: false,
         },
         {
           reg: "^#?搜索语音角色(.*)$",
           fnc: "searchSpeaker",
+          log: false,
+        },
+        {
+          reg: "^#?语音角色列表\\s*(\\d*)$",
+          fnc: "getSpeakersList",
+          log: false,
+        },
+        {
+          reg: "^#?切换语音(.*)$",
+          fnc: "changeDefaultSpeaker",
         },
       ],
     })
@@ -25,7 +38,8 @@ export class VitsVoice extends plugin {
 
   async vitsSpeak(e) {
     let msg = e.msg.replace(/^#/, "")
-    let speaker = "派蒙"
+    let config = setting.getConfig("VitsVoice")
+    let speaker = config.defaultSpeaker || "派蒙"
     let text = ""
 
     if (msg.startsWith("说")) {
@@ -101,7 +115,7 @@ export class VitsVoice extends plugin {
     if (!keyword) {
       return false
     }
-
+    await randomEmojiLike(this.e, 124)
     try {
       const payload = {
         fn_index: 2,
@@ -134,5 +148,47 @@ export class VitsVoice extends plugin {
       logger.error(`[VitsVoice] 搜索出错: ${errMsg}`)
       await this.reply("搜索出错，请稍后再试。", true, { recallMsg: 10 })
     }
+  }
+
+  async getSpeakersList(e) {
+    await randomEmojiLike(this.e, 124)
+    if (!speakersCache || speakersCache.length === 0) {
+      try {
+        const response = await axios.get("https://mikusfan-vits-uma-genshin-honkai.hf.space/config")
+        const component = response.data.components.find(c => c.id === 13)
+        if (component && component.props && component.props.choices) {
+          speakersCache = component.props.choices
+        }
+      } catch (err) {
+        logger.error("[VitsVoice] 获取角色列表失败", err)
+        return this.reply("获取角色列表失败，请稍后再试。", false, { recallMsg: 10 })
+      }
+    }
+
+    if (!speakersCache || speakersCache.length === 0) {
+      return this.reply("未获取到角色列表。", false, { recallMsg: 10 })
+    }
+
+    let forwardData = []
+    for (let i = 0; i < speakersCache.length; i += 50) {
+      const chunk = speakersCache.slice(i, i + 50)
+      forwardData.push({
+        text: chunk.join("，"),
+        senderId: Bot.uin,
+        senderName: Bot.nickname,
+      })
+    }
+
+    await makeForwardMsg(e, forwardData, `语音角色列表（共${speakersCache.length}个）`)
+  }
+
+  async changeDefaultSpeaker(e) {
+    let newSpeaker = e.msg.replace(/^#?切换语音\s*/, "").trim()
+    if (!newSpeaker) {
+      return false
+    }
+
+    setting.setConfig("VitsVoice", { defaultSpeaker: newSpeaker })
+    await this.reply(`默认语音角色已切换为：${newSpeaker}`, false, { recallMsg: 10 })
   }
 }
