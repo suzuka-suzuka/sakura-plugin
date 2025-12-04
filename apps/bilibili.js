@@ -98,21 +98,16 @@ export class bilibili extends plugin {
         }
 
         bvId = await this.getBvIdFromUrl(url)
-        logger.info(`从URL获取到BV: ${bvId}`)
       }
 
       if (!bvId) {
-        logger.warn("未能从链接中提取到有效的BV号")
         return false
       }
-      logger.info(`成功解析BV号: ${bvId}`)
 
       const videoInfo = await this.getVideoInfo(bvId)
       if (!videoInfo) {
-        logger.warn("获取视频信息失败")
         return false
       }
-      logger.info(`视频信息获取成功: 标题=${videoInfo.title}, 时长=${videoInfo.duration}`)
 
       const comments = await this.getComments(videoInfo.aid)
 
@@ -136,10 +131,8 @@ export class bilibili extends plugin {
         logger.warn("获取播放URL失败")
         return false
       }
-      logger.info("获取播放URL成功，开始处理视频")
       await this.processAndSendVideo(bvId, playUrls)
       lastVideoSentTimestamp = Date.now()
-      logger.info("视频处理并发送完成")
     } catch (error) {
       logger.error("处理过程中发生未知错误:", error)
     }
@@ -171,7 +164,7 @@ export class bilibili extends plugin {
     return null
   }
 
-  async getVideoInfo(bvId) {
+  async getVideoInfo(bvId, retry = 1) {
     const BILI_COOKIE = this.appconfig.cookie || ""
     const url = `https://api.bilibili.com/x/web-interface/view?bvid=${bvId}`
     try {
@@ -187,9 +180,17 @@ export class bilibili extends plugin {
       if (json.code === 0) {
         return json.data
       }
+      if (retry > 0) {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        return this.getVideoInfo(bvId, retry - 1)
+      }
       logger.error(`API获取视频信息失败: ${json.message}`)
       return null
     } catch (error) {
+      if (retry > 0) {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        return this.getVideoInfo(bvId, retry - 1)
+      }
       logger.error("请求视频信息API时出错:", error)
       return null
     }
@@ -228,10 +229,14 @@ export class bilibili extends plugin {
         ...(desc ? [`简介：${desc.substring(0, 100)}${desc.length > 100 ? "..." : ""}`] : []),
       ].join("\n")
 
-      await this.e.reply([segment.image(pic), infoText])
+      const forwardMessages = []
+
+      forwardMessages.push({
+        text: [segment.image(pic), infoText],
+        senderId: this.e.user_id,
+      })
 
       if (comments && comments.length > 0) {
-        const forwardMessages = []
         for (const comment of comments) {
           const content = comment.content.message.replace(/\[.*?\]/g, "").trim()
           const hasPictures = comment.content.pictures && comment.content.pictures.length > 0
@@ -246,15 +251,13 @@ export class bilibili extends plugin {
             }
 
             if (messageParts.length > 0) {
-              forwardMessages.push({ text: messageParts, senderId: this.e.self_id })
+              forwardMessages.push({ text: messageParts, senderId: this.e.user_id })
             }
           }
         }
-
-        if (forwardMessages.length > 0) {
-          await makeForwardMsg(this.e, forwardMessages, "热门评论")
-        }
       }
+
+      await makeForwardMsg(this.e, forwardMessages, `B站视频：${title}`)
     } catch (error) {
       logger.error("发送视频信息时出错:", error)
     }
