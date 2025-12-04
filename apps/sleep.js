@@ -11,12 +11,12 @@ export class Sleep extends plugin {
       priority: 1135,
       rule: [
         {
-          reg: "^(晚安|睡了|睡觉|去睡了|我睡了|我要睡了)(.*)?$",
+          reg: "^(晚安|睡了|睡觉|去睡了|我睡了|我要睡了)$",
           fnc: "goodNight",
           log: false,
         },
         {
-          reg: "^(早安|早|起床|醒了|我醒了|早上好)(.*)?$",
+          reg: "^(早安|早|起床|醒了|我醒了|早上好)$",
           fnc: "goodMorning",
           log: false,
         },
