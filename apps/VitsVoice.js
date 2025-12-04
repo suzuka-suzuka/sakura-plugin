@@ -12,7 +12,7 @@ export class VitsVoice extends plugin {
       priority: 5000,
       rule: [
         {
-          reg: "^#?(.+)?说(.*)$",
+          reg: "^#?(.+)?说\\s+(.*)$",
           fnc: "vitsSpeak",
         },
         {
@@ -31,7 +31,7 @@ export class VitsVoice extends plugin {
     if (msg.startsWith("说")) {
       text = msg.substring(1).trim()
     } else {
-      const match = msg.match(/^(.+?)说(.*)$/)
+      const match = msg.match(/^(.+?)说\s+(.*)$/)
       if (match) {
         speaker = match[1].trim()
         text = match[2].trim()
