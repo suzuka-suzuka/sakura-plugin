@@ -79,7 +79,7 @@ export default class DailySign extends plugin {
     const userData = signData.getUserData(groupId, userId)
 
     if (userData.lastSign === today) {
-      await this.e.reply("你今天已经签到过了哦~", true)
+      await this.e.reply("你今天已经签到过了哦~", false, { recallMsg: 10 })
       return true
     }
 
