@@ -3,7 +3,13 @@ import { parseAtMessage } from "../lib/AIUtils/messaging.js"
 import Setting from "../lib/setting.js"
 
 const AI_PROMPT =
-  "你是一个QQ群的成员。你的任务是根据群成员的变动（新成员加入或成员离开）以及最近的群聊记录，生成一个自然、得体的回应。当有新人加入时，你可以根据最近的聊天内容，简单告知新人大家在聊什么，并表示欢迎。当有成员离开时，你可以根据聊天内容推测可能的原因（如果可能的话），或者仅仅表达惋惜。你的回应应该简短、友好，并像一个真正的群成员一样融入对话。下面是具体的情景和聊天记录："
+  "你是一个QQ群的成员。你的任务是根据群成员的变动（新成员加入或成员离开）以及最近的群聊记录，生成一个自然、得体的回应。\n" +
+  "重要提示：\n" +
+  "1. 直接输出你要说的话，不要包含任何名字、QQ号、时间戳或格式前缀（如“xx说：”）。\n" +
+  "2. 语气要像真人一样自然、简短、友好，不要过于机械或正式。\n" +
+  "3. 当有新人加入时，可以根据最近的聊天内容，简单告知新人大家在聊什么，并表示欢迎。\n" +
+  "4. 当有成员离开时，可以根据聊天内容推测可能的原因，或者仅仅表达惋惜。\n" +
+  "下面是具体的情景和聊天记录："
 
 async function createMockMessageEvent(original_e) {
   const group = Bot.pickGroup(original_e.group_id)
@@ -128,7 +134,7 @@ export class groupNoticeAI extends plugin {
       return
     }
     const name = mockE.sender.card || mockE.sender.nickname
-    const query = `新成员 ${name}(QQ:${mockE.user_id})刚刚加入了群聊。请根据聊天上下文，写一句欢迎词欢迎他。`
+    const query = `新成员 ${name}(QQ:${mockE.user_id})刚刚加入了群聊。请根据聊天上下文，直接写一句欢迎词欢迎他。注意：直接输出内容，不要带任何格式或前缀，不要模仿聊天记录的格式。`
     try {
       const aiResponse = await getAI(
         Setting.getConfig("AI").appschannel,
@@ -161,7 +167,7 @@ export class groupNoticeAI extends plugin {
       return
     }
     const name = mockE.sender.card || mockE.sender.nickname
-    const query = `成员${name}(QQ:${mockE.user_id}) 刚刚离开了群聊。请根据聊天上下文，写一句简短的告别。`
+    const query = `成员${name}(QQ:${mockE.user_id}) 刚刚离开了群聊。请根据聊天上下文，直接写一句简短的告别。注意：直接输出内容，不要带任何格式或前缀，不要模仿聊天记录的格式。`
     try {
       const aiResponse = await getAI(
         Setting.getConfig("AI").appschannel,
