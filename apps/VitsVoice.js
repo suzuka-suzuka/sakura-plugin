@@ -55,7 +55,9 @@ export class VitsVoice extends plugin {
     }
 
     if (!text) return false
-    await randomEmojiLike(e, 124)
+    if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
+      await e.group.setMsgEmojiLike(e.message_id, "124")
+    }
     let lang = "中文"
     if (/[\u3040-\u309F\u30A0-\u30FF]/.test(text)) {
       lang = "日语"
@@ -115,7 +117,9 @@ export class VitsVoice extends plugin {
     if (!keyword) {
       return false
     }
-    await randomEmojiLike(this.e, 124)
+    if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
+      await e.group.setMsgEmojiLike(e.message_id, "124")
+    }
     try {
       const payload = {
         fn_index: 2,
@@ -151,7 +155,9 @@ export class VitsVoice extends plugin {
   }
 
   async getSpeakersList(e) {
-    await randomEmojiLike(this.e, 124)
+    if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
+      await e.group.setMsgEmojiLike(e.message_id, "124")
+    }
     if (!speakersCache || speakersCache.length === 0) {
       try {
         const response = await axios.get("https://mikusfan-vits-uma-genshin-honkai.hf.space/config")

@@ -40,7 +40,11 @@ export class SplitImage extends plugin {
     if (!imgUrls || imgUrls.length === 0) {
       return false
     }
-    await randomEmojiLike(e, 124)
+    if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
+      await e.group.setMsgEmojiLike(e.message_id, "124")
+    } else {
+      await this.reply("正在切割图片，请稍候...", false, { recallMsg: 10 })
+    }
     const targetUrl = imgUrls[0]
 
     try {

@@ -111,7 +111,7 @@ export class pixivSearch extends plugin {
     tag += ` 500users入り`
 
     if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
-      await e.group.setMsgEmojiLike(this.e.message_id, "124")
+      await e.group.setMsgEmojiLike(message_id, "124")
     } else {
       await this.reply("获取中...请稍等", false, { recallMsg: 10 })
     }
