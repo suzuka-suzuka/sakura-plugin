@@ -164,7 +164,7 @@ export class EditImage extends plugin {
   }
 
   async _processAndCallAPI(e, promptText, imageUrls, options = {}) {
-    if (e.isGroup && e.group?.setMsgEmojiLike === "function") {
+    if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
       await e.group.setMsgEmojiLike(e.message_id, "124")
     } else {
       await this.reply("🎨 正在进行创作, 请稍候...", false, { recallMsg: 10 })

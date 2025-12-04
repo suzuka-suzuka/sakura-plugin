@@ -159,7 +159,7 @@ export class Mimic extends plugin {
     }
 
     logger.info(`mimic触发`)
-    if (this.e.isGroup && typeof this.e.group?.setMsgEmojiLike === "function") {
+    if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
       await randomEmojiLike(e)
     }
     let finalResponseText = ""
