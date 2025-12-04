@@ -69,7 +69,7 @@ export class Sleep extends plugin {
 
     const { duration, order } = result
 
-    let msg = `早安！你是本群第 ${order} 个起床的。`
+    let msg = `早安！你是本群第 ${order} 个起床的`
 
     if (duration) {
       const hours = Math.floor(duration / (1000 * 60 * 60))
