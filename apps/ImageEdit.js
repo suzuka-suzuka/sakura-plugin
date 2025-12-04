@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai"
-import { getImg, randomEmojiLike } from "../lib/utils.js"
+import { getImg } from "../lib/utils.js"
 import Setting from "../lib/setting.js"
 import sharp from "sharp"
 import cfg from "../../../lib/config/config.js"
@@ -164,7 +164,11 @@ export class EditImage extends plugin {
   }
 
   async _processAndCallAPI(e, promptText, imageUrls, options = {}) {
-    await randomEmojiLike(this.e, 124)
+    if (e.isGroup && e.group?.setMsgEmojiLike === "function") {
+      await e.group.setMsgEmojiLike(e.message_id, "124")
+    } else {
+      await this.reply("🎨 正在进行创作, 请稍候...", false, { recallMsg: 10 })
+    }
 
     const { aspectRatio, imageSize = "1K" } = options
     const contents = []

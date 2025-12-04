@@ -10,7 +10,7 @@ import {
   clearAllPrefixesForUser,
   clearAllConversationHistories,
 } from "../lib/AIUtils/ConversationHistory.js"
-import { makeForwardMsg, randomEmojiLike } from "../lib/utils.js"
+import { makeForwardMsg } from "../lib/utils.js"
 export class Conversationmanagement extends plugin {
   constructor() {
     super({
@@ -205,7 +205,11 @@ export class Conversationmanagement extends plugin {
       return true
     }
 
-    await randomEmojiLike(e, 124)
+    if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
+      await e.group.setMsgEmojiLike(e.message_id, "124")
+    } else {
+      await this.reply(`正在为您导出「${profileName}」的对话记录，请稍候...`, false, { recallMsg: 10 })
+    }
 
     try {
       let leftBubbleBase64, rightBubbleBase64

@@ -112,7 +112,10 @@ export class AIChat extends plugin {
     const { Channel, Prompt, GroupContext, History, Tool } = matchedProfile
 
     logger.info(`Chat触发`)
-    await randomEmojiLike(e)
+    if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
+      await randomEmojiLike(e)
+    }
+
     let finalResponseText = ""
     let currentFullHistory = []
     let toolCallCount = 0

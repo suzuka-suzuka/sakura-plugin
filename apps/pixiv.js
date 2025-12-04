@@ -1,6 +1,6 @@
 import Setting from "../lib/setting.js"
 import PixivHistory from "../lib/pixiv/history.js"
-import { Recall, randomEmojiLike } from "../lib/utils.js"
+import { Recall } from "../lib/utils.js"
 import { requestApi } from "../lib/pixiv/api.js"
 import { FlipImage } from "../lib/ImageUtils/ImageUtils.js"
 export class pixivSearch extends plugin {
@@ -41,14 +41,14 @@ export class pixivSearch extends plugin {
     const pid = match[1]
     const pageNum = parseInt(match[2]) || 1
 
-    await this.reply(`正在获取P站作品ID: ${pid} (第${pageNum}页)...`, true, { recallMsg: 10 })
+    await this.reply(`正在获取P站作品ID: ${pid} (第${pageNum}页)...`, false, { recallMsg: 10 })
 
     try {
       const detailUrl = `https://www.pixiv.net/ajax/illust/${pid}`
       const detailRes = await requestApi(detailUrl)
 
       if (!detailRes.body) {
-        await this.reply(`获取作品详情失败: 作品可能已被删除或为私密作品`, false, { recallMsg: 10 })
+        await this.reply(`获取作品详情失败: 作品可能已被删除或为私密作品`, true, { recallMsg: 10 })
         return true
       }
       const illust = detailRes.body
@@ -57,7 +57,7 @@ export class pixivSearch extends plugin {
       const pagesRes = await requestApi(pagesUrl)
 
       if (!pagesRes.body || pagesRes.body.length === 0) {
-        await this.reply(`获取作品图片列表失败: 未找到图片页面信息`, false, { recallMsg: 10 })
+        await this.reply(`获取作品图片列表失败: 未找到图片页面信息`, true, { recallMsg: 10 })
         return true
       }
       const pages = pagesRes.body
@@ -79,7 +79,7 @@ export class pixivSearch extends plugin {
       } else {
         replyMsg = `请求P站API时出错: ${error.message}`
       }
-      await this.reply(replyMsg, false, { recallMsg: 10 })
+      await this.reply(replyMsg, true, { recallMsg: 10 })
     }
     return true
   }
@@ -94,7 +94,7 @@ export class pixivSearch extends plugin {
     let tag = match[2].trim()
 
     if (isR18Search && !this.r18Config.enable_group.includes(e.group_id)) {
-      return this.reply("根据插件设置，本群不可使用r18功能。", true)
+      return this.reply("根据插件设置，本群不可使用r18功能。", true, { recallMsg: 10 })
     }
 
     if (!tag) {
@@ -110,7 +110,11 @@ export class pixivSearch extends plugin {
     const minBookmarks = 500
     tag += ` 500users入り`
 
-    await randomEmojiLike(this.e, 124)
+    if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
+      await e.group.setMsgEmojiLike(this.e.message_id, "124")
+    } else {
+      await this.reply("获取中...请稍等", false, { recallMsg: 10 })
+    }
 
     try {
       let illust = null
@@ -192,7 +196,7 @@ export class pixivSearch extends plugin {
       }
 
       if (!illust) {
-        await this.reply(`未能找到符合条件的图片，请换个标签再试。`, false, { recallMsg: 10 })
+        await this.reply(`未能找到符合条件的图片，请换个标签再试。`, true, { recallMsg: 10 })
 
         return true
       }
@@ -213,7 +217,7 @@ export class pixivSearch extends plugin {
       } else {
         replyMsg = `搜索失败: ${error.message}`
       }
-      await this.reply(replyMsg, false, { recallMsg: 10 })
+      await this.reply(replyMsg, true, { recallMsg: 10 })
     }
 
     return true

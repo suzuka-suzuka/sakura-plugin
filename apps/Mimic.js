@@ -159,7 +159,9 @@ export class Mimic extends plugin {
     }
 
     logger.info(`mimic触发`)
-    await randomEmojiLike(e)
+    if (this.e.isGroup && typeof this.e.group?.setMsgEmojiLike === "function") {
+      await randomEmojiLike(e)
+    }
     let finalResponseText = ""
     let currentFullHistory = []
     let toolCallCount = 0

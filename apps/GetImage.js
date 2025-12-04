@@ -1,6 +1,5 @@
 import { connect } from "puppeteer-real-browser"
 import { FlipImage } from "../lib/ImageUtils/ImageUtils.js"
-import { randomEmojiLike } from "../lib/utils.js"
 import _ from "lodash"
 
 const IMAGE_SOURCES = {
@@ -45,7 +44,11 @@ export class GetImagePlugin extends plugin {
   async fetchAndSendImage(e, sourceKey) {
     const sourceConfig = IMAGE_SOURCES[sourceKey]
 
-    await randomEmojiLike(e, 124)
+    if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
+      await e.group.setMsgEmojiLike(e.message_id, "124")
+    } else {
+      await this.reply("正在获取中，请稍候...", false, { recallMsg: 10 })
+    }
 
     let jsonData
 
