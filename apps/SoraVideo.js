@@ -89,7 +89,7 @@ export class SoraVideo extends plugin {
 
       isGenerating = true
 
-      await this.reply("🎬 开始生成视频...", false, { recallMsg: 10 })
+      await randomEmojiLike(e, 124)
 
       const { client, browser: browserInstance } = await this.initClient()
       browser = browserInstance

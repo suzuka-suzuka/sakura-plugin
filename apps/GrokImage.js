@@ -1,6 +1,6 @@
 import plugin from "../../../lib/plugins/plugin.js"
 import { grokRequest } from "../lib/AIUtils/GrokClient.js"
-import { getImg } from "../lib/utils.js"
+import { getImg, randomEmojiLike } from "../lib/utils.js"
 import Setting from "../lib/setting.js"
 
 export class GrokImage extends plugin {
@@ -38,7 +38,7 @@ export class GrokImage extends plugin {
       return false
     }
 
-    await this.reply("🎨 正在进行创作, 请稍候...", true, { recallMsg: 10 })
+    await randomEmojiLike(this.e, 124)
 
     try {
       let messages = []

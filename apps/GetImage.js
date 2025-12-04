@@ -1,5 +1,6 @@
 import { connect } from "puppeteer-real-browser"
 import { FlipImage } from "../lib/ImageUtils/ImageUtils.js"
+import { randomEmojiLike } from "../lib/utils.js"
 import _ from "lodash"
 
 const IMAGE_SOURCES = {
@@ -44,7 +45,7 @@ export class GetImagePlugin extends plugin {
   async fetchAndSendImage(e, sourceKey) {
     const sourceConfig = IMAGE_SOURCES[sourceKey]
 
-    e.reply("正在获取中，请稍候...")
+    await randomEmojiLike(e, 124)
 
     let jsonData
 
@@ -101,28 +102,28 @@ export class GetImagePlugin extends plugin {
 
           if (!sendResult?.message_id) {
             logger.warn(`图片URL发送失败 (${sourceKey}): ${imageUrl}，尝试备用方案...`)
-            await e.reply("图片发送失败，正在尝试翻转图片...")
+            await this.reply("图片发送失败，正在尝试翻转图片...", true, { recallMsg: 10 })
  
             const flippedBuffer = await FlipImage(imageUrl)
             if (flippedBuffer) {
               const finalSendResult = await e.reply(segment.image(flippedBuffer))
               if (!finalSendResult?.message_id) {
-                await e.reply("翻转后图片也发送失败，可能图片太色了")
+                await this.reply("翻转后图片也发送失败，可能图片太色了", true, { recallMsg: 10 })
               }
             } else {
-              await e.reply("图片翻转失败")
+              await this.reply("图片翻转失败", true, { recallMsg: 10 })
             }
           }
         } else {
-          logger.warn("没有获取到有效的图片URL")
-          await e.reply("获取失败,没有有效的图片URL")
+          logger.warn("没有获取到有效的图片URL", true, { recallMsg: 10 })
+          await this.reply("获取失败,没有有效的图片URL", true, { recallMsg: 10 })
         }
       } else {
-        await e.reply("获取失败,没有获取到有效的图片数据")
+        await this.reply("获取失败,没有获取到有效的图片数据", true, { recallMsg: 10 })
       }
     } catch (error) {
       logger.error(`整体处理流程出错:`, error)
-      await e.reply("获取失败,发生错误，请稍后再试") 
+      await this.reply("获取失败,发生错误，请稍后再试", true, { recallMsg: 10 })
     }
   }
 }

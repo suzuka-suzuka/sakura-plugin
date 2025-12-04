@@ -1,6 +1,6 @@
 import plugin from "../../../lib/plugins/plugin.js"
 import { grokRequest } from "../lib/AIUtils/GrokClient.js"
-import { getImg } from "../lib/utils.js"
+import { getImg, randomEmojiLike } from "../lib/utils.js"
 import Setting from "../lib/setting.js"
 
 export class GrokVideo extends plugin {
@@ -28,8 +28,7 @@ export class GrokVideo extends plugin {
     const imageUrls = await getImg(e, true)
 
     if (!prompt && (!imageUrls || imageUrls.length === 0)) {
-      await this.reply("请提供视频生成提示词或图片", true, { recallMsg: 10 })
-      return true
+      return false
     }
 
     const channelsConfig = Setting.getConfig("Channels")
@@ -38,7 +37,7 @@ export class GrokVideo extends plugin {
     if (!grokChannel || !grokChannel.sso) {
       return false
     }
-    await this.reply("正在生成视频，请稍候...", true, { recallMsg: 10 })
+    await randomEmojiLike(this.e, 124)
 
     try {
       const content = []

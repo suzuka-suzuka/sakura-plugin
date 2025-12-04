@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai"
-import { getImg } from "../lib/utils.js"
+import { getImg, randomEmojiLike } from "../lib/utils.js"
 import Setting from "../lib/setting.js"
 import sharp from "sharp"
 import cfg from "../../../lib/config/config.js"
@@ -164,7 +164,7 @@ export class EditImage extends plugin {
   }
 
   async _processAndCallAPI(e, promptText, imageUrls, options = {}) {
-    await this.reply("🎨 正在进行创作, 请稍候...", true, { recallMsg: 10 })
+    await randomEmojiLike(this.e, 124)
 
     const { aspectRatio, imageSize = "1K" } = options
     const contents = []

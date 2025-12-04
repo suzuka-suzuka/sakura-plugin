@@ -1,6 +1,6 @@
 import Setting from "../lib/setting.js"
 import PixivHistory from "../lib/pixiv/history.js"
-import { Recall } from "../lib/utils.js"
+import { Recall, randomEmojiLike } from "../lib/utils.js"
 import { requestApi } from "../lib/pixiv/api.js"
 import { FlipImage } from "../lib/ImageUtils/ImageUtils.js"
 export class pixivSearch extends plugin {
@@ -110,7 +110,7 @@ export class pixivSearch extends plugin {
     const minBookmarks = 500
     tag += ` 500users入り`
 
-    await this.reply("获取中...请稍等", true, { recallMsg: 10 })
+    await randomEmojiLike(this.e, 124)
 
     try {
       let illust = null

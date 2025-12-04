@@ -1,4 +1,5 @@
 import axios from "axios"
+import { randomEmojiLike } from "../lib/utils.js"
 
 const API_URL = "https://mikusfan-vits-uma-genshin-honkai.hf.space/api/predict"
 
@@ -40,7 +41,7 @@ export class VitsVoice extends plugin {
     }
 
     if (!text) return false
-
+    await randomEmojiLike(e, 124)
     let lang = "中文"
     if (/[\u3040-\u309F\u30A0-\u30FF]/.test(text)) {
       lang = "日语"

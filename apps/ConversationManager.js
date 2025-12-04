@@ -10,7 +10,7 @@ import {
   clearAllPrefixesForUser,
   clearAllConversationHistories,
 } from "../lib/AIUtils/ConversationHistory.js"
-import { makeForwardMsg } from "../lib/utils.js"
+import { makeForwardMsg, randomEmojiLike } from "../lib/utils.js"
 export class Conversationmanagement extends plugin {
   constructor() {
     super({
@@ -187,8 +187,7 @@ export class Conversationmanagement extends plugin {
     const prefix = msg.substring(trigger.length).trim()
 
     if (!prefix) {
-      e.reply("请提供需要导出的对话前缀哦，例如：导出对话 g", true)
-      return true
+      return false
     }
 
     const config = this.appconfig
@@ -206,7 +205,7 @@ export class Conversationmanagement extends plugin {
       return true
     }
 
-    e.reply(`正在为您导出「${profileName}」的对话记录，请稍候...`, true)
+    await randomEmojiLike(e, 124)
 
     try {
       let leftBubbleBase64, rightBubbleBase64
