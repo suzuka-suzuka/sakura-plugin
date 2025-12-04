@@ -35,7 +35,6 @@ const configSchema = {
         "Permission",
         "webeditor",
         "groupnotice",
-        "SoraVideo",
         "EmojiLike",
       ],
     },
