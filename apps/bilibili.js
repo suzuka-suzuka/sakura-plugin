@@ -257,7 +257,7 @@ export class bilibili extends plugin {
         }
       }
 
-      await makeForwardMsg(this.e, forwardMessages, `B站视频：${title}`)
+      await makeForwardMsg(this.e, forwardMessages, `${title}`)
     } catch (error) {
       logger.error("发送视频信息时出错:", error)
     }

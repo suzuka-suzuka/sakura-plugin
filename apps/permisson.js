@@ -1,5 +1,6 @@
 import Setting from "../lib/setting.js"
 import cfg from "../../../lib/config/config.js"
+import { addBlackList, removeBlackList } from "../lib/utils.js"
 export class Permission extends plugin {
   constructor() {
     super({
@@ -11,6 +12,11 @@ export class Permission extends plugin {
         {
           reg: "^#?(取消)?赋权\\s*",
           fnc: "managePermission",
+          log: false,
+        },
+        {
+          reg: "^#?(拉黑|取消拉黑|解黑)",
+          fnc: "manageBlackList",
           log: false,
         },
       ],
@@ -78,14 +84,122 @@ export class Permission extends plugin {
     if (needSave) {
       const success = Setting.setConfig("Permission", config)
       if (success) {
-        await this.reply(replyMsg, true, { recallMsg: 10 })
+        await this.reply(replyMsg, false, { recallMsg: 10 })
       } else {
-        await this.reply("❎赋权失败F", true, { recallMsg: 10 })
+        await this.reply("❎赋权失败", false, { recallMsg: 10 })
       }
     } else {
-      await this.reply(replyMsg, true, { recallMsg: 10 })
+      await this.reply(replyMsg, false, { recallMsg: 10 })
     }
 
     return true
+  }
+
+  async manageBlackList(e) {
+    if (
+      !this.appconfig?.enable?.includes(e.sender.user_id) &&
+      !cfg.masterQQ.includes(e.sender.user_id)
+    ) {
+      return false
+    }
+
+    const cleanMsg = e.msg.replace(/^#?/, "")
+    const isRemove = cleanMsg.startsWith("取消拉黑") || cleanMsg.startsWith("解黑")
+
+    if (isRemove) {
+      const targetQQ =
+        cleanMsg
+          .replace(/取消拉黑|解黑/g, "")
+          .trim()
+          .replace("@", "") || e.at
+      if (!targetQQ) return false
+
+      let memberInfo
+      try {
+        memberInfo = await e.group.pickMember(targetQQ).getInfo(true)
+      } catch {
+        memberInfo = (await e.group.pickMember(targetQQ)).info
+      }
+      const memberName = memberInfo?.card || memberInfo?.nickname || targetQQ
+
+      const success = removeBlackList(targetQQ)
+      if (success) {
+        await this.reply(`✅已将 ${memberName} 移出黑名单`, false, { recallMsg: 10 })
+      } else {
+        await this.reply(`❎移出黑名单失败`, false, { recallMsg: 10 })
+      }
+    } else {
+      let { targetQQ, duration, unit } = this.parseBlackListCommand(cleanMsg)
+      if (!targetQQ) return false
+
+      let memberInfo
+      try {
+        memberInfo = await e.group.pickMember(targetQQ).getInfo(true)
+      } catch {
+        memberInfo = (await e.group.pickMember(targetQQ)).info
+      }
+      const memberName = memberInfo?.card || memberInfo?.nickname || targetQQ
+
+      const masterQQs = Array.isArray(cfg.masterQQ) ? cfg.masterQQ : [cfg.masterQQ]
+      if (masterQQs.includes(Number(targetQQ))) {
+        await this.reply(`❎不能拉黑主人哦`, false, { recallMsg: 10 })
+        return true
+      }
+
+      const success = addBlackList(targetQQ)
+      if (success) {
+        let msg = `✅已将 ${memberName} 加入黑名单`
+        if (duration > 0 && duration <= 86400) {
+          msg += `，时长 ${unit}`
+          setTimeout(() => {
+            removeBlackList(targetQQ)
+          }, duration * 1000)
+        }
+        await this.reply(msg, false, { recallMsg: 10 })
+      } else {
+        await this.reply(`❎加入黑名单失败`, false, { recallMsg: 10 })
+      }
+    }
+    return true
+  }
+
+  parseBlackListCommand(msg) {
+    let targetQQ = msg.match(/(\d{5,12})/) ? msg.match(/(\d{5,12})/)[1] : this.e.at
+    let msgWithoutQQ = msg
+    if (targetQQ) {
+      msgWithoutQQ = msg.replace(targetQQ, "")
+      let timeMatch = msgWithoutQQ.match(/(\d+)\s*(分钟|小时|天|分|时|秒)?/)
+      let duration = 0
+      let unitText = ""
+
+      if (timeMatch) {
+        const time = parseInt(timeMatch[1])
+        const unit = timeMatch[2] || "秒"
+
+        switch (unit) {
+          case "秒":
+            duration = time
+            unitText = `${time}秒`
+            break
+          case "分":
+          case "分钟":
+            duration = time * 60
+            unitText = `${time}分钟`
+            break
+          case "时":
+          case "小时":
+            duration = time * 3600
+            unitText = `${time}小时`
+            break
+          case "天":
+            duration = time * 86400
+            unitText = `${time}天`
+            break
+        }
+      }
+
+      return { targetQQ, duration, unit: unitText }
+    }
+    return { targetQQ, duration, unit: unitText }
   }
 }

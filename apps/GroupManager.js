@@ -132,7 +132,7 @@ export class GroupManager extends plugin {
     })
 
     if (inactiveMembers.length === 0) {
-      return await this.reply("非常棒！本群所有成员都发言过啦！", true, { recallMsg: 10 })
+      return await this.reply("非常棒！本群所有成员都发言过啦！", false, { recallMsg: 10 })
     }
 
     const forwardMsgNodes = [
@@ -176,7 +176,7 @@ export class GroupManager extends plugin {
     if (userInput === "取消") {
       delete conversationStateNeverSpoken[e.user_id]
       this.finish("confirmCleanupNeverSpoken", true)
-      await this.reply("操作已取消。", true, { recallMsg: 10 })
+      await this.reply("操作已取消。", false, { recallMsg: 10 })
       return
     }
 
@@ -188,7 +188,7 @@ export class GroupManager extends plugin {
     this.finish("confirmCleanupNeverSpoken", true)
 
     let successCount = 0
-    await this.reply(`正在开始清理 ${inactiveMembers.length} 位从未发言的成员...`, true, {
+    await this.reply(`正在开始清理 ${inactiveMembers.length} 位从未发言的成员...`, false, {
       recallMsg: 10,
     })
 
@@ -227,7 +227,7 @@ export class GroupManager extends plugin {
     }
 
     if (isNaN(days) || days <= 0) {
-      return await this.reply("请输入有效的时间！", true, { recallMsg: 10 })
+      return await this.reply("请输入有效的时间！", false, { recallMsg: 10 })
     }
 
     if (conversationStateInactive[e.user_id]) {
@@ -238,7 +238,7 @@ export class GroupManager extends plugin {
     const memberMap = await e.group.getMemberMap(true)
     if (!memberMap) {
       logger.error(`[清理长时间未发言] 获取群成员列表失败`)
-      return await this.reply("获取群成员列表失败，请稍后再试。", true, { recallMsg: 10 })
+      return await this.reply("获取群成员列表失败，请稍后再试。", false, { recallMsg: 10 })
     }
 
     const currentTime = Math.floor(Date.now() / 1000)
@@ -260,7 +260,7 @@ export class GroupManager extends plugin {
     })
 
     if (inactiveMembers.length === 0) {
-      return await this.reply(`非常棒！本群所有成员在最近 ${value}${unit} 内都发言过啦！`, true, {
+      return await this.reply(`非常棒！本群所有成员在最近 ${value}${unit} 内都发言过啦！`, false, {
         recallMsg: 10,
       })
     }
@@ -308,7 +308,7 @@ export class GroupManager extends plugin {
     if (userInput === "取消") {
       delete conversationStateInactive[e.user_id]
       this.finish("confirmCleanupInactive", true)
-      await this.reply("操作已取消。", true, { recallMsg: 10 })
+      await this.reply("操作已取消。", false, { recallMsg: 10 })
       return
     }
 
@@ -320,7 +320,7 @@ export class GroupManager extends plugin {
     this.finish("confirmCleanupInactive", true)
 
     let successCount = 0
-    await this.reply(`正在开始清理 ${inactiveMembers.length} 位长时间未发言的成员...`, true, {
+    await this.reply(`正在开始清理 ${inactiveMembers.length} 位长时间未发言的成员...`, false, {
       recallMsg: 10,
     })
 
@@ -350,7 +350,7 @@ export class GroupManager extends plugin {
     const level = parseInt(match[1])
 
     if (isNaN(level) || level <= 0) {
-      return await this.reply("请输入有效的等级！", true, { recallMsg: 10 })
+      return await this.reply("请输入有效的等级！", false, { recallMsg: 10 })
     }
 
     if (conversationStateLevel[e.user_id]) {
@@ -361,7 +361,7 @@ export class GroupManager extends plugin {
     const memberMap = await e.group.getMemberMap(true)
     if (!memberMap) {
       logger.error(`[清理低等级成员] 获取群成员列表失败`)
-      return await this.reply("获取群成员列表失败，请稍后再试。", true, { recallMsg: 10 })
+      return await this.reply("获取群成员列表失败，请稍后再试。", false, { recallMsg: 10 })
     }
 
     const lowLevelMembers = []
@@ -379,7 +379,7 @@ export class GroupManager extends plugin {
     })
 
     if (lowLevelMembers.length === 0) {
-      return await this.reply(`本群没有群等级低于 ${level} 级的成员。`, true, { recallMsg: 10 })
+      return await this.reply(`本群没有群等级低于 ${level} 级的成员。`, false, { recallMsg: 10 })
     }
 
     const forwardMsgNodes = [
@@ -423,7 +423,7 @@ export class GroupManager extends plugin {
     if (userInput === "取消") {
       delete conversationStateLevel[e.user_id]
       this.finish("confirmCleanupByLevel", true)
-      await this.reply("操作已取消。", true, { recallMsg: 10 })
+      await this.reply("操作已取消。", false, { recallMsg: 10 })
       return
     }
 
@@ -435,7 +435,7 @@ export class GroupManager extends plugin {
     this.finish("confirmCleanupByLevel", true)
 
     let successCount = 0
-    await this.reply(`正在开始清理 ${lowLevelMembers.length} 位低等级的成员...`, true, {
+    await this.reply(`正在开始清理 ${lowLevelMembers.length} 位低等级的成员...`, false, {
       recallMsg: 10,
     })
 
@@ -488,7 +488,7 @@ export class GroupManager extends plugin {
         return false
       }
       await e.group.muteMember(targetQQ, duration)
-      await this.reply(`✅ 已将「${memberName}」禁言${unit}。`, true, { recallMsg: 10 })
+      await this.reply(`✅ 已将「${memberName}」禁言${unit}。`, false, { recallMsg: 10 })
     } else {
       const targetQQ = cleanMsg.replace(/解禁/g, "").trim().replace("@", "") || e.at
       if (!targetQQ) return false
@@ -505,7 +505,7 @@ export class GroupManager extends plugin {
         return false
       }
       await e.group.muteMember(targetQQ, 0)
-      await this.reply(`✅ 已将「${memberName}」解除禁言。`, true, { recallMsg: 10 })
+      await this.reply(`✅ 已将「${memberName}」解除禁言。`, false, { recallMsg: 10 })
     }
     return true
   }
@@ -548,9 +548,9 @@ export class GroupManager extends plugin {
     await e.group.kickMember(targetQQ, isBlacklist)
 
     if (isBlacklist) {
-      await this.reply(`✅ 已将「${memberName}」移出本群并加入黑名单。`, true, { recallMsg: 10 })
+      await this.reply(`✅ 已将「${memberName}」移出本群并加入黑名单。`, false, { recallMsg: 10 })
     } else {
-      await this.reply(`✅ 已将「${memberName}」移出本群。`, true, { recallMsg: 10 })
+      await this.reply(`✅ 已将「${memberName}」移出本群。`, false, { recallMsg: 10 })
     }
     return true
   }
@@ -575,10 +575,10 @@ export class GroupManager extends plugin {
 
     if (action === "set") {
       await this.e.bot.setEssenceMessage(messageId)
-      await this.reply("✅ 已将该消息设为群精华！", true, { recallMsg: 10 })
+      await this.reply("✅ 已将该消息设为群精华！", false, { recallMsg: 10 })
     } else {
       await this.e.bot.removeEssenceMessage(messageId)
-      await this.reply("✅ 已取消该消息的精华状态。", true, { recallMsg: 10 })
+      await this.reply("✅ 已取消该消息的精华状态。", false, { recallMsg: 10 })
     }
     return true
   }
@@ -642,10 +642,10 @@ export class GroupManager extends plugin {
     try {
       if (isMute) {
         await e.group.muteAll(true)
-        await this.reply("✅已开启全员禁言。", true, { recallMsg: 10 })
+        await this.reply("✅已开启全员禁言。", false, { recallMsg: 10 })
       } else {
         await e.group.muteAll(false)
-        await this.reply("✅已关闭全员禁言。", true, { recallMsg: 10 })
+        await this.reply("✅已关闭全员禁言。", false, { recallMsg: 10 })
       }
     } catch (err) {
       logger.error("全体禁言/解禁操作失败:", err)
@@ -703,9 +703,9 @@ export class GroupManager extends plugin {
 
     try {
       await e.group.sendNotice(content, image, params)
-      await this.reply("✅ 群公告发送成功！", true, { recallMsg: 10 })
+      await this.reply("✅ 群公告发送成功！", false, { recallMsg: 10 })
     } catch (err) {
-      logger.error("发送群公告失败:", err, true, { recallMsg: 10 })
+      logger.error("发送群公告失败:", err, false, { recallMsg: 10 })
     }
     return true
   }
