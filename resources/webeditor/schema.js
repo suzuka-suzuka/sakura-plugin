@@ -655,7 +655,7 @@ const configSchema = {
       itemType: "object",
       titleField: "group",
       schema: {
-        group: { label: "群聊", type: "groupSelect", required: true ,help:"只能选择一个群聊"},
+        group: { label: "群聊", type: "groupSelect", required: true, help: "只能选择一个群聊" },
         replyAll: {
           label: "回应所有人",
           type: "boolean",

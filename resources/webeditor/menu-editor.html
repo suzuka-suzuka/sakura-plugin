@@ -839,7 +839,12 @@
       // 登录检查
       async function checkLogin() {
         try {
-          const response = await fetch("/api/check-login")
+          const token = localStorage.getItem("sakura_token")
+          const headers = {}
+          if (token) {
+            headers["Authorization"] = `Bearer ${token}`
+          }
+          const response = await fetch("/api/check-login", { headers })
           const data = await response.json()
           if (!data.loggedIn) {
             window.location.href = "/login"

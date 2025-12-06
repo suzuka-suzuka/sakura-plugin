@@ -5,6 +5,7 @@ import { getAI } from "../lib/AIUtils/getAI.js"
 import { executeToolCalls } from "../lib/AIUtils/tools/tools.js"
 import { splitAndReplyMessages, parseAtMessage, getQuoteContent } from "../lib/AIUtils/messaging.js"
 import Setting from "../lib/setting.js"
+import cfg from "../../../lib/config/config.js"
 import { randomEmojiLike } from "../lib/utils.js"
 
 export class Mimic extends plugin {
@@ -118,19 +119,22 @@ export class Mimic extends plugin {
 
     const hasKeyword = config.triggerWords.some(word => messageText.includes(word))
 
-    if (e.isGroup && config.enableLevelLimit && hasKeyword) {
-      let level
+    const permissionConfig = Setting.getConfig("Permission")
+    if (
+      !permissionConfig?.enable?.includes(e.sender.user_id) &&
+      !cfg.masterQQ.includes(e.sender.user_id) &&
+      e.isGroup &&
+      config.enableLevelLimit &&
+      hasKeyword
+    ) {
+      let memberInfo
       try {
-        let memberInfo
-        try {
-          memberInfo = await e.group.pickMember(e.user_id).getInfo(true)
-        } catch {
-          memberInfo = (await e.group.pickMember(Number(e.user_id))).info
-        }
-        level = memberInfo?.level
-      } catch (error) {
-        logger.warn(`获取成员等级失败: ${error.message}`)
+        memberInfo = await e.group.pickMember(e.user_id).getInfo(true)
+      } catch {
+        memberInfo = (await e.group.pickMember(Number(e.user_id))).info
       }
+      const level = memberInfo?.level || 100
+
       if (level <= 10) {
         return false
       }
