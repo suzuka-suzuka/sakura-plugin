@@ -104,7 +104,7 @@ ${rawChatHistory}`
                                 ul { padding-left: 20px; }
                                 li { margin-bottom: 10px; }
                                 strong { color: #0056b3; }
-                                .container { max-width: 800px; margin: auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+                                .container { max-width: 1200px; margin: auto; background: white; padding: 35px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); font-size: 24px; line-height: 1.6; }
                             </style>
                         </head>
                         <body>
