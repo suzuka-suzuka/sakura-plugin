@@ -50,13 +50,26 @@ function showLoadingUI(message = "加载中...", tip = "") {
 async function apiRequest(url, options = {}) {
   try {
     console.log("[sakura] API 请求:", API_BASE + url)
+
+    const token = localStorage.getItem("sakura_token")
+    const headers = {
+      "Content-Type": "application/json",
+      ...options.headers,
+    }
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`
+    }
+
     const response = await fetch(API_BASE + url, {
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
+      headers,
       ...options,
     })
+
+    if (response.status === 401) {
+      localStorage.removeItem("sakura_token")
+      window.location.href = "/login"
+      throw new Error("未登录")
+    }
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`)

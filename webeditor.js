@@ -59,21 +59,39 @@ class WebEditor {
       const { password } = req.body
       if (password === this.password) {
         this.isLoggedIn = true
-        res.json({ success: true, message: "登录成功" })
+        const token = Buffer.from(this.password).toString('base64')
+        res.json({ success: true, message: "登录成功", token })
       } else {
         res.json({ success: false, message: "密码错误" })
       }
     })
 
     this.app.get("/api/check-login", (req, res) => {
+      const authHeader = req.headers.authorization
+      if (authHeader) {
+        const token = authHeader.split(' ')[1]
+        if (token === Buffer.from(this.password).toString('base64')) {
+          return res.json({ loggedIn: true })
+        }
+      }
       res.json({ loggedIn: this.isLoggedIn })
     })
 
     this.app.use(express.static(path.join(__dirname, "resources/webeditor")))
 
     this.app.use((req, res, next) => {
+      const authHeader = req.headers.authorization
+      let tokenValid = false
+      if (authHeader) {
+        const token = authHeader.split(' ')[1]
+        if (token === Buffer.from(this.password).toString('base64')) {
+          tokenValid = true
+        }
+      }
+
       if (
         !this.isLoggedIn &&
+        !tokenValid &&
         !req.path.startsWith("/api/login") &&
         !req.path.startsWith("/api/check-login")
       ) {
