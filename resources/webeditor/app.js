@@ -567,7 +567,7 @@ function renderArray(arr, path) {
     if (fieldSchema.itemType === "object") {
       isObjectArray = true
       isSimpleArray = false
-    } else if (fieldSchema.itemType === "text" || fieldSchema.itemType === "number") {
+    } else if (fieldSchema.itemType === "text" || fieldSchema.itemType === "number" || fieldSchema.itemType === "roleSelect") {
       isObjectArray = false
       isSimpleArray = true
     }
