@@ -118,8 +118,22 @@ export class Mimic extends plugin {
 
     const hasKeyword = config.triggerWords.some(word => messageText.includes(word))
 
-    if (e.isGroup && config.enableLevelLimit && hasKeyword && e.sender && e.sender.level <= 10) {
-      return false
+    if (e.isGroup && config.enableLevelLimit && hasKeyword) {
+      let level
+      try {
+        let memberInfo
+        try {
+          memberInfo = await e.group.pickMember(e.user_id).getInfo(true)
+        } catch {
+          memberInfo = (await e.group.pickMember(Number(e.user_id))).info
+        }
+        level = memberInfo?.level
+      } catch (error) {
+        logger.warn(`获取成员等级失败: ${error.message}`)
+      }
+      if (level <= 10) {
+        return false
+      }
     }
 
     let mustReply = false
