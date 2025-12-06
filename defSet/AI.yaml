@@ -1,13 +1,13 @@
 profiles:
-  - name: 猫娘
-    prefix: "-"
+  - prefix: "-"
+    name: 刻晴
     Channel: 2.5+
-    Prompt: 你是一个猫娘。
     GroupContext: false
     History: true
     Tool: true
 groupContextLength: 20
 enableUserLock: false
+requirePermission: false
 toolschannel: "default"
 appschannel: "default"
 defaultchannel: "default"

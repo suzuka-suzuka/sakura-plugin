@@ -167,12 +167,12 @@ export class VitsVoice extends plugin {
         }
       } catch (err) {
         logger.error("[VitsVoice] 获取角色列表失败", err)
-        return this.reply("获取角色列表失败，请稍后再试。", false, { recallMsg: 10 })
+        return this.reply("获取角色列表失败，请稍后再试。", true, { recallMsg: 10 })
       }
     }
 
     if (!speakersCache || speakersCache.length === 0) {
-      return this.reply("未获取到角色列表。", false, { recallMsg: 10 })
+      return this.reply("未获取到角色列表。", true, { recallMsg: 10 })
     }
 
     let forwardData = []

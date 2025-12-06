@@ -64,7 +64,7 @@ export class pixivSearch extends plugin {
 
       const isR18 = illust.xRestrict !== 0
       if (isR18 && !this.r18Config.enable.includes(e.group_id)) {
-        return this.reply("本群未开启r18功能哦~", true, { recallMsg: 10 })
+        return this.reply("本群未开启r18功能哦~", false, { recallMsg: 10 })
       }
       await this.sendIllustMessage(e, illust, pages, isR18, pageNum)
     } catch (error) {
@@ -94,7 +94,7 @@ export class pixivSearch extends plugin {
     let tag = match[2].trim()
 
     if (isR18Search && !this.r18Config.enable_group.includes(e.group_id)) {
-      return this.reply("根据插件设置，本群不可使用r18功能。", true, { recallMsg: 10 })
+      return this.reply("根据插件设置，本群不可使用r18功能。", false, { recallMsg: 10 })
     }
 
     if (!tag) {
@@ -111,7 +111,7 @@ export class pixivSearch extends plugin {
     tag += ` 500users入り`
 
     if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
-      await e.group.setMsgEmojiLike(message_id, "124")
+      await e.group.setMsgEmojiLike(e.message_id, "124")
     } else {
       await this.reply("获取中...请稍等", false, { recallMsg: 10 })
     }
@@ -298,7 +298,7 @@ export class pixivSearch extends plugin {
       return true
     }
 
-    this.reply("图片发送失败，正在尝试翻转后重发...", false, { recallMsg: 10 })
+    this.reply("图片发送失败，正在尝试翻转后重发...", true, { recallMsg: 10 })
 
     const processedImageBuffers = []
     for (const url of imageUrls) {

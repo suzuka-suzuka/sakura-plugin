@@ -108,8 +108,15 @@ export class poke extends plugin {
     let systemInstruction = ""
 
     if (personas && personas.length > 0) {
-      const selectedPersona = _.sample(personas)
-      systemInstruction = selectedPersona.Prompt
+      const personaName = _.sample(personas)
+
+      const rolesConfig = Setting.getConfig("roles")
+      const roles = rolesConfig?.roles || []
+      const role = roles.find(r => r.name === personaName)
+
+      if (role && role.prompt) {
+        systemInstruction = role.prompt
+      }
     } else {
       logger.warn("[戳一戳] 人设配置文件中未找到或其为空，将使用无设定的默认回复。")
     }

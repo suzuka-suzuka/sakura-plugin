@@ -32,7 +32,8 @@ export class GrokImage extends plugin {
     const imageUrls = await getImg(e, true)
 
     const channelsConfig = Setting.getConfig("Channels")
-    const grokChannel = channelsConfig?.grok?.find(c => c.name === "grok")
+    const grokList = channelsConfig?.grok || []
+    const grokChannel = grokList[Math.floor(Math.random() * grokList.length)]
 
     if (!grokChannel || !grokChannel.sso) {
       return false

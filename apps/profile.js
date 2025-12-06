@@ -1,7 +1,7 @@
 import { getAI } from "../lib/AIUtils/getAI.js"
 import { marked } from "marked"
 import puppeteer from "puppeteer"
-import { makeForwardMsg } from "../lib/utils.js"
+
 import Setting from "../lib/setting.js"
 
 export class UserProfilePlugin extends plugin {
@@ -24,6 +24,11 @@ export class UserProfilePlugin extends plugin {
   async generateUserProfile(e) {
     if (!e.isGroup) {
       return false
+    }
+    if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
+      await e.group.setMsgEmojiLike(e.message_id, "124")
+    } else {
+      await this.reply("获取中...请稍等", false, { recallMsg: 10 })
     }
     const targetUserId = e.user_id
     const messageCount = 100
@@ -88,15 +93,6 @@ ${rawChatHistory}`
         const result = await getAI(Channel, e, queryParts, null, false, false, [])
 
         if (result && result.text) {
-          const forwardMsgContent = [
-            {
-              text: result.text,
-              senderId: e.user_id,
-              senderName: e.member.card || e.member.nickname,
-            },
-          ]
-          await makeForwardMsg(e, forwardMsgContent, `【${senderNickname}】的用户画像`)
-
           const html = marked(result.text)
           const styledHtml = `
                         <!DOCTYPE html>
@@ -130,11 +126,11 @@ ${rawChatHistory}`
 
           await e.reply(segment.image(imageBuffer))
         } else {
-          this.reply("画像分析失败，未能获取到有效的返回结果。", false, { recallMsg: 10 })
+          this.reply("画像分析失败，未能获取到有效的返回结果。", true, { recallMsg: 10 })
         }
       } catch (error) {
         logger.error("调用画像分析或生成消息时出错:", error)
-        this.reply("画像分析或消息生成过程中出现错误，请稍后再试。", false, { recallMsg: 10 })
+        this.reply("画像分析或消息生成过程中出现错误，请稍后再试。", true, { recallMsg: 10 })
       }
     }
     return true

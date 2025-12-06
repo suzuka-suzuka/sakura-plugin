@@ -282,6 +282,16 @@ function renderEditor(name, config) {
   const displayName = getConfigName(name)
 
   console.log("[sakura] renderEditor 被调用，设置 isCategoryMode = false")
+  
+  // 数据预处理：将 GroupConfigs 对象转换为数组，以匹配 schema 定义
+  if (name === 'mimic' && config && config.GroupConfigs && !Array.isArray(config.GroupConfigs) && typeof config.GroupConfigs === 'object') {
+      console.log("[sakura] 转换 GroupConfigs 为数组格式")
+      config.GroupConfigs = Object.entries(config.GroupConfigs).map(([k, v]) => {
+          if (typeof v !== 'object' || v === null) return { group: Number(k) }
+          return { group: Number(k), ...v }
+      })
+  }
+
   isCategoryMode = false
   currentConfig = name
   currentData = config
@@ -305,10 +315,30 @@ function renderConfigForm(config, prefix = "") {
   }
 
   if (typeof config === "object") {
-    const keys = Object.keys(config).filter(key => {
+    let keys = Object.keys(config)
+
+    // 如果是分群配置，强制使用 schema 中的 keys
+    if (prefix === "mimic.GroupConfigs" || (prefix && prefix.endsWith(".GroupConfigs"))) {
+        const fieldSchema = getFieldSchema(prefix)
+        if (fieldSchema && fieldSchema.schema) {
+            // 合并 config 中的 keys 和 schema 中的 keys
+            const schemaKeys = Object.keys(fieldSchema.schema)
+            keys = [...new Set([...keys, ...schemaKeys])]
+        }
+    }
+
+    keys = keys.filter(key => {
       if (!window.configSchema || !window.configSchema.fields) return true
 
       const fullPath = prefix ? `${prefix}.${key}` : key
+      // 对于 GroupConfigs 下的子项，如果 schema 中有定义，也应该显示
+      if (prefix && (prefix === "mimic.GroupConfigs" || prefix.endsWith(".GroupConfigs"))) {
+          const parentSchema = getFieldSchema(prefix)
+          if (parentSchema && parentSchema.schema && parentSchema.schema[key]) {
+              return true
+          }
+      }
+
       return (
         window.configSchema.fields[fullPath] !== undefined ||
         window.configSchema.fields[key] !== undefined
@@ -317,7 +347,21 @@ function renderConfigForm(config, prefix = "") {
 
     return keys
       .map(key => {
-        const value = config[key]
+        let value = config[key]
+        
+        // 为缺失的字段提供默认值
+        if (value === undefined && (prefix === "mimic.GroupConfigs" || prefix.endsWith(".GroupConfigs"))) {
+             const parentSchema = getFieldSchema(prefix)
+             if (parentSchema && parentSchema.schema && parentSchema.schema[key]) {
+                 const type = parentSchema.schema[key].type
+                 if (type === "boolean") value = false
+                 else if (type === "number") value = 0
+                 else if (type === "array") value = []
+                 else if (type === "object") value = {}
+                 else value = ""
+             }
+        }
+
         const fullPath = prefix ? `${prefix}.${key}` : key
         return renderField(key, value, fullPath)
       })
@@ -345,7 +389,7 @@ function renderField(key, value, path) {
   let label = fieldSchema.label
   const fieldType = fieldSchema.type || (isArray ? "array" : isObject ? "object" : type)
 
-  const isGroupField = fieldType === "groupSelect" || (/groups?|启用群|群组/i.test(key) && isArray)
+  const isGroupField = fieldType === "groupSelect" || (fieldSchema.itemType !== 'object' && /groups?|启用群|群组/i.test(key) && isArray)
 
   if (isArray) {
     if (isGroupField) {
@@ -454,6 +498,23 @@ function renderField(key, value, path) {
         `
     }
 
+    if (fieldType === "roleSelect") {
+      const roles = getAvailableRoles()
+      return `
+            <div class="form-group">
+                <label>${label}${fieldSchema.required ? ' <span style="color: #ff4d4f;">*</span>' : ""}</label>
+                <div class="form-control-wrapper">
+                    <select data-path="${path}" onchange="updateValue(this)" style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
+                        <option value="" disabled ${!value ? "selected" : ""}>请选择人设...</option>
+                        ${roles.map(r => `<option value="${r}" ${value === r ? "selected" : ""}>${r}</option>`).join("")}
+                        ${value && !roles.includes(value) ? `<option value="${value}" selected>${value} (未找到)</option>` : ""}
+                    </select>
+                    ${fieldSchema.help ? `<p style="color: #999; font-size: 12px; margin-top: 4px;">${fieldSchema.help}</p>` : ""}
+                </div>
+            </div>
+        `
+    }
+
     return `
             <div class="form-group">
                 <label>${label}${fieldSchema.required ? ' <span style="color: #ff4d4f;">*</span>' : ""}</label>
@@ -477,8 +538,27 @@ function renderArray(arr, path) {
   let isSimpleArray =
     arr.length > 0 && arr.every(item => typeof item === "string" || typeof item === "number")
 
-  if (arr.length === 0) {
-    const fieldSchema = getFieldSchema(path)
+  // 尝试获取更准确的 schema
+  let fieldSchema = getFieldSchema(path)
+  
+  // 如果直接获取的 schema 是默认的（无效的），尝试加上 currentConfig 前缀
+  if (fieldSchema.label === path && currentConfig && !path.startsWith(currentConfig + ".")) {
+      const fullPath = `${currentConfig}.${path}`
+      const fullSchema = getFieldSchema(fullPath)
+      if (fullSchema.label !== fullPath) {
+          fieldSchema = fullSchema
+      }
+  }
+
+  if (fieldSchema && fieldSchema.itemType) {
+    if (fieldSchema.itemType === "object") {
+      isObjectArray = true
+      isSimpleArray = false
+    } else if (fieldSchema.itemType === "text" || fieldSchema.itemType === "number") {
+      isObjectArray = false
+      isSimpleArray = true
+    }
+  } else if (arr.length === 0) {
     if (fieldSchema && fieldSchema.itemType === "object") {
       isObjectArray = true
       isSimpleArray = false
@@ -531,7 +611,15 @@ function renderObjectArrayCard(item, index, path) {
 
   const fieldSchema = getFieldSchema(path)
 
-  if (fieldSchema && fieldSchema.titleField && item[fieldSchema.titleField]) {
+  if (path === "AI.profiles") {
+    titleField = item.prefix || "无前缀"
+    descField = item.name || "未命名"
+  } else if (path === "mimic.GroupConfigs") {
+    const groupId = item.group
+    const group = groupList.find(g => String(g.id) === String(groupId))
+    titleField = group ? `${group.name}(${groupId})` : (groupId || "未配置群")
+    descField = item.name || "默认预设"
+  } else if (fieldSchema && fieldSchema.titleField && item[fieldSchema.titleField]) {
     titleField = item[fieldSchema.titleField]
   } else if (item.sourceGroupIds && item.targetGroupIds) {
     const sourceIds = Array.isArray(item.sourceGroupIds)
@@ -727,7 +815,11 @@ let currentEditingArrayIndex = null
 function addSimpleArrayItem(path) {
   currentEditingArrayPath = path
   currentEditingArrayIndex = null
-  openSimpleItemModal("", "新增项")
+  
+  const fieldSchema = getFieldSchema(path)
+  const itemType = fieldSchema ? fieldSchema.itemType : 'text'
+  
+  openSimpleItemModal("", "新增项", itemType)
 }
 
 function editSimpleArrayItem(path, index) {
@@ -735,22 +827,53 @@ function editSimpleArrayItem(path, index) {
   if (arr && Array.isArray(arr) && arr[index] !== undefined) {
     currentEditingArrayPath = path
     currentEditingArrayIndex = index
-    openSimpleItemModal(String(arr[index]), "编辑项")
+    
+    const fieldSchema = getFieldSchema(path)
+    const itemType = fieldSchema ? fieldSchema.itemType : 'text'
+
+    openSimpleItemModal(String(arr[index]), "编辑项", itemType)
   }
 }
 
-function openSimpleItemModal(initialValue, title) {
+function openSimpleItemModal(initialValue, title, itemType = 'text') {
   const modal = document.getElementById("simpleItemModal")
   if (!modal) {
     createSimpleItemModal()
   }
 
   document.getElementById("simpleItemModalTitle").textContent = title
-  document.getElementById("simpleItemInput").value = initialValue
+  
+  const wrapper = document.querySelector('#simpleItemModal .form-control-wrapper')
+  if (wrapper) {
+      if (itemType === 'roleSelect') {
+          const roles = getAvailableRoles()
+          wrapper.innerHTML = `
+            <select id="simpleItemInput" class="simple-item-input" style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
+                <option value="" disabled ${!initialValue ? "selected" : ""}>请选择人设...</option>
+                ${roles.map(r => `<option value="${r}" ${initialValue === r ? "selected" : ""}>${r}</option>`).join("")}
+            </select>
+          `
+      } else {
+          wrapper.innerHTML = `
+            <input type="text" id="simpleItemInput" class="simple-item-input" 
+                   placeholder="请输入内容..." 
+                   value="${escapeHtml(initialValue)}"
+                   onkeypress="if(event.key==='Enter') confirmSimpleItem()">
+          `
+      }
+  }
+
+  // Re-get input element as it might have been replaced
+  const input = document.getElementById("simpleItemInput")
+  if (input && itemType !== 'roleSelect') {
+      input.value = initialValue
+  }
+
   document.getElementById("simpleItemModal").classList.add("show")
 
   setTimeout(() => {
-    document.getElementById("simpleItemInput").focus()
+    const input = document.getElementById("simpleItemInput")
+    if (input) input.focus()
   }, 100)
 }
 
@@ -946,19 +1069,28 @@ function renderObjectEditorForm() {
   const parentSchema = getFieldSchema(currentEditingObjectPath)
   const itemSchema = parentSchema && parentSchema.schema ? parentSchema.schema : {}
 
-  const keys = Object.keys(currentEditingObjectData).filter(key => {
-    if (Object.keys(itemSchema).length > 0) {
-      return itemSchema[key] !== undefined
-    }
-    return true
-  })
+  let keys = []
+  if (Object.keys(itemSchema).length > 0) {
+    keys = Object.keys(itemSchema)
+  } else {
+    keys = Object.keys(currentEditingObjectData)
+  }
 
   modalBody.innerHTML = keys
     .map(key => {
-      const value = currentEditingObjectData[key]
+      let value = currentEditingObjectData[key]
       let fieldSchema = itemSchema[key]
       if (!fieldSchema) {
         fieldSchema = getFieldSchema(key)
+      }
+
+      if (value === undefined) {
+        if (fieldSchema.type === "boolean") value = false
+        else if (fieldSchema.type === "number") value = 0
+        else if (fieldSchema.type === "array") value = []
+        else if (fieldSchema.type === "object") value = {}
+        else value = ""
+        currentEditingObjectData[key] = value
       }
 
       const label = fieldSchema.label || key
@@ -1038,6 +1170,21 @@ function renderObjectEditorForm() {
                             <option value="" disabled ${!value ? "selected" : ""}>请选择渠道...</option>
                             ${channels.map(c => `<option value="${c}" ${value === c ? "selected" : ""}>${c}</option>`).join("")}
                             ${value && !channels.includes(value) ? `<option value="${value}" selected>${value} (未找到)</option>` : ""}
+                        </select>
+                        ${fieldSchema.help ? `<p style="color: #999; font-size: 12px; margin-top: 4px;">${fieldSchema.help}</p>` : ""}
+                    </div>
+                </div>
+            `
+      } else if (fieldType === "roleSelect") {
+        const roles = getAvailableRoles()
+        return `
+                <div class="form-group">
+                    <label>${label}${fieldSchema.required ? ' <span style="color: #ff4d4f;">*</span>' : ""}</label>
+                    <div class="form-control-wrapper">
+                        <select data-obj-key="${key}" onchange="updateObjectValue(this)" style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
+                            <option value="" disabled ${!value ? "selected" : ""}>请选择人设...</option>
+                            ${roles.map(r => `<option value="${r}" ${value === r ? "selected" : ""}>${r}</option>`).join("")}
+                            ${value && !roles.includes(value) ? `<option value="${value}" selected>${value} (未找到)</option>` : ""}
                         </select>
                         ${fieldSchema.help ? `<p style="color: #999; font-size: 12px; margin-top: 4px;">${fieldSchema.help}</p>` : ""}
                     </div>
@@ -1639,10 +1786,8 @@ function confirmGroupSelection() {
         isNaN(id) ? String(id) : Number(id),
       )
 
-      const modalBody = document.getElementById("modalBody")
-      if (modalBody) {
-        modalBody.innerHTML = renderObjectEditorForm()
-      }
+      // 重新渲染对象编辑表单
+      renderObjectEditorForm()
 
       closeGroupSelectorModal()
       showToast(`已选择 ${selectedIds.length} 个群`, "success")
@@ -2050,4 +2195,27 @@ function getAvailableChannels() {
   }
 
   return [...new Set(channels)] // 去重
+}
+
+function getAvailableRoles() {
+  const roles = []
+  
+  // 尝试从缓存中获取 roles 配置
+  for (const categoryName in categoryCache) {
+    const configs = categoryCache[categoryName]
+    if (Array.isArray(configs)) {
+      configs.forEach(({ name, data }) => {
+        if (name === "roles" && data && Array.isArray(data.roles)) {
+          data.roles.forEach(r => r.name && roles.push(r.name))
+        }
+      })
+    }
+  }
+
+  // 如果当前正在编辑 roles，也尝试从 currentData 获取
+  if (currentConfig === "roles" && currentData && Array.isArray(currentData.roles)) {
+    currentData.roles.forEach(r => r.name && roles.push(r.name))
+  }
+
+  return [...new Set(roles)]
 }

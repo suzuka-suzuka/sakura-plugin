@@ -32,7 +32,8 @@ export class GrokVideo extends plugin {
     }
 
     const channelsConfig = Setting.getConfig("Channels")
-    const grokChannel = channelsConfig?.grok?.find(c => c.name === "video")
+    const grokList = channelsConfig?.grok || []
+    const grokChannel = grokList[Math.floor(Math.random() * grokList.length)]
 
     if (!grokChannel || !grokChannel.sso) {
       return false
@@ -68,7 +69,7 @@ export class GrokVideo extends plugin {
         dynamic_statsig: grokChannel.dynamic_statsig !== false,
       }
 
-      const model = grokChannel.model
+      const model = "grok-imagine-0.9"
 
       const request = {
         model: model,

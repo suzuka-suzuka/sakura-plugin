@@ -28,8 +28,34 @@ export class Mimic extends plugin {
     return Setting.getConfig("mimic")
   }
 
+  getGroupConfig(groupId) {
+    const config = this.appconfig
+    if (!config.GroupConfigs || !Array.isArray(config.GroupConfigs)) {
+      return config
+    }
+    const groupConfig = config.GroupConfigs.find(c => {
+      if (!c.group) return false
+      if (Array.isArray(c.group)) {
+        return c.group.map(String).includes(String(groupId))
+      }
+      return String(c.group) === String(groupId)
+    })
+    if (!groupConfig) {
+      return config
+    }
+    const mergedConfig = { ...config, ...groupConfig }
+    if (groupConfig.triggerWords && typeof groupConfig.triggerWords === "string") {
+      mergedConfig.triggerWords = groupConfig.triggerWords
+        .split("\n")
+        .map(w => w.trim())
+        .filter(w => w)
+    }
+    return mergedConfig
+  }
+
   async Mimic(e) {
-    if (this.appconfig.enableGroupLock && e.isGroup) {
+    const config = this.getGroupConfig(e.group_id)
+    if (config.enableGroupLock && e.isGroup) {
       const lockKey = `sakura:mimic:lock:${e.group_id}`
       if (await redis.get(lockKey)) {
         return false
@@ -40,7 +66,7 @@ export class Mimic extends plugin {
     try {
       return await this.doMimic(e)
     } finally {
-      if (this.appconfig.enableGroupLock && e.isGroup) {
+      if (config.enableGroupLock && e.isGroup) {
         const lockKey = `sakura:mimic:lock:${e.group_id}`
         await redis.del(lockKey)
       }
@@ -51,6 +77,8 @@ export class Mimic extends plugin {
     if (!this.appconfig.Groups.includes(e.group_id)) {
       return false
     }
+
+    const config = this.getGroupConfig(e.group_id)
 
     let contentParts = []
     if (e.message && Array.isArray(e.message) && e.message.length > 0) {
@@ -88,16 +116,20 @@ export class Mimic extends plugin {
       (e.message &&
         e.message.some(msg => msg.type === "at" && String(msg.qq) === String(e.self_id)))
 
-    const hasKeyword = this.appconfig.triggerWords.some(word => messageText.includes(word))
+    const hasKeyword = config.triggerWords.some(word => messageText.includes(word))
+
+    if (e.isGroup && config.enableLevelLimit && hasKeyword && e.sender && e.sender.level <= 10) {
+      return false
+    }
 
     let mustReply = false
-    if (this.appconfig.enableAtReply && isAt) {
+    if (config.enableAtReply && isAt) {
       mustReply = true
     } else if (hasKeyword) {
       mustReply = true
     }
 
-    if (!mustReply && Math.random() > this.appconfig.replyProbability) {
+    if (!mustReply && Math.random() > config.replyProbability) {
       return false
     }
 
@@ -124,10 +156,30 @@ export class Mimic extends plugin {
       }
     }
 
-    let selectedPresetPrompt = this.appconfig.Prompt
+    let Prompt = config.Prompt
+    if (config.name) {
+      const rolesConfig = Setting.getConfig("roles")
+      const roles = rolesConfig?.roles || []
+      const role = roles.find(r => r.name === config.name)
+      if (role && role.prompt) {
+        Prompt = role.prompt
+      }
+    }
+
+    let alternatePrompt = config.alternatePrompt
+    if (config.alternateName) {
+      const rolesConfig = Setting.getConfig("roles")
+      const roles = rolesConfig?.roles || []
+      const role = roles.find(r => r.name === config.alternateName)
+      if (role && role.prompt) {
+        alternatePrompt = role.prompt
+      }
+    }
+
+    let selectedPresetPrompt = Prompt
     let shouldRecall = false
-    if (!e.isMaster && !isNewMember && Math.random() < this.appconfig.alternatePromptProbability) {
-      selectedPresetPrompt = this.appconfig.alternatePrompt
+    if (!e.isMaster && !isNewMember && Math.random() < config.alternatePromptProbability) {
+      selectedPresetPrompt = alternatePrompt
       shouldRecall = true
     }
 
@@ -165,7 +217,7 @@ export class Mimic extends plugin {
     let finalResponseText = ""
     let currentFullHistory = []
     let toolCallCount = 0
-    const Channel = this.appconfig.Channel
+    const Channel = config.Channel
     try {
       const queryParts = [{ text: query }]
 
@@ -243,8 +295,8 @@ export class Mimic extends plugin {
         }
       }
 
-      const recalltime = this.appconfig.recalltime
-      if (this.appconfig.splitMessage) {
+      const recalltime = config.recalltime
+      if (config.splitMessage) {
         await splitAndReplyMessages(e, finalResponseText, shouldRecall, recalltime)
       } else {
         const parsedResponse = parseAtMessage(finalResponseText)

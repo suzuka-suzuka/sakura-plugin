@@ -13,6 +13,11 @@ const configSchema = {
       configs: ["Channels"],
     },
     {
+      name: "AI人设",
+      icon: "🎭",
+      configs: ["roles"],
+    },
+    {
       name: "AI设定",
       icon: "💬",
       configs: ["AI", "mimic", "ActiveChat"],
@@ -65,6 +70,7 @@ const configSchema = {
     webeditor: "配置面板",
     groupnotice: "进退群通知",
     EmojiLike: "表情回应",
+    roles: "AI人设",
   },
 
   fields: {
@@ -73,6 +79,17 @@ const configSchema = {
     name: { label: "名称", type: "text" },
     description: { label: "描述", type: "textarea" },
     title: { label: "标题", type: "text" },
+
+    "roles.roles": {
+      label: "人设列表",
+      type: "array",
+      itemType: "object",
+      titleField: "name",
+      schema: {
+        name: { label: "人设名称", type: "text", required: true },
+        prompt: { label: "设定内容", type: "textarea", required: true },
+      },
+    },
 
     "summary.enable": { label: "启用", type: "boolean" },
     "poke.enable": { label: "戳一戳总开关", type: "boolean" },
@@ -296,24 +313,23 @@ const configSchema = {
       itemType: "object",
       help: "配置不同的人格和其设定，可新增或删除角色",
       schema: {
-        name: { label: "角色名称", type: "text", required: true },
         prefix: {
           label: "触发前缀",
           type: "text",
           required: true,
           help: "用于触发该角色的命令前缀",
         },
+        name: {
+          label: "角色名称",
+          type: "roleSelect",
+          required: true,
+          help: "选择已有的AI人设",
+        },
         Channel: {
           label: "渠道",
           type: "channelSelect",
           required: true,
           help: "使用的渠道名称，必须与上方渠道配置中的名称一致",
-        },
-        Prompt: {
-          label: "预设提示词",
-          type: "textarea",
-          required: true,
-          help: "角色的核心设定，例如：你是一个可爱的猫娘...",
         },
         GroupContext: { label: "启用群聊上下文", type: "boolean" },
         History: { label: "启用历史记录", type: "boolean" },
@@ -325,6 +341,11 @@ const configSchema = {
       label: "是否启用用户锁",
       type: "boolean",
       help: "启用后，每个用户处理完当前消息前，不会处理该用户的后续消息，直到当前消息处理完毕",
+    },
+    "AI.requirePermission": {
+      label: "需要权限",
+      type: "boolean",
+      help: "启用后，只有在权限列表中的用户才能触发",
     },
     "AI.toolschannel": {
       label: "工具渠道",
@@ -360,10 +381,10 @@ const configSchema = {
 
     "mimic.Groups": { label: "启用群", type: "groupSelect" },
     "mimic.Channel": { label: "伪人渠道", type: "channelSelect" },
-    "mimic.Prompt": { label: "伪人预设", type: "textarea", help: "默认预设" },
-    "mimic.alternatePrompt": {
+    "mimic.name": { label: "伪人预设", type: "roleSelect", help: "默认预设" },
+    "mimic.alternateName": {
       label: "反差预设",
-      type: "textarea",
+      type: "roleSelect",
       help: "伪人有概率触发的其他预设",
     },
     "mimic.triggerWords": { label: "伪人必定触发词", type: "array", itemType: "text" },
@@ -385,6 +406,11 @@ const configSchema = {
       type: "boolean",
       help: "启用后,伪人模式的每个群处理完当前消息前,不会处理该群的后续消息,直到当前消息处理完毕",
     },
+    "mimic.enableLevelLimit": {
+      label: "启用等级限制",
+      type: "boolean",
+      help: "启用后，群等级小于等于10级的用户无法触发",
+    },
     "mimic.splitMessage": {
       label: "启用消息分割",
       type: "boolean",
@@ -395,6 +421,58 @@ const configSchema = {
       type: "number",
       min: 0,
       help: "反差预设触发时,消息撤回的延迟时间,单位为秒。设为0则不撤回",
+    },
+    "mimic.GroupConfigs": {
+      label: "分群配置",
+      type: "array",
+      itemType: "object",
+      titleField: "group",
+      help: "为特定群组配置独立的伪人设定",
+      schema: {
+        group: { label: "群聊", type: "groupSelect", required: true },
+        name: { label: "伪人预设", type: "roleSelect", help: "默认预设" },
+        alternateName: {
+          label: "反差预设",
+          type: "roleSelect",
+          help: "伪人有概率触发的其他预设",
+        },
+        triggerWords: { label: "伪人必定触发词", type: "textarea", help: "一行一个" },
+        enableAtReply: {
+          label: "伪人艾特回复",
+          type: "boolean",
+          help: "启用后,被艾特时会触发伪人回复",
+        },
+        replyProbability: { label: "回复概率", type: "number", min: 0, max: 1, step: 0.01 },
+        alternatePromptProbability: {
+          label: "反差回复概率",
+          type: "number",
+          min: 0,
+          max: 1,
+          step: 0.01,
+        },
+        enableGroupLock: {
+          label: "是否启用群聊锁",
+          type: "boolean",
+          help: "启用后,伪人模式的每个群处理完当前消息前,不会处理该群的后续消息,直到当前消息处理完毕",
+        },
+        enableLevelLimit: {
+          label: "启用等级限制",
+          type: "boolean",
+          help: "启用后，群等级小于等于10级的用户无法触发",
+        },
+        splitMessage: {
+          label: "启用消息分割",
+          type: "boolean",
+          help: "启用后,当伪人回复过长时会进行分割发送",
+        },
+        recalltime: {
+          label: "撤回时间(秒)",
+          type: "number",
+          min: 0,
+          help: "反差预设触发时,消息撤回的延迟时间,单位为秒。设为0则不撤回",
+        },
+        Channel: { label: "伪人渠道", type: "channelSelect" },
+      },
     },
     Prompt: { label: "预设提示词", type: "textarea" },
     alternatePrompt: { label: "反差预设", type: "textarea" },
@@ -462,12 +540,8 @@ const configSchema = {
     "poke.personas": {
       label: "戳一戳设定",
       type: "array",
-      itemType: "object",
+      itemType: "roleSelect",
       help: "配置不同的人格和其设定",
-      schema: {
-        name: { label: "角色名称", type: "text", required: true },
-        Prompt: { label: "预设提示词", type: "textarea", required: true, help: "角色的核心设定" },
-      },
     },
     masterReplies: { label: "戳主人回复", type: "textarea", help: "一行一个回复" },
     genericTextReplies: { label: "通用文本回复", type: "textarea", help: "一行一个回复" },
@@ -581,7 +655,7 @@ const configSchema = {
       itemType: "object",
       titleField: "group",
       schema: {
-        group: { label: "群聊", type: "groupSelect", required: true },
+        group: { label: "群聊", type: "groupSelect", required: true ,help:"只能选择一个群聊"},
         replyAll: {
           label: "回应所有人",
           type: "boolean",

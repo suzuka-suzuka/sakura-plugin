@@ -27,10 +27,10 @@ export class setuPlugin extends plugin {
     tag = match?.[2]?.trim() || ""
 
     if (isR18 && !this.r18Config.enable.includes(e.group_id)) {
-      return this.reply("本群未开启r18功能哦~", true, { recallMsg: 10 })
+      return this.reply("本群未开启r18功能哦~", false, { recallMsg: 10 })
     }
 
-    await this.reply("正在获取图片...", true, { recallMsg: 10 })
+    await this.reply("正在获取图片...", false, { recallMsg: 10 })
 
     try {
       const imageInfo = await this.fetchLolicon(tag, isR18)
@@ -64,7 +64,7 @@ export class setuPlugin extends plugin {
     let finalSuccess = !!sendResult?.message_id
 
     if (!finalSuccess) {
-      await this.reply("图片发送失败，可能被风控，正在尝试翻转后重发...", false, { recallMsg: 10 })
+      await this.reply("图片发送失败，可能被风控，正在尝试翻转后重发...", true, { recallMsg: 10 })
 
       const flippedImageBuffer = await FlipImage(imageUrl)
 

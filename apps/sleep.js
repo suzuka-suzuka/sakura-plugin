@@ -34,7 +34,7 @@ export class Sleep extends plugin {
     const history = sleepData.getHistory(groupId, e.user_id)
 
     if (!history || history.length === 0) {
-      await this.reply("你还没有睡眠记录哦~", true, { recallMsg: 10 })
+      await this.reply("你还没有睡眠记录哦~", false, { recallMsg: 10 })
       return false
     }
 

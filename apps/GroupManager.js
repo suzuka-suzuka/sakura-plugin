@@ -115,7 +115,7 @@ export class GroupManager extends plugin {
     const memberMap = await e.group.getMemberMap(true)
     if (!memberMap) {
       logger.error(`[清理从未发言] 获取群成员列表失败`)
-      return await this.reply("获取群成员列表失败，请稍后再试。", true, { recallMsg: 10 })
+      return await this.reply("获取群成员列表失败，请稍后再试。", false, { recallMsg: 10 })
     }
 
     const inactiveMembers = []
@@ -199,7 +199,7 @@ export class GroupManager extends plugin {
     }
 
     let reportMsg = `清理完成。成功清理 ${successCount} 人。`
-    await this.reply(reportMsg, true, { recallMsg: 10 })
+    await this.reply(reportMsg, false, { recallMsg: 10 })
   }
 
   async prepareCleanupInactive(e) {
@@ -331,7 +331,7 @@ export class GroupManager extends plugin {
     }
 
     let reportMsg = `清理完成。成功清理 ${successCount} 人。`
-    await this.reply(reportMsg, true, { recallMsg: 10 })
+    await this.reply(reportMsg, false, { recallMsg: 10 })
   }
   async prepareCleanupByLevel(e) {
     if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
@@ -446,7 +446,7 @@ export class GroupManager extends plugin {
     }
 
     let reportMsg = `清理完成。成功清理 ${successCount} 人。`
-    await this.reply(reportMsg, true, { recallMsg: 10 })
+    await this.reply(reportMsg, false, { recallMsg: 10 })
   }
 
   async handleMuteAction(e) {

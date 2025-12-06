@@ -1,4 +1,5 @@
 import Setting from "../lib/setting.js"
+import cfg from "../../../lib/config/config.js"
 import { getAI } from "../lib/AIUtils/getAI.js"
 import {
   loadConversationHistory,
@@ -29,9 +30,27 @@ export class AIChat extends plugin {
     return Setting.getConfig("AI")
   }
 
+  checkPermission(e) {
+    if (!this.appconfig?.requirePermission) {
+      return true
+    }
+    const permissionConfig = Setting.getConfig("Permission")
+    if (
+      !permissionConfig?.enable?.includes(e.sender.user_id) &&
+      !cfg.masterQQ.includes(e.sender.user_id)
+    ) {
+      return false
+    }
+    return true
+  }
+
   async Chat(e) {
     const config = this.appconfig
     if (!config || !config.profiles || config.profiles.length === 0) {
+      return false
+    }
+
+    if (!this.checkPermission(e)) {
       return false
     }
 
@@ -71,7 +90,17 @@ export class AIChat extends plugin {
       return false
     }
 
-    const { prefix, Channel, Prompt, GroupContext, History, Tool } = matchedProfile
+    const { prefix, Channel, GroupContext, History, Tool } = matchedProfile
+    
+    let Prompt = matchedProfile.Prompt
+    if (matchedProfile.name) {
+        const rolesConfig = Setting.getConfig("roles")
+        const roles = rolesConfig?.roles || []
+        const role = roles.find(r => r.name === matchedProfile.name)
+        if (role && role.prompt) {
+            Prompt = role.prompt
+        }
+    }
 
     let query = textToMatch.substring(prefix.length).trim()
 
@@ -97,7 +126,7 @@ export class AIChat extends plugin {
     }
 
     try {
-      return await this.doChat(e, matchedProfile, query)
+      return await this.doChat(e, { ...matchedProfile, Prompt }, query)
     } finally {
       if (config.enableUserLock) {
         const lockKey = e.isGroup
@@ -139,7 +168,7 @@ export class AIChat extends plugin {
       )
 
       if (typeof currentAIResponse === "string") {
-        await this.reply(currentAIResponse, false, { recallMsg: 10 })
+        await this.reply(currentAIResponse, true, { recallMsg: 10 })
         return true
       }
 
@@ -194,7 +223,7 @@ export class AIChat extends plugin {
           )
 
           if (typeof currentAIResponse === "string") {
-            await this.reply(currentAIResponse, false, { recallMsg: 10 })
+            await this.reply(currentAIResponse, true, { recallMsg: 10 })
             return true
           }
         } else if (textContent) {
@@ -216,7 +245,7 @@ export class AIChat extends plugin {
       await this.reply(msg)
     } catch (error) {
       logger.error(`Chat处理过程中出现错误: ${error.message}`)
-      await this.reply(`处理过程中出现错误: ${error.message}`, false, { recallMsg: 10 })
+      await this.reply(`处理过程中出现错误: ${error.message}`, true, { recallMsg: 10 })
       return true
     }
     return true

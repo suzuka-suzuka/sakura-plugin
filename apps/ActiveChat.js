@@ -129,11 +129,21 @@ export class ActiveChatScheduler extends plugin {
         },
       ]
 
+      let Prompt = profile.Prompt
+      if (profile.name) {
+          const rolesConfig = Setting.getConfig("roles")
+          const roles = rolesConfig?.roles || []
+          const role = roles.find(r => r.name === profile.name)
+          if (role && role.prompt) {
+              Prompt = role.prompt
+          }
+      }
+
       const geminiResponse = await getAI(
         profile.Channel,
         mockE,
         queryParts,
-        profile.Prompt,
+        Prompt,
         profile.GroupContext,
         false,
         history,

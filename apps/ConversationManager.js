@@ -20,28 +20,28 @@ export class Conversationmanagement extends plugin {
       priority: 1135,
       rule: [
         {
-          reg: `^清空全部对话$`,
+          reg: `^#?清空全部对话$`,
           fnc: "handleClearAllPrefixesForCurrentUser",
           log: false,
         },
         {
-          reg: `^清空所有用户对话$`,
+          reg: `^#?清空所有用户对话$`,
           fnc: "handleClearAllUsersAndPrefixes",
           log: false,
           permission: "master",
         },
         {
-          reg: `^清空对话\\s*(.+)`,
+          reg: `^#?清空对话\\s*(.+)`,
           fnc: "handleClearSingleConversation",
           log: false,
         },
         {
-          reg: `^列出对话\\s*(.+)`,
+          reg: `^#?列出对话\\s*(.+)`,
           fnc: "handleListSingleConversation",
           log: false,
         },
         {
-          reg: `^导出对话\\s*(.+)`,
+          reg: `^#?导出对话\\s*(.+)`,
           fnc: "handleExportConversation",
           log: false,
         },
@@ -62,8 +62,7 @@ export class Conversationmanagement extends plugin {
 
   async handleClearSingleConversation(e) {
     const msg = e.msg || ""
-    const trigger = "清空对话"
-    const prefix = msg.substring(trigger.length).trim()
+    const prefix = msg.replace(/^#?清空对话\s*/, "").trim()
 
     if (!prefix) {
       return false
@@ -72,37 +71,35 @@ export class Conversationmanagement extends plugin {
     const config = this.appconfig
 
     if (!config || !config.profiles.some(p => p.prefix === prefix)) {
-      e.reply(`未找到前缀为「${prefix}」的设定，请检查输入。`, true)
+      await this.reply(`未找到前缀为「${prefix}」的设定，请检查输入。`, false, { recallMsg: 10 })
       return true
     }
 
     const profileName = this.getProfileName(prefix)
     await clearConversationHistory(e, prefix)
-    e.reply(`您与「${profileName}」的对话历史已清空！喵~`, true)
+    await this.reply(`您与「${prefix}」的对话历史已清空！喵~`, false, { recallMsg: 10 })
     return true
   }
 
   async handleListSingleConversation(e) {
     const msg = e.msg || ""
-    const trigger = "列出对话"
-    const prefix = msg.substring(trigger.length).trim()
+    const prefix = msg.replace(/^#?列出对话\s*/, "").trim()
 
     if (!prefix) {
-      e.reply("请提供需要列出的对话前缀哦，例如：列出对话 g", true)
-      return true
+      return false
     }
 
     const config = this.appconfig
 
     if (!config || !config.profiles.some(p => p.prefix === prefix)) {
-      e.reply(`未找到前缀为「${prefix}」的设定，请检查输入。`, true)
+      await this.reply(`未找到前缀为「${prefix}」的设定，请检查输入。`, false, { recallMsg: 10 })
       return true
     }
 
     const profileName = this.getProfileName(prefix)
     const history = await loadConversationHistory(e, prefix)
     if (history.length === 0) {
-      e.reply(`目前没有与「${profileName}」的对话历史记录。`, true)
+      await this.reply(`目前没有与「${prefix}」的对话历史记录。`, false, { recallMsg: 10 })
       return true
     }
 
@@ -135,20 +132,20 @@ export class Conversationmanagement extends plugin {
       }
     }
 
-    await makeForwardMsg(e, messagesWithSender, `「${profileName}」对话历史`)
+    await makeForwardMsg(e, messagesWithSender, `「${prefix}」对话历史`)
 
     return true
   }
 
   async handleClearAllPrefixesForCurrentUser(e) {
     await clearAllPrefixesForUser(e)
-    e.reply("您的所有模式对话历史已全部清空！喵~", true)
+    await this.reply("您的所有模式对话历史已全部清空！喵~", false, { recallMsg: 10 })
     return true
   }
 
   async handleClearAllUsersAndPrefixes(e) {
     await clearAllConversationHistories()
-    e.reply("所有用户的全部对话历史已成功清空！喵~", true)
+    await this.reply("所有用户的全部对话历史已成功清空！喵~", false, { recallMsg: 10 })
     return true
   }
 
@@ -183,8 +180,7 @@ export class Conversationmanagement extends plugin {
 
   async handleExportConversation(e) {
     const msg = e.msg || ""
-    const trigger = "导出对话"
-    const prefix = msg.substring(trigger.length).trim()
+    const prefix = msg.replace(/^#?导出对话\s*/, "").trim()
 
     if (!prefix) {
       return false
@@ -193,7 +189,7 @@ export class Conversationmanagement extends plugin {
     const config = this.appconfig
 
     if (!config || !config.profiles.some(p => p.prefix === prefix)) {
-      e.reply(`未找到前缀为「${prefix}」的设定，请检查输入。`, true)
+      await this.reply(`未找到前缀为「${prefix}」的设定，请检查输入。`, false, { recallMsg: 10 })
       return true
     }
 
@@ -201,14 +197,18 @@ export class Conversationmanagement extends plugin {
     const history = await loadConversationHistory(e, prefix)
 
     if (history.length === 0) {
-      e.reply(`目前没有与「${profileName}」的对话历史记录，无法导出。`, true)
+      await this.reply(`目前没有与「${prefix}」的对话历史记录，无法导出。`, false, {
+        recallMsg: 10,
+      })
       return true
     }
 
     if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
       await e.group.setMsgEmojiLike(e.message_id, "124")
     } else {
-      await this.reply(`正在为您导出「${profileName}」的对话记录，请稍候...`, false, { recallMsg: 10 })
+      await this.reply(`正在为您导出「${prefix}」的对话记录，请稍候...`, false, {
+        recallMsg: 10,
+      })
     }
 
     try {
@@ -288,7 +288,6 @@ export class Conversationmanagement extends plugin {
         avatar: `http://q1.qlogo.cn/g?b=qq&nk=${e.user_id}&s=640`,
       }
 
-      
       let botName = e.bot.nickname
       if (e.isGroup) {
         let info
@@ -335,7 +334,7 @@ export class Conversationmanagement extends plugin {
       }
 
       const finalHtml = templateHtml
-        .replace(/{{title}}/g, `与「${profileName}」的对话记录`)
+        .replace(/{{title}}/g, `与「${prefix}」的对话记录`)
         .replace(/{{messages}}/g, messagesHtml)
         .replace(/{{left_bubble_base64}}/g, leftBubbleBase64)
         .replace(/{{right_bubble_base64}}/g, rightBubbleBase64)
