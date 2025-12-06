@@ -29,8 +29,11 @@ export class setuPlugin extends plugin {
     if (isR18 && !this.r18Config.enable.includes(e.group_id)) {
       return this.reply("本群未开启r18功能哦~", false, { recallMsg: 10 })
     }
-
-    await this.reply("正在获取图片...", false, { recallMsg: 10 })
+    if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
+      await e.group.setMsgEmojiLike(e.message_id, "124")
+    } else {
+      await this.reply("正在获取图片...", false, { recallMsg: 10 })
+    }
 
     try {
       const imageInfo = await this.fetchLolicon(tag, isR18)
