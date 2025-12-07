@@ -387,7 +387,7 @@ export class poke extends plugin {
       await this.replyWithText(e, pokeConfig, count, usercount)
     } else if (random <= 70) {
       await this.replyWithImage(e, pokeConfig, count, usercount)
-    } else if (random <= 85) {
+    } else if (random <= 80) {
       await this.replyWithPokeBack(e, pokeConfig)
     } else {
       await this.replyWithSpecialEasterEgg(e)
@@ -484,54 +484,15 @@ export class poke extends plugin {
           e.reply(msg)
         }, 500)
         break
+
       case 2:
-        for (let i = 0; i < 10; i++) {
-          await e.group.pokeMember(e.operator_id)
-          await common.sleep(500)
-        }
-        await e.reply(`超级加倍！让你见识一下${this.botname}的厉害！`)
-        await common.sleep(1000)
-        break
-      case 3:
         const msg_text = _.sample(pokeConfig.pokeBackTextReplies)
         await e.reply(msg_text.replace(/_botname_/g, this.botname))
         await common.sleep(500)
         await e.group.pokeMember(e.operator_id)
         break
-      case 4:
-        await e.reply("嗯？什么？戳戳对方的游戏？")
-        await common.sleep(500)
-        await e.group.pokeMember(e.operator_id)
-        await common.sleep(500)
-        await e.group.pokeMember(e.operator_id)
-        await common.sleep(500)
-        await e.reply("我也不会输哦！")
-        await common.sleep(500)
-        await e.group.pokeMember(e.operator_id)
-        await common.sleep(500)
-        await e.group.pokeMember(e.operator_id)
-        await common.sleep(500)
-        await e.reply("喝！")
-        await common.sleep(500)
-        await e.group.pokeMember(e.operator_id)
-        await common.sleep(500)
-        await e.group.pokeMember(e.operator_id)
-        await common.sleep(500)
-        await e.reply("哈！")
-        await common.sleep(500)
-        await e.group.pokeMember(e.operator_id)
-        await common.sleep(500)
-        await e.group.pokeMember(e.operator_id)
-        break
-      case 5:
-        await e.reply("觉得我不会反击就为所欲为……做好觉悟吧！")
-        await common.sleep(500)
-        for (let i = 0; i < 11; i++) {
-          await e.group.pokeMember(e.operator_id)
-          await common.sleep(500)
-        }
-        break
-      case 6:
+
+      case 3:
         await e.reply("呜呜呜……这样到处摸的话……")
         await common.sleep(500)
         await e.group.pokeMember(e.operator_id)
@@ -595,6 +556,47 @@ export class poke extends plugin {
         await e.reply("在这里无意义地消耗着时间，这……")
         await common.sleep(5000)
         await e.reply("没、没有，我并没有讨厌……")
+        break
+      case 8:
+        for (let i = 0; i < 10; i++) {
+          await e.group.pokeMember(e.operator_id)
+          await common.sleep(500)
+        }
+        await e.reply(`超级加倍！让你见识一下${this.botname}的厉害！`)
+        await common.sleep(1000)
+        break
+      case 9:
+        await e.reply("嗯？什么？戳戳对方的游戏？")
+        await common.sleep(500)
+        await e.group.pokeMember(e.operator_id)
+        await common.sleep(500)
+        await e.group.pokeMember(e.operator_id)
+        await common.sleep(500)
+        await e.reply("我也不会输哦！")
+        await common.sleep(500)
+        await e.group.pokeMember(e.operator_id)
+        await common.sleep(500)
+        await e.group.pokeMember(e.operator_id)
+        await common.sleep(500)
+        await e.reply("喝！")
+        await common.sleep(500)
+        await e.group.pokeMember(e.operator_id)
+        await common.sleep(500)
+        await e.group.pokeMember(e.operator_id)
+        await common.sleep(500)
+        await e.reply("哈！")
+        await common.sleep(500)
+        await e.group.pokeMember(e.operator_id)
+        await common.sleep(500)
+        await e.group.pokeMember(e.operator_id)
+        break
+      case 10:
+        await e.reply("觉得我不会反击就为所欲为……做好觉悟吧！")
+        await common.sleep(500)
+        for (let i = 0; i < 11; i++) {
+          await e.group.pokeMember(e.operator_id)
+          await common.sleep(500)
+        }
         break
     }
   }
