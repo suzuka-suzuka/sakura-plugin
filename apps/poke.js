@@ -574,10 +574,8 @@ export class poke extends plugin {
         const apiUrl = "https://yande.re/post.json?tags=loli+-rating:e+-nipples&limit=500"
         const imageUrl = await yandeimage(apiUrl)
         if (imageUrl) {
-          try {
-            await e.reply(segment.image(imageUrl))
-          } catch (error) {
-            logger.error(`[戳一戳] 发送图片失败: ${error}`)
+          const result = await e.reply(segment.image(imageUrl))
+          if (!result?.message_id) {
             await e.reply("嘻嘻，骗你的，其实根本没有涩图~")
           }
         }
@@ -587,10 +585,8 @@ export class poke extends plugin {
         const feet_apiUrl = "https://yande.re/post.json?tags=feet+-rating:e+-nipples&limit=500"
         const feet_imageUrl = await yandeimage(feet_apiUrl)
         if (feet_imageUrl) {
-          try {
-            await e.reply(segment.image(feet_imageUrl))
-          } catch (error) {
-            logger.error(`[戳一戳] 发送图片失败: ${error}`)
+          const result = await e.reply(segment.image(feet_imageUrl))
+          if (!result?.message_id) {
             await e.reply("你还真张嘴了啊（收起脚），想得美~")
           }
         }
