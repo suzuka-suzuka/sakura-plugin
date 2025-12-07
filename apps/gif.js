@@ -24,7 +24,7 @@ export class gifPlugin extends plugin {
 				return false
 			}
 			const keyword = e.msg.match(/^来张(.*)表情包$/)[1]
-			const apiUrl = `https://tenor.googleapis.com/v2/search?key=${config.apiKey}&q=${encodeURIComponent(keyword)}&searchfilter=sticker&media_filter=gif&limit=50`;
+			const apiUrl = `https://tenor.googleapis.com/v2/search?key=${config.apiKey}&q=${encodeURIComponent(keyword)}&searchfilter=sticker&media_filter=gif`;
 			const imageUrl = await getgif(apiUrl);
 			if (imageUrl) {
 				if (adapter === 0) {
