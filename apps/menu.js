@@ -23,6 +23,10 @@ export class helpMenu extends plugin {
   }
 
   async getImageUrl() {
+    if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
+      await e.group.setMsgEmojiLike(e.message_id, "124")
+    }
+
     const url = "https://yande.re/post.json?tags=loli+-rating:e+-nipples&limit=500"
     try {
       const response = await fetch(url)
