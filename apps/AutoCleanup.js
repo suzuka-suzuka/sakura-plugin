@@ -4,14 +4,14 @@ export class AutoCleanup extends plugin {
   constructor() {
     super({
       name: "自动清理群成员",
-      dsc: "每天0点自动清理半年未发言的人和进群超24小时但群等级为1级的号",
+      dsc: "每天0点自动清理半年未发言的人和进群超24小时但群等级为1级及以下的号",
       priority: 1135,
     })
   }
 
   task = {
     name: "AutoCleanupTask",
-    cron: "0 27 16 * * *",
+    cron: "0 0 0 * * *",
     fnc: () => this.autoCleanupTask(),
     log: false,
   }
@@ -44,8 +44,13 @@ export class AutoCleanup extends plugin {
     let botInfo
     try {
       botInfo = await group.pickMember(Bot.uin).getInfo(true)
-    } catch {
-      botInfo = (await group.pickMember(Number(Bot.uin))).info
+    } catch (err) {
+      try {
+        botInfo = (await group.pickMember(Number(Bot.uin))).info
+      } catch (e) {
+        logger.error(`[自动清理] 获取群 ${groupId} Bot自身信息失败`)
+        return
+      }
     }
 
     if (botInfo.role === "member") {
@@ -66,21 +71,29 @@ export class AutoCleanup extends plugin {
     const toCleanup = []
 
     memberMap.forEach(member => {
-      if (member.user_id === Bot.uin) {
-        return
+      if (member.user_id === Bot.uin) return
+
+      if (member.role !== "member") return
+
+      const lastSentTime = member.last_sent_time || 0
+
+      let joinTime = member.join_time || 0
+      if (joinTime > 1000000000000) {
+        joinTime = Math.floor(joinTime / 1000)
       }
 
-      if (member.role !== "member") {
-        return
-      }
+      const level = parseInt(member.level)
 
-      const timeSinceLastSpoke = currentTime - member.last_sent_time
-      const timeSinceJoin = currentTime - member.join_time
+      const timeSinceLastSpoke = currentTime - lastSentTime
+      const timeSinceJoin = currentTime - joinTime
 
-      if (
-        timeSinceLastSpoke > sixMonthsInSeconds ||
-        (timeSinceJoin > oneDayInSeconds && member.level == 1)
-      ) {
+      const isOldInactive = timeSinceLastSpoke > sixMonthsInSeconds
+
+      const isLowLevel = !isNaN(level) && level <= 1
+
+      const isNewJoiner = timeSinceJoin > oneDayInSeconds
+
+      if (isOldInactive || (isNewJoiner && isLowLevel)) {
         toCleanup.push(member.user_id)
       }
     })
@@ -89,24 +102,10 @@ export class AutoCleanup extends plugin {
       return
     }
 
-    await group.sendMsg("午夜时刻，开杀了喵")
+    await group.sendMsg(`午夜时刻，开杀了喵`)
 
     for (const userId of toCleanup) {
-      let retry = 0
-      let success = false
-      while (retry < 3 && !success) {
-        const waitTime = 2000 * (retry + 1)
-        const result = await group.kickMember(userId)
-        if (result && result.status === "ok") {
-          success = true
-        } else {
-          logger.warn(
-            `[自动清理] 群 ${groupId} 踢出成员 ${userId} 失败: ${JSON.stringify(result)}，正在重试...`,
-          )
-          retry++
-          await new Promise(resolve => setTimeout(resolve, waitTime))
-        }
-      }
+      await group.kickMember(userId)
       await new Promise(resolve => setTimeout(resolve, 1000))
     }
   }
