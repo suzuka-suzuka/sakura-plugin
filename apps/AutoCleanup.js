@@ -11,7 +11,7 @@ export class AutoCleanup extends plugin {
 
   task = {
     name: "AutoCleanupTask",
-    cron: "0 24 16 * * *",
+    cron: "0 27 16 * * *",
     fnc: () => this.autoCleanupTask(),
     log: false,
   }
@@ -43,9 +43,9 @@ export class AutoCleanup extends plugin {
 
     let botInfo
     try {
-      botInfo = await group.pickMember(e.self_id).getInfo(true)
+      botInfo = await group.pickMember(Bot.uin).getInfo(true)
     } catch {
-      botInfo = (await group.pickMember(Number(e.self_id))).info
+      botInfo = (await group.pickMember(Number(Bot.uin))).info
     }
 
     if (botInfo.role === "member") {
