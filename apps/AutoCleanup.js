@@ -11,7 +11,7 @@ export class AutoCleanup extends plugin {
 
   task = {
     name: "AutoCleanupTask",
-    cron: "0 0 0 * * *",
+    cron: "0 22 16 * * *",
     fnc: () => this.autoCleanupTask(),
     log: false,
   }
@@ -40,17 +40,12 @@ export class AutoCleanup extends plugin {
 
   async cleanupGroup(groupId) {
     const group = Bot.pickGroup(groupId)
-    if (!group) {
-      logger.error(`[自动清理] 无法获取群 ${groupId}`)
-      return
-    }
 
     let botInfo
     try {
-      botInfo = await group.pickMember(Bot.uin).getInfo(true)
-    } catch (error) {
-      logger.error(`[自动清理] 获取Bot信息失败 群${groupId}:`, error)
-      return
+      botInfo = await e.group.pickMember(e.self_id).getInfo(true)
+    } catch {
+      botInfo = (await e.group.pickMember(Number(e.self_id))).info
     }
 
     if (botInfo.role === "member") {
@@ -94,20 +89,25 @@ export class AutoCleanup extends plugin {
       return
     }
 
-    try {
-      await group.sendMsg("午夜时刻，开杀了喵")
-      await new Promise(resolve => setTimeout(resolve, 2000))
-    } catch (error) {
-      logger.error(`[自动清理] 群 ${groupId} 发送提示消息失败:`, error)
-    }
+    await group.sendMsg("午夜时刻，开杀了喵")
 
     for (const userId of toCleanup) {
-      try {
-        await group.kickMember(userId)
-        await new Promise(resolve => setTimeout(resolve, 1000))
-      } catch (error) {
-        logger.error(`[自动清理] 群 ${groupId} 清理成员 ${userId} 失败:`, error)
+      let retry = 0
+      let success = false
+      while (retry < 3 && !success) {
+        const waitTime = 2000 * (retry + 1)
+        const result = await group.kickMember(userId)
+        if (result && result.status === "ok") {
+          success = true
+        } else {
+          logger.warn(
+            `[自动清理] 群 ${groupId} 踢出成员 ${userId} 失败: ${JSON.stringify(result)}，正在重试...`,
+          )
+          retry++
+          await new Promise(resolve => setTimeout(resolve, waitTime))
+        }
       }
+      await new Promise(resolve => setTimeout(resolve, 1000))
     }
   }
 }
