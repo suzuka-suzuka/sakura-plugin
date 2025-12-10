@@ -15,7 +15,7 @@ export class SoraVideo extends plugin {
       priority: 1135,
       rule: [
         {
-          reg: "^([lps])?\\s*#v(.+)",
+          reg: "^([lps])?\\s*#v(\\+)?(.+)",
           fnc: "generateVideo",
           log: false,
         },
@@ -65,13 +65,15 @@ export class SoraVideo extends plugin {
         return true
       }
 
-      const match = e.msg.match(/^([lps])?\s*#v(.+)/s)
+      const match = e.msg.match(/^([lps])?\s*#v(\+)?(.+)/s)
       if (!match) {
         return false
       }
 
       const orientationPrefix = match[1]
-      const prompt = match[2].trim()
+      const isLongVideo = match[2] === "+"
+      const prompt = match[3].trim()
+      const nFrames = isLongVideo ? 450 : 300
 
       let orientation = "portrait"
       if (orientationPrefix === "l") {
@@ -100,7 +102,7 @@ export class SoraVideo extends plugin {
 
       let result
 
-      const videoOptions = { orientation }
+      const videoOptions = { orientation, nFrames }
 
       if (hasImage) {
         const imageUrl = imgs[0]

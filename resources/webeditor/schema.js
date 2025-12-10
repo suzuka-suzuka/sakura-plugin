@@ -41,6 +41,7 @@ const configSchema = {
         "webeditor",
         "groupnotice",
         "EmojiLike",
+        "SoraVideo",
       ],
     },
   ],
@@ -70,6 +71,7 @@ const configSchema = {
     webeditor: "配置面板",
     groupnotice: "进退群通知",
     EmojiLike: "表情回应",
+    SoraVideo: "Sora视频",
     roles: "AI人设",
   },
 
@@ -90,6 +92,8 @@ const configSchema = {
         prompt: { label: "设定内容", type: "textarea", required: true },
       },
     },
+
+    "SoraVideo.access_token": { label: "Access Token", type: "textarea" },
 
     "summary.enable": { label: "启用", type: "boolean" },
     "poke.enable": { label: "戳一戳总开关", type: "boolean" },
