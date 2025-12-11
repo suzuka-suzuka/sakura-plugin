@@ -37,7 +37,6 @@ const configSchema = {
         "60sNews",
         "bilicookie",
         "AutoCleanup",
-        "Permission",
         "webeditor",
         "groupnotice",
         "EmojiLike",
@@ -59,7 +58,6 @@ const configSchema = {
     forwardMessage: "消息转发",
     menu: "菜单",
     mimic: "伪人模式",
-    Permission: "权限管理",
     pixiv: "P站功能",
     poke: "戳一戳",
     r18: "R18图片",
@@ -107,12 +105,6 @@ const configSchema = {
     "recall.Groups": { label: "启用群", type: "groupSelect" },
     "ActiveChat.Groups": { label: "启用群", type: "groupSelect" },
     "r18.enable": { label: "启用群", type: "groupSelect", help: "影响所有图片功能" },
-    "Permission.enable": {
-      label: "已赋权QQ",
-      type: "array",
-      itemType: "text",
-      help: "赋予管理权限",
-    },
 
     "cool.Groups": { label: "启用群", type: "groupSelect" },
     "cool.randomIntervalMin": {

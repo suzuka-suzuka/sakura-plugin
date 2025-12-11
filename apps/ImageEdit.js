@@ -3,6 +3,7 @@ import { getImg } from "../lib/utils.js"
 import Setting from "../lib/setting.js"
 import sharp from "sharp"
 import cfg from "../../../lib/config/config.js"
+import { PermissionManager } from "../lib/PermissionManager.js"
 
 export class EditImage extends plugin {
   constructor() {
@@ -26,14 +27,14 @@ export class EditImage extends plugin {
     if (!this.task?.requirePermission) {
       return true
     }
-    const permissionConfig = Setting.getConfig("Permission")
-    if (
-      !permissionConfig?.enable?.includes(e.sender.user_id) &&
-      !cfg.masterQQ.includes(e.sender.user_id)
-    ) {
-      return false
+
+    const masterQQs = Array.isArray(cfg.masterQQ) ? cfg.masterQQ : [cfg.masterQQ]
+
+    if (!e.group_id) {
+      return masterQQs.includes(e.sender.user_id)
     }
-    return true
+
+    return PermissionManager.hasPermission(e.group_id, e.sender.user_id)
   }
 
   async dispatchHandler(e) {

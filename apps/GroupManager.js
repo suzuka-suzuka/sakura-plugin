@@ -1,5 +1,5 @@
-import Setting from "../lib/setting.js"
 import { getImg } from "../lib/utils.js"
+import { PermissionManager } from "../lib/PermissionManager.js"
 
 const conversationStateNeverSpoken = {}
 const conversationStateInactive = {}
@@ -61,12 +61,9 @@ export class GroupManager extends plugin {
       ],
     })
   }
-  get appconfig() {
-    return Setting.getConfig("Permission")
-  }
 
   async handleApprovalCommand(e) {
-    if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
+    if (e.sender.role === "member" && !PermissionManager.hasExplicitPermission(e.group_id, e.sender.user_id)) {
       return false
     }
     if (!global.GroupRequests) {
@@ -95,7 +92,7 @@ export class GroupManager extends plugin {
   }
 
   async prepareCleanupNeverSpoken(e) {
-    if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
+    if (e.sender.role === "member" && !PermissionManager.hasExplicitPermission(e.group_id, e.sender.user_id)) {
       return false
     }
     let bot
@@ -203,7 +200,7 @@ export class GroupManager extends plugin {
   }
 
   async prepareCleanupInactive(e) {
-    if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
+    if (e.sender.role === "member" && !PermissionManager.hasExplicitPermission(e.group_id, e.sender.user_id)) {
       return false
     }
     let bot
@@ -334,7 +331,7 @@ export class GroupManager extends plugin {
     await this.reply(reportMsg, false, { recallMsg: 10 })
   }
   async prepareCleanupByLevel(e) {
-    if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
+    if (e.sender.role === "member" && !PermissionManager.hasExplicitPermission(e.group_id, e.sender.user_id)) {
       return false
     }
     let bot
@@ -450,7 +447,7 @@ export class GroupManager extends plugin {
   }
 
   async handleMuteAction(e) {
-    if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
+    if (e.sender.role === "member" && !PermissionManager.hasExplicitPermission(e.group_id, e.sender.user_id)) {
       return false
     }
     let bot
@@ -511,7 +508,7 @@ export class GroupManager extends plugin {
   }
 
   async kickMember(e) {
-    if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
+    if (e.sender.role === "member" && !PermissionManager.hasExplicitPermission(e.group_id, e.sender.user_id)) {
       return false
     }
     let bot
@@ -653,7 +650,7 @@ export class GroupManager extends plugin {
   }
 
   async handleGroupNotice(e) {
-    if (e.sender.role === "member" && !this.appconfig?.enable?.includes(e.sender.user_id)) {
+    if (e.sender.role === "member" && !PermissionManager.hasExplicitPermission(e.group_id, e.sender.user_id)) {
       return false
     }
 

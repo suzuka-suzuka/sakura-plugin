@@ -1,6 +1,7 @@
-import Setting from "../lib/setting.js"
 import cfg from "../../../lib/config/config.js"
 import { addBlackList, removeBlackList } from "../lib/utils.js"
+import { PermissionManager } from "../lib/PermissionManager.js"
+
 export class Permission extends plugin {
   constructor() {
     super({
@@ -15,6 +16,16 @@ export class Permission extends plugin {
           log: false,
         },
         {
+          reg: "^#?移权\\s*",
+          fnc: "transferPermission",
+          log: false,
+        },
+        {
+          reg: "^#?(开启|关闭)全群权限",
+          fnc: "toggleGroupPermission",
+          log: false,
+        },
+        {
           reg: "^#?(拉黑|取消拉黑|解黑)",
           fnc: "manageBlackList",
           log: false,
@@ -22,18 +33,21 @@ export class Permission extends plugin {
       ],
     })
   }
-  get appconfig() {
-    return Setting.getConfig("Permission")
+
+  get masterQQs() {
+    return Array.isArray(cfg.masterQQ) ? cfg.masterQQ : [cfg.masterQQ]
   }
+
   async managePermission(e) {
-    if (
-      !this.appconfig?.enable?.includes(e.sender.user_id) &&
-      !cfg.masterQQ.includes(e.sender.user_id)
-    ) {
+    const userId = e.sender.user_id
+    const groupId = e.group_id
+    const isMaster = this.masterQQs.includes(userId)
+
+    if (!isMaster && !PermissionManager.hasPermission(groupId, userId)) {
       return false
     }
 
-    const isRemove = e.msg.includes("取消")
+    const isRevoke = e.msg.includes("取消")
     const commandRegex = /^#?(取消)?赋权\s*/
     const rawTargetQQ = e.msg.replace(commandRegex, "").trim().replace("@", "") || e.at
 
@@ -45,56 +59,127 @@ export class Permission extends plugin {
     if (isNaN(targetQQ)) {
       return false
     }
+
     let memberInfo
     try {
       memberInfo = await e.group.pickMember(targetQQ).getInfo(true)
     } catch {
-      memberInfo = (await e.group.pickMember(targetQQ)).info
+      memberInfo = (await e.group.pickMember(targetQQ))?.info
     }
-
     const memberName = memberInfo?.card || memberInfo?.nickname || targetQQ
-    const config = this.appconfig
 
-    let replyMsg = ""
-    let needSave = false
-    const userExists = config.enable.includes(targetQQ)
-
-    const masterQQs = Array.isArray(cfg.masterQQ) ? cfg.masterQQ : [cfg.masterQQ]
-
-    if (isRemove) {
-      if (masterQQs.includes(targetQQ)) {
-        replyMsg = "❎操作无效，不能取消主人的权限"
-      } else if (!userExists) {
-        replyMsg = `❎「${memberName}」没有权限，无需移除`
-      } else {
-        config.enable = config.enable.filter(id => id !== targetQQ)
-        replyMsg = `✅已移除「${memberName}」的权限`
-        needSave = true
+    if (isRevoke) {
+      if (!isMaster) {
+        return false
       }
-    } else {
-      if (userExists) {
-        replyMsg = `❎用户「${memberName}」已经拥有权限，无需重复添加`
-      } else {
-        config.enable.push(targetQQ)
-        replyMsg = `✅已赋予「${memberName}」权限`
-        needSave = true
+
+      if (this.masterQQs.includes(targetQQ)) {
+        return false
       }
+
+      const result = PermissionManager.revokePermission(groupId, targetQQ)
+      if (result.success) {
+        const msg = `✅已取消「${memberName}」的权限`
+        await this.reply(msg, false, { recallMsg: 10 })
+        return true
+      }
+      return false
     }
 
-    if (needSave) {
-      const success = Setting.setConfig("Permission", config)
+    if (this.masterQQs.includes(targetQQ)) {
+      return false
+    }
+
+    if (isMaster) {
+      const success = PermissionManager.grantByMaster(groupId, targetQQ)
       if (success) {
-        await this.reply(replyMsg, false, { recallMsg: 10 })
-      } else {
-        await this.reply("❎赋权失败", false, { recallMsg: 10 })
+        const msg = `✅已赋予「${memberName}」权限`
+        await this.reply(msg, false, { recallMsg: 15 })
+        return true
       }
-    } else {
-      await this.reply(replyMsg, false, { recallMsg: 10 })
+      return false
     }
 
+    const result = PermissionManager.grantByUser(groupId, userId, targetQQ)
+    if (result.success) {
+      let msg = `✅已赋予「${memberName}」权限`
+      await this.reply(msg, false, { recallMsg: 15 })
+      return true
+    } else if (result.message?.includes("你的赋权名额已用完") || result.message?.includes("该用户已有权限")) {
+      await this.reply(`❎${result.message}`, false, { recallMsg: 15 })
+      return true
+    }
+    return false
+  }
+
+  async transferPermission(e) {
+    const userId = e.sender.user_id
+    const groupId = e.group_id
+
+    if (!PermissionManager.hasPermission(groupId, userId)) {
+      return false
+    }
+
+    const commandRegex = /^#?移权\s*/
+    const rawTargetQQ = e.msg.replace(commandRegex, "").trim().replace("@", "") || e.at
+
+    if (!rawTargetQQ) {
+      return false
+    }
+
+    const targetQQ = Number(rawTargetQQ)
+    if (isNaN(targetQQ)) {
+      return false
+    }
+
+    if (targetQQ === userId) {
+      return false
+    }
+
+    let memberInfo
+    try {
+      memberInfo = await e.group.pickMember(targetQQ).getInfo(true)
+    } catch {
+      memberInfo = (await e.group.pickMember(targetQQ))?.info
+    }
+    const memberName = memberInfo?.card || memberInfo?.nickname || targetQQ
+
+    const result = PermissionManager.transferPermission(groupId, userId, targetQQ)
+
+    if (result.success) {
+      let msg = `✅已将权限移交给「${memberName}」`
+      await this.reply(msg, false, { recallMsg: 20 })
+      return true
+    } else if (result.message?.includes("天内不能移交权力") || result.message?.includes("目标用户已有权限")) {
+      await this.reply(`❎${result.message}`, false, { recallMsg: 10 })
+      return true
+    }
+
+    return false
+  }
+
+  async toggleGroupPermission(e) {
+    const userId = e.sender.user_id
+    const groupId = e.group_id
+
+    if (!this.masterQQs.includes(userId)) {
+      return false
+    }
+
+    const enable = e.msg.includes("开启")
+    const success = PermissionManager.toggleGroupPermission(groupId, enable)
+
+    const msg = success
+      ? enable
+        ? "✅已开启全群权限"
+        : "✅已关闭全群权限"
+      : "❎操作失败"
+
+    await this.reply(msg, false, { recallMsg: 10 })
     return true
   }
 
+ 
   async manageBlackList(e) {
     if (!e.isMaster) {
       return false
@@ -115,7 +200,7 @@ export class Permission extends plugin {
       try {
         memberInfo = await e.group.pickMember(targetQQ).getInfo(true)
       } catch {
-        memberInfo = (await e.group.pickMember(targetQQ)).info
+        memberInfo = (await e.group.pickMember(targetQQ))?.info
       }
       const memberName = memberInfo?.card || memberInfo?.nickname || targetQQ
 
@@ -133,14 +218,12 @@ export class Permission extends plugin {
       try {
         memberInfo = await e.group.pickMember(targetQQ).getInfo(true)
       } catch {
-        memberInfo = (await e.group.pickMember(targetQQ)).info
+        memberInfo = (await e.group.pickMember(targetQQ))?.info
       }
       const memberName = memberInfo?.card || memberInfo?.nickname || targetQQ
 
-      const masterQQs = Array.isArray(cfg.masterQQ) ? cfg.masterQQ : [cfg.masterQQ]
-      if (masterQQs.includes(Number(targetQQ))) {
-        await this.reply(`❎不能拉黑主人哦`, false, { recallMsg: 10 })
-        return true
+      if (this.masterQQs.includes(Number(targetQQ))) {
+        return false
       }
 
       const success = addBlackList(targetQQ)

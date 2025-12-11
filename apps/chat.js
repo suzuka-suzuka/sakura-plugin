@@ -8,7 +8,7 @@ import {
 import { executeToolCalls } from "../lib/AIUtils/tools/tools.js"
 import { parseAtMessage, getQuoteContent } from "../lib/AIUtils/messaging.js"
 import { randomEmojiLike } from "../lib/utils.js"
-
+import { PermissionManager } from "../lib/PermissionManager.js"
 export class AIChat extends plugin {
   constructor() {
     super({
@@ -34,14 +34,12 @@ export class AIChat extends plugin {
     if (!this.appconfig?.requirePermission) {
       return true
     }
-    const permissionConfig = Setting.getConfig("Permission")
-    if (
-      !permissionConfig?.enable?.includes(e.sender.user_id) &&
-      !cfg.masterQQ.includes(e.sender.user_id)
-    ) {
-      return false
+    const masterQQs = Array.isArray(cfg.masterQQ) ? cfg.masterQQ : [cfg.masterQQ]
+    if (!e.group_id) {
+      return masterQQs.includes(e.sender.user_id)
     }
-    return true
+
+    return PermissionManager.hasPermission(e.group_id, e.sender.user_id)
   }
 
   async Chat(e) {
@@ -91,15 +89,15 @@ export class AIChat extends plugin {
     }
 
     const { prefix, Channel, GroupContext, History, Tool } = matchedProfile
-    
+
     let Prompt = matchedProfile.Prompt
     if (matchedProfile.name) {
-        const rolesConfig = Setting.getConfig("roles")
-        const roles = rolesConfig?.roles || []
-        const role = roles.find(r => r.name === matchedProfile.name)
-        if (role && role.prompt) {
-            Prompt = role.prompt
-        }
+      const rolesConfig = Setting.getConfig("roles")
+      const roles = rolesConfig?.roles || []
+      const role = roles.find(r => r.name === matchedProfile.name)
+      if (role && role.prompt) {
+        Prompt = role.prompt
+      }
     }
 
     let query = textToMatch.substring(prefix.length).trim()

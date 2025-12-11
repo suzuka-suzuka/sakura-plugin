@@ -7,6 +7,7 @@ import { splitAndReplyMessages, parseAtMessage, getQuoteContent } from "../lib/A
 import Setting from "../lib/setting.js"
 import cfg from "../../../lib/config/config.js"
 import { randomEmojiLike } from "../lib/utils.js"
+import { PermissionManager } from "../lib/PermissionManager.js"
 
 export class Mimic extends plugin {
   constructor() {
@@ -119,9 +120,8 @@ export class Mimic extends plugin {
 
     const hasKeyword = config.triggerWords.some(word => messageText.includes(word))
 
-    const permissionConfig = Setting.getConfig("Permission")
     if (
-      !permissionConfig?.enable?.includes(e.sender.user_id) &&
+      !PermissionManager.hasPermission(e.group_id, e.sender.user_id) &&
       !cfg.masterQQ.includes(e.sender.user_id) &&
       e.isGroup &&
       config.enableLevelLimit &&
