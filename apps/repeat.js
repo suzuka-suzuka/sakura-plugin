@@ -37,6 +37,7 @@ export class repeatPlugin extends plugin {
     }
 
     if (await this.isSameMessage(e.message, msg[e.group_id].message)) {
+      if (msg[e.group_id].lastSender === e.sender.user_id) return false
       msg[e.group_id].times++
       msg[e.group_id].lastSender = e.sender.user_id
 
@@ -114,6 +115,7 @@ export class repeatPlugin extends plugin {
     } else {
       msg[e.group_id].message = e.message
       msg[e.group_id].times = 1
+      msg[e.group_id].lastSender = e.sender.user_id
       return false
     }
   }
