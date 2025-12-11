@@ -96,10 +96,7 @@ export class Permission extends plugin {
   }
 
   async manageBlackList(e) {
-    if (
-      !this.appconfig?.enable?.includes(e.sender.user_id) &&
-      !cfg.masterQQ.includes(e.sender.user_id)
-    ) {
+    if (!e.isMaster) {
       return false
     }
 
