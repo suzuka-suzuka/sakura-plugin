@@ -471,7 +471,7 @@ export class poke extends plugin {
   }
 
   async replyWithPokeBack(e, pokeConfig) {
-    const retype = _.random(1, 6)
+    const retype = _.random(1, 3)
 
     switch (retype) {
       case 1:
@@ -503,7 +503,7 @@ export class poke extends plugin {
   }
 
   async replyWithSpecialEasterEgg(e) {
-    const retype = _.random(1, 7)
+    const retype = _.random(1, 10)
 
     switch (retype) {
       case 1:
