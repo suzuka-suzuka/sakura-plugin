@@ -1,36 +1,17 @@
 import fs from "fs"
 import path from "path"
 import { _path } from "../lib/path.js"
-import { makeForwardMsg } from "../lib/utils.js"
 
 export class Memory extends plugin {
   constructor() {
     super({
       name: "Memory",
-      dsc: "记忆管理",
       event: "message.group",
       priority: 1135,
-      rule: [
-        {
-          reg: "^#添加记忆.*$",
-          fnc: "addMemory",
-          log: false,
-        },
-        {
-          reg: "^#删除记忆.*$",
-          fnc: "deleteMemory",
-          log: false,
-        },
-        {
-          reg: "^#导出记忆$",
-          fnc: "exportMemory",
-          log: false,
-        },
-      ],
     })
   }
 
-  async addMemory(e) {
+  addMemory = Command(/^#添加记忆.*$/, async (e) => {
     let fullText = ""
     if (e.message && Array.isArray(e.message)) {
       fullText = e.message
@@ -71,9 +52,9 @@ export class Memory extends plugin {
     fs.writeFileSync(memoryFile, JSON.stringify(memories, null, 2))
     await this.reply(`已添加记忆`, false, { recallMsg: 10 })
     return true
-  }
+  });
 
-  async deleteMemory(e) {
+  deleteMemory = Command(/^#删除记忆.*$/, async (e) => {
     const msg = e.msg || ""
     const match = msg.match(/^#删除记忆\s*(\d+)$/)
     if (!match) {
@@ -102,22 +83,22 @@ export class Memory extends plugin {
       memories = JSON.parse(fs.readFileSync(memoryFile, "utf8"))
     } catch (err) {
       logger.error(`读取记忆文件失败: ${err}`)
-      await this.reply("读取记忆失败，请稍后再试", false, { recallMsg: 10 })
+      await e.reply("读取记忆失败，请稍后再试", false, { recallMsg: 10 })
       return true
     }
 
     if (index < 1 || index > memories.length) {
-      await this.reply(`找不到第 ${index} 条记忆，请检查序号是否正确`, false, { recallMsg: 10 })
+      await e.reply(`找不到第 ${index} 条记忆，请检查序号是否正确`, false, { recallMsg: 10 })
       return true
     }
 
     const deletedMemory = memories.splice(index - 1, 1)
     fs.writeFileSync(memoryFile, JSON.stringify(memories, null, 2))
-    await this.reply(`已删除第 ${index} 条记忆: ${deletedMemory[0]}`, false, { recallMsg: 10 })
+    await e.reply(`已删除第 ${index} 条记忆: ${deletedMemory[0]}`, false, { recallMsg: 10 })
     return true
-  }
+  });
 
-  async exportMemory(e) {
+  exportMemory = Command(/^#导出记忆$/, async (e) => {
     const groupId = e.isGroup ? e.group_id : "private"
     const userId = e.user_id
     const memoryFile = path.join(
@@ -140,17 +121,20 @@ export class Memory extends plugin {
         return false
       }
 
-      const messages = memories.map((m, index) => ({
-        text: `${index + 1}. ${m}`,
-        senderId: e.user_id,
-        senderName: e.sender.card || e.sender.nickname || "",
+      const nodes = memories.map((m, index) => ({
+        type: "node",
+        data: {
+          user_id: e.user_id,
+          nickname: e.sender.card || e.sender.nickname || "",
+          content: `${index + 1}. ${m}`,
+        },
       }))
 
-      await makeForwardMsg(e, messages, "用户的记忆列表")
+      await e.sendForwardMsg(nodes, { source: "用户的记忆列表" })
     } catch (err) {
       logger.error(`读取记忆文件失败: ${err}`)
-      await this.reply("读取记忆失败，请稍后再试", false, { recallMsg: 10 })
+      await e.reply("读取记忆失败，请稍后再试", false, { recallMsg: 10 })
     }
     return true
-  }
+  });
 }

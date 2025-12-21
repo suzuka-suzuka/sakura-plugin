@@ -5,17 +5,10 @@ export class DoroEnding extends plugin {
       dsc: 'Doro结局图片',
       event: 'message' ,
       priority: 1135,
-      rule: [
-        {
-          reg: '^doro结局$',
-          fnc: 'doroEnding',
-		  log: false
-        }
-      ]
     })
   }
 
-  async doroEnding(e) {
+  doroEnding = Command(/^doro结局$/, async (e) => {
     try {
       const imageUrl = 'https://image.rendround.ggff.net/doroending'
       await e.reply(segment.image(imageUrl))
@@ -24,5 +17,5 @@ export class DoroEnding extends plugin {
       logger.error('获取Doro结局图片出错：', error)
       return false
     }
-  }
+  });
 }

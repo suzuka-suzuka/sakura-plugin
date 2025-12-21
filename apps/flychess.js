@@ -7,36 +7,8 @@ export class Ludo extends plugin {
   constructor() {
     super({
       name: "飞行棋",
-      dsc: "多人在线飞行棋游戏",
       event: "message.group",
       priority: 1135,
-      rule: [
-        {
-          reg: "^#创建飞行棋$",
-          fnc: "createLudoGame",
-          log: false,
-        },
-        {
-          reg: "^#?加入飞行棋$",
-          fnc: "joinLudoGame",
-          log: false,
-        },
-        {
-          reg: "^#?开始飞行棋$",
-          fnc: "startLudoGame",
-          log: false,
-        },
-        {
-          reg: "^[1-4]$",
-          fnc: "selectPiece",
-          log: false,
-        },
-        {
-          reg: "^#结束飞行棋$",
-          fnc: "endLudoGame",
-          log: false,
-        },
-      ],
     })
   }
 
@@ -44,12 +16,12 @@ export class Ludo extends plugin {
     logger.info("[飞行棋] 插件启动，开始加载图像资源...")
     await loadAssets()
   }
-  async createLudoGame(e) {
-    if (!(e.isMaster || e.isAdmin || e.isOwner)) {
+  createLudoGame = Command(/^#创建飞行棋$/, async (e) => {
+    if (!(e.isMaster || e.isAdmin)) {
       return false
     }
     if (activeGames.has(e.group_id)) {
-      await this.reply("本群已经有一局飞行棋正在进行中啦。")
+      await e.reply("本群已经有一局飞行棋正在进行中啦。")
       return true
     }
 
@@ -60,31 +32,31 @@ export class Ludo extends plugin {
     const response = gameManager.createGame()
     activeGames.set(e.group_id, gameManager)
 
-    await this.reply(response)
+    await e.reply(response)
     return true
-  }
+  });
 
-  async joinLudoGame(e) {
+  joinLudoGame = Command(/^#?加入飞行棋$/, async (e) => {
     const gameManager = activeGames.get(e.group_id)
     if (!gameManager) {
       return false
     }
 
     const response = await gameManager.joinGame(e.user_id)
-    await this.reply(response)
+    await e.reply(response)
     return true
-  }
+  });
 
-  async startLudoGame(e) {
+  startLudoGame = Command(/^#?开始飞行棋$/, async (e) => {
     const gameManager = activeGames.get(e.group_id)
     if (!gameManager) {
       return false
     }
     await gameManager.startGame()
     return true
-  }
+  });
 
-  async selectPiece(e) {
+  selectPiece = Command(/^[1-4]$/, async (e) => {
     const gameManager = activeGames.get(e.group_id)
     if (!gameManager || !gameManager.isStarted) {
       return false
@@ -93,18 +65,18 @@ export class Ludo extends plugin {
     const pieceIndex = parseInt(e.msg)
     await gameManager.selectPiece(e.user_id, pieceIndex)
     return true
-  }
+  });
 
-  async endLudoGame(e) {
-    if (!(e.isMaster || e.isAdmin || e.isOwner)) {
+  endLudoGame = Command(/^#结束飞行棋$/, async (e) => {
+    if (!(e.isMaster || e.isAdmin)) {
       return false
     }
     if (activeGames.has(e.group_id)) {
       activeGames.delete(e.group_id)
-      await this.reply("飞行棋游戏已由管理员强制结束。")
+      await e.reply("飞行棋游戏已由管理员强制结束。")
     } else {
-      await this.reply("本群当前没有正在进行的飞行棋游戏。")
+      await e.reply("本群当前没有正在进行的飞行棋游戏。")
     }
     return true
-  }
+  });
 }

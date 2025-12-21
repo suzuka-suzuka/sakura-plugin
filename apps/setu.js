@@ -1,5 +1,4 @@
 import { FlipImage } from "../lib/ImageUtils/ImageUtils.js"
-import common from "../../../lib/common/common.js"
 import setting from "../lib/setting.js"
 const DEFAULT_PROXY = "pixiv.manbomanbo.asia"
 
@@ -7,17 +6,16 @@ export class setuPlugin extends plugin {
   constructor() {
     super({
       name: "setu",
-      dsc: "获取图片",
       event: "message",
       priority: 1135,
-      rule: [{ reg: "^#来张涩图(。)?(.*)$", fnc: "handleApiRequest", log: false }],
     })
   }
 
   get r18Config() {
     return setting.getConfig("r18")
   }
-  async handleApiRequest(e) {
+
+  handleApiRequest = Command(/^#来张浩图(。)?(.*)$/, async (e) => {
     let apiType = "lolicon",
       tag,
       isR18 = false
@@ -27,21 +25,14 @@ export class setuPlugin extends plugin {
     tag = match?.[2]?.trim() || ""
 
     if (isR18 && !this.r18Config.enable.includes(e.group_id)) {
-      return this.reply("本群未开启r18功能哦~", false, { recallMsg: 10 })
+      return e.reply("本群未开启r18功能哦~", 10, false)
     }
-    if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
-      await e.group.setMsgEmojiLike(e.message_id, "124")
-    } else {
-      await this.reply("正在获取图片...", false, { recallMsg: 10 })
-    }
-
+await e.react(124) 
     try {
       const imageInfo = await this.fetchLolicon(tag, isR18)
 
       if (!imageInfo?.url) {
-        return this.reply(tag ? `标签「${tag}」找不到对应的图片。` : "未能找到图片。", true, {
-          recallMsg: 10,
-        })
+        return e.reply(tag ? `标签「${tag}」找不到对应的图片。` : "未能找到图片。", 10, true)
       }
 
       const messageText = `${imageInfo.id ? "pid:" + imageInfo.id : ""}${imageInfo.tags?.length ? "\n标签: " + imageInfo.tags.join(", ") : ""}`
@@ -49,16 +40,16 @@ export class setuPlugin extends plugin {
       await this.sendImageWithRetry(e, imageInfo.url, messageText, isR18)
     } catch (err) {
       logger.error(`处理API请求时出错 (${apiType}): ${err.message}`)
-      await this.reply(`获取图片时出错: ${err.message}`, true, { recallMsg: 10 })
+      await e.reply(`获取图片时出错: ${err.message}`, 10, true)
     }
-  }
+  });
 
   async sendImageWithRetry(e, imageUrl, messageText, shouldRecall) {
-    const sendOptions = shouldRecall ? { recallMsg: 10 } : {}
+    const recallTime = shouldRecall ? 10 : 0
 
     let sendResult
     try {
-      sendResult = await this.reply(segment.image(imageUrl), false, sendOptions)
+      sendResult = await this.reply(segment.image(imageUrl), recallTime, false)
     } catch (err) {
       logger.error(`初次发送图片失败 (URL): ${err.message}`)
       sendResult = null
@@ -67,12 +58,12 @@ export class setuPlugin extends plugin {
     let finalSuccess = !!sendResult?.message_id
 
     if (!finalSuccess) {
-      await this.reply("图片发送失败，可能被风控，正在尝试翻转后重发...", true, { recallMsg: 10 })
+      await this.reply("图片发送失败，可能被风控，正在尝试翻转后重发...", 10, true)
 
       const flippedImageBuffer = await FlipImage(imageUrl)
 
       if (flippedImageBuffer) {
-        sendResult = await this.reply(segment.image(flippedImageBuffer), false, sendOptions).catch(
+        sendResult = await this.reply(segment.image(flippedImageBuffer), recallTime, false).catch(
           err => {
             logger.error(`第二次尝试发送图片失败 (flipped): ${err.message}`)
             return null
@@ -81,21 +72,19 @@ export class setuPlugin extends plugin {
         finalSuccess = !!sendResult?.message_id
       } else {
         logger.error("翻转图片失败，很可能是源图片链接已失效")
-        await this.reply("图片链接已失效，无法获取。", true, { recallMsg: 10 })
+        await this.reply("图片链接已失效，无法获取。", 10, true)
         return false
       }
     }
 
     if (finalSuccess) {
       if (messageText) {
-        await this.reply(messageText, false, { recallMsg: 60 })
+        await this.reply(messageText, 60, false)
       }
       await common.sleep(500)
-      await this.reply("图片已发送", true, { recallMsg: 10 })
+      await this.reply("图片已发送", 10, true)
     } else {
-      await this.reply(`图片发送仍然失败，请自行查看图片链接：\n${imageUrl}`, true, {
-        recallMsg: 10,
-      })
+      await this.reply(`图片发送仍然失败，请自行查看图片链接：\n${imageUrl}`, 10, true)
     }
 
     return finalSuccess

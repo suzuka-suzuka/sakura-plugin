@@ -1,50 +1,65 @@
-if (!global.GroupRequests) {
-  global.GroupRequests = new Map()
-}
 
 export class groupRequestListener extends plugin {
+  groupRequests = new Map();
+
   constructor() {
     super({
       name: "入群申请监听",
-      dsc: "监听入群申请，并发送通知",
-      event: "request.group.add",
-      priority: 50,
-      rule: [
-        {
-          fnc: "handleGroupAddRequest",
-          log: false,
-        },
-      ],
-    })
+    });
   }
 
-  async handleGroupAddRequest(e) {
-    let nickname = e.user_id
+  handleGroupAddRequest = OnEvent("request.group.add", async (e) => {
+    const info = await e.bot.getStrangerInfo(e.user_id);
+    const nickname = info?.nickname || e.user_id;
 
-    const userObject = e.bot.pickUser(e.user_id)
-    const userInfo = await userObject.getInfo()
-
-    if (userInfo && userInfo.nickname) {
-      nickname = userInfo.nickname
+    if (!this.groupRequests.has(e.group_id)) {
+      this.groupRequests.set(e.group_id, new Map());
     }
+    const requests = this.groupRequests.get(e.group_id);
+    const markerId = requests.size + 1;
+    requests.set(markerId, { flag: e.flag, event: e });
 
-    if (!global.GroupRequests.has(e.group_id)) {
-      global.GroupRequests.set(e.group_id, new Map())
-    }
-    const groupRequests = global.GroupRequests.get(e.group_id)
-    const markerId = groupRequests.size + 1
-    groupRequests.set(markerId, e.flag)
-
-    const avatarUrl = `https://q1.qlogo.cn/g?b=qq&nk=${e.user_id}&s=100`
+    const avatarUrl = `https://q1.qlogo.cn/g?b=qq&nk=${e.user_id}&s=100`;
     const message = [
       `来人啦\n`,
       `门牌号: ${markerId}\n`,
       `敲门人: ${nickname} (${e.user_id})\n`,
       segment.image(avatarUrl),
       `\n敲门口令: ${e.comment || "这个人啥也没说"}`,
-    ]
-    await Bot.sendGroupMsg(e.group_id, message)
+    ];
+    await e.reply(message);
 
-    return false
-  }
+    return false;
+  });
+
+  handleApprovalCommand = Command(
+    /^#?开门\s*(\d+)$/,
+    "message.group",
+    1135,
+    async (e) => {
+      if (!e.isAdmin && !e.isWhite) {
+        return false;
+      }
+
+      const requests = this.groupRequests.get(e.group_id);
+      if (!requests) {
+        return false;
+      }
+
+      const markerId = Number(e.msg.match(/^#?开门\s*(\d+)$/)[1]);
+
+      if (!requests.has(markerId)) {
+        await e.reply(`门牌号${markerId}不存在`, 10);
+        return true;
+      }
+
+      await e.reply(`好的，我这就开门`);
+      const { event } = requests.get(markerId);
+
+      await event.approve();
+      requests.delete(markerId);
+
+      return true;
+    }
+  );
 }

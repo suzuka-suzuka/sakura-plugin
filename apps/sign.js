@@ -1,10 +1,8 @@
-﻿import plugin from "../../../lib/plugins/plugin.js"
 import path from "node:path"
 import fs from "node:fs"
 import _ from "lodash"
 import { plugindata } from "../lib/path.js"
 import ImageGenerator from "../lib/sign/ImageGenerator.js"
-
 const dataPath = path.join(plugindata, "sign")
 if (!fs.existsSync(dataPath)) {
   fs.mkdirSync(dataPath, { recursive: true })
@@ -56,21 +54,12 @@ export default class DailySign extends plugin {
   constructor() {
     super({
       name: "每日签到图",
-      dsc: "生成每日签到图",
       event: "message",
       priority: 1135,
-      rule: [
-        {
-          reg: "^#?签到$",
-          fnc: "signIn",
-          log: false,
-        },
-      ],
     })
   }
 
-  async signIn(e) {
-    this.e = e
+  signIn = Command(/^#?签到$/, async (e) => {
     const groupId = e.group_id
     const userId = e.user_id
     const today = new Date().toLocaleDateString()
@@ -79,7 +68,7 @@ export default class DailySign extends plugin {
     const userData = signData.getUserData(groupId, userId)
 
     if (userData.lastSign === today) {
-      await this.e.reply("你今天已经签到过了哦~", false, { recallMsg: 10 })
+      await e.reply("你今天已经签到过了哦~",10)
       return true
     }
 
@@ -127,14 +116,14 @@ export default class DailySign extends plugin {
     try {
       const imageGenerator = new ImageGenerator()
       const imageBuffer = await imageGenerator.generateSignImage(displayData)
-      await this.e.reply(segment.image(imageBuffer))
+      await e.reply(segment.image(imageBuffer))
     } catch (error) {
       logger.error("签到图生成失败:", error)
-      await this.e.reply("签到失败~")
+      await e.reply("签到失败~")
     }
 
     return true
-  }
+  });
 
   getFortune() {
     const fortunes = [

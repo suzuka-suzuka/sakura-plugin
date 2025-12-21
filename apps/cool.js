@@ -1,4 +1,3 @@
-import plugin from '../../../lib/plugins/plugin.js';
 import lodash from 'lodash';
 import moment from 'moment';
 import Setting from '../lib/setting.js';
@@ -10,15 +9,7 @@ export class cool extends plugin {
     constructor() {
         super({
             name: 'cool',
-            event: 'message.group',
             priority: 35,
-            rule: [
-                {
-                    reg: '',
-                    fnc: 'updateLastTime',
-                    log: false
-                }
-            ],
         });
     }
 
@@ -26,26 +17,17 @@ export class cool extends plugin {
         return Setting.getConfig("cool");
     }
 
-    task = {
-        name: 'coolTask',
-        fnc: () => this.coolTask(),
-        cron: '0 */20 * * * *',
-        log: false
-    };
-
-    async updateLastTime(e) {
+    updateLastTime = OnEvent("message.group", async (e) => {
         const groupId = e.group_id;
         const config = this.appconfig;
 
         if ((config?.Groups ?? []).includes(groupId)) {
             _lastMsgTime[groupId] = moment().unix();
-        } else {
-            return false;
         }
         return false;
-    }
+    });
 
-    async coolTask() {
+    coolTask = Cron('0 */20 * * * *', async () => {
         const currentTime = moment().unix();
         const config = this.appconfig;
 
@@ -58,6 +40,8 @@ export class cool extends plugin {
         if (Groups.length === 0) {
             return;
         }
+
+        if (!bot) return;
 
         for (const groupId of Groups) {
             const lastTime = _lastMsgTime[groupId] || _pluginGlobalStartTime;
@@ -92,7 +76,7 @@ export class cool extends plugin {
 
                 if (imageUrl) {
                     try {
-                        await Bot.pickGroup(groupId).sendMsg(segment.image(imageUrl));
+                        await bot.pickGroup(groupId).sendMsg(segment.image(imageUrl));
                         _lastMsgTime[groupId] = moment().unix();
                     } catch (error) {
                         logger.error(`发送图片到群 ${groupId} 失败: ${error}`);
@@ -100,10 +84,10 @@ export class cool extends plugin {
                             const response = await fetch('https://international.v1.hitokoto.cn/');
                             const data = await response.json();
                             const hitokotoText = data.hitokoto;
-                            await Bot.pickGroup(groupId).sendMsg(hitokotoText);
+                            await bot.pickGroup(groupId).sendMsg(hitokotoText);
                         } catch (fallbackError) {
                             logger.error(`获取一言也失败了: ${fallbackError}`);
-                            await Bot.pickGroup(groupId).sendMsg('喵');
+                            await bot.pickGroup(groupId).sendMsg('喵');
                         } finally {
                             _lastMsgTime[groupId] = moment().unix();
                         }
@@ -114,5 +98,5 @@ export class cool extends plugin {
                 }
             }
         }
-    }
+    });
 }

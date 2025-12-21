@@ -32,9 +32,10 @@ export class summary extends plugin {
         const summaryText = _.sample(config.Summaries)
         return {
           type: "image",
-          file,
-          name,
-          summary: summaryText
+          data: {
+            file: typeof file === "string" ? file : `base64://${file.toString("base64")}`,
+            summary: summaryText
+          }
         }
       } else {
           return raw(file, name)

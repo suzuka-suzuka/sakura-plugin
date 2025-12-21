@@ -1,56 +1,43 @@
-import plugin from "../../../lib/plugins/plugin.js"
-import { grokRequest } from "../lib/AIUtils/GrokClient.js"
-import { getImg } from "../lib/utils.js"
-import Setting from "../lib/setting.js"
+import { grokRequest } from "../lib/AIUtils/GrokClient.js";
+import { getImg } from "../lib/utils.js";
+import Setting from "../lib/setting.js";
 
 export class GrokVideo extends plugin {
   constructor() {
     super({
       name: "Grok视频生成",
-      dsc: "使用Grok生成视频",
       event: "message",
       priority: 1000,
-      rule: [
-        {
-          reg: "^#?gv(.*)",
-          fnc: "generateVideo",
-          log: false,
-        },
-      ],
-    })
+    });
   }
 
-  async generateVideo(e) {
-    const match = e.msg.match(/^#?gv(.*)/)
-    if (!match) return false
+  generateVideo = Command(/^#?gv(.*)/, async (e) => {
+    const match = e.msg.match(/^#?gv(.*)/);
+    if (!match) return false;
 
-    const prompt = match[1].trim()
-    const imageUrls = await getImg(e, true)
+    const prompt = match[1].trim();
+    const imageUrls = await getImg(e, true);
 
     if (!prompt && (!imageUrls || imageUrls.length === 0)) {
-      return false
+      return false;
     }
 
-    const channelsConfig = Setting.getConfig("Channels")
-    const grokList = channelsConfig?.grok || []
-    const grokChannel = grokList[Math.floor(Math.random() * grokList.length)]
+    const channelsConfig = Setting.getConfig("Channels");
+    const grokList = channelsConfig?.grok || [];
+    const grokChannel = grokList[Math.floor(Math.random() * grokList.length)];
 
     if (!grokChannel || !grokChannel.sso) {
-      return false
+      return false;
     }
-    if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
-      await e.group.setMsgEmojiLike(e.message_id, "124")
-    } else {
-      await this.reply("正在生成视频，请稍候...", false, { recallMsg: 10 })
-    }
+    await e.react(124);
 
     try {
-      const content = []
+      const content = [];
       if (imageUrls && imageUrls.length > 0) {
-        content.push({ type: "image_url", image_url: { url: imageUrls[0] } })
+        content.push({ type: "image_url", image_url: { url: imageUrls[0] } });
       }
       if (prompt) {
-        content.push({ type: "text", text: prompt })
+        content.push({ type: "text", text: prompt });
       }
 
       const messages = [
@@ -58,7 +45,7 @@ export class GrokVideo extends plugin {
           role: "user",
           content: content,
         },
-      ]
+      ];
 
       const grokConfig = {
         sso: grokChannel.sso,
@@ -67,37 +54,41 @@ export class GrokVideo extends plugin {
         x_statsig_id: grokChannel.x_statsig_id,
         temporary: grokChannel.temporary !== false,
         dynamic_statsig: grokChannel.dynamic_statsig !== false,
-      }
+      };
 
-      const model = "grok-imagine-0.9"
+      const model = "grok-imagine-0.9";
 
       const request = {
         model: model,
         messages: messages,
-      }
+      };
 
-      const result = await grokRequest(request, grokConfig, e)
+      const result = await grokRequest(request, grokConfig, e);
 
       if (!result || typeof result === "string") {
-        await this.reply(`视频生成失败: ${result || "未知错误"}`, true, { recallMsg: 10 })
-        return true
+        await this.reply(`视频生成失败: ${result || "未知错误"}`, true, {
+          recallMsg: 10,
+        });
+        return true;
       }
 
       if (result.videos && result.videos.length > 0) {
-        const video = result.videos[0]
+        const video = result.videos[0];
         if (video.localPath) {
-          await e.reply(segment.video(video.localPath))
+          await e.reply(segment.video(video.localPath));
         } else {
-          await this.reply("视频下载失败", true, { recallMsg: 10 })
+          await this.reply("视频下载失败", true, { recallMsg: 10 });
         }
       } else {
-        await this.reply("未返回视频", true, { recallMsg: 10 })
+        await this.reply("未返回视频", true, { recallMsg: 10 });
       }
     } catch (error) {
-      logger.error("[GrokVideo] 生成视频时出错:", error)
-      await this.reply(`视频生成出错: ${error.message}`, true, { recallMsg: 10 })
+      logger.error("[GrokVideo] 生成视频时出错:", error);
+      await this.reply(`视频生成出错: ${error.message}`, true, {
+        recallMsg: 10,
+      });
     }
 
-    return true
-  }
+    return true;
+  });
 }

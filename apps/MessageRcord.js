@@ -8,23 +8,15 @@ export class recordMessage extends plugin {
   constructor() {
     super({
       name: "消息记录",
-      dsc: "防撤回支持",
       event: "message.group",
       priority: 35,
-      rule: [
-        {
-          reg: "",
-          fnc: "recordMessage",
-          log: false,
-        },
-      ],
     })
   }
   get appconfig() {
     return Setting.getConfig("recall")
   }
 
-  async recordMessage(e) {
+  recordMessage = OnEvent("message.group", async (e) => {
     if (!this.appconfig.enable) {
       return false
     }
@@ -45,5 +37,5 @@ export class recordMessage extends plugin {
       msgStore.delete(e.message_id)
     }, 120 * 1000)
     return false
-  }
+  });
 }

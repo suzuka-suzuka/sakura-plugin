@@ -1,14 +1,12 @@
-import plugin from "../../../lib/plugins/plugin.js"
-import fs from "fs"
-import path from "path"
-import { plugindata } from "../lib/path.js"
-import adapter from "../lib/adapter.js"
-import FavorabilityImageGenerator from "../lib/favorability/ImageGenerator.js"
+import fs from "fs";
+import path from "path";
+import { plugindata } from "../lib/path.js";
+import FavorabilityImageGenerator from "../lib/favorability/ImageGenerator.js";
 
-const dataPath = path.join(plugindata, "favorability")
+const dataPath = path.join(plugindata, "favorability");
 
-const lastSender = new Map()
-const penaltyTimers = new Map()
+const lastSender = new Map();
+const penaltyTimers = new Map();
 
 export class Favorability extends plugin {
   constructor() {
@@ -17,380 +15,348 @@ export class Favorability extends plugin {
       dsc: "记录群友之间的好感度",
       event: "message.group",
       priority: 35,
-      rule: [
-        {
-          reg: "^#?好感度.*$",
-          fnc: "queryFavorability",
-          log: false,
-        },
-        {
-          reg: "^#?(谁在意我|喜欢我的人)$",
-          fnc: "whoLikesMe",
-          log: false,
-        },
-        {
-          reg: "^#?(我在意谁|我喜欢的人)$",
-          fnc: "whoILike",
-          log: false,
-        },
-      ],
-    })
+    });
   }
 
-  task = {
-    name: "清理最低好感度",
-    cron: "0 0 0 * * *",
-    fnc: () => this.cleanupFavorability(),
-    log: false,
-  }
+  cleanupFavorabilityTask = Cron("0 0 0 * * *", async () => {
+    this.cleanupFavorability();
+  });
 
   async cleanupFavorability() {
-    const files = fs.readdirSync(dataPath).filter(file => file.endsWith(".json"))
+    const files = fs
+      .readdirSync(dataPath)
+      .filter((file) => file.endsWith(".json"));
     for (const file of files) {
-      const groupId = path.basename(file, ".json")
-      const data = this.readData(groupId)
+      const groupId = path.basename(file, ".json");
+      const data = this.readData(groupId);
 
       if (!data.favorability || Object.keys(data.favorability).length === 0) {
-        continue
+        continue;
       }
 
-      let minFavorability = Infinity
-      let minFrom = null
-      let minTo = null
+      let minFavorability = Infinity;
+      let minFrom = null;
+      let minTo = null;
 
       for (const from in data.favorability) {
         for (const to in data.favorability[from]) {
           if (data.favorability[from][to] < minFavorability) {
-            minFavorability = data.favorability[from][to]
-            minFrom = from
-            minTo = to
+            minFavorability = data.favorability[from][to];
+            minFrom = from;
+            minTo = to;
           }
         }
       }
 
       if (minFrom && minTo) {
-        delete data.favorability[minFrom][minTo]
+        delete data.favorability[minFrom][minTo];
         if (Object.keys(data.favorability[minFrom]).length === 0) {
-          delete data.favorability[minFrom]
+          delete data.favorability[minFrom];
         }
-        this.saveData(groupId, data)
+        this.saveData(groupId, data);
       }
     }
   }
   getDataFile(groupId) {
-    return path.join(dataPath, `${groupId}.json`)
+    return path.join(dataPath, `${groupId}.json`);
   }
 
   readData(groupId) {
-    const file = this.getDataFile(groupId)
+    const file = this.getDataFile(groupId);
     if (!fs.existsSync(file)) {
-      return { favorability: {} }
+      return { favorability: {} };
     }
     try {
-      const data = fs.readFileSync(file, "utf-8")
-      return JSON.parse(data)
+      const data = fs.readFileSync(file, "utf-8");
+      return JSON.parse(data);
     } catch (err) {
-      logger.error(`[好感度] 读取数据失败: ${err}`)
-      return { favorability: {} }
+      logger.error(`[好感度] 读取数据失败: ${err}`);
+      return { favorability: {} };
     }
   }
 
   saveData(groupId, data) {
-    const file = this.getDataFile(groupId)
+    const file = this.getDataFile(groupId);
     try {
-      fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8")
+      fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
     } catch (err) {
-      logger.error(`[好感度] 保存数据失败: ${err}`)
+      logger.error(`[好感度] 保存数据失败: ${err}`);
     }
   }
 
   addFavorability(groupId, from, to, value) {
-    const data = this.readData(groupId)
+    const data = this.readData(groupId);
 
     if (!data.favorability) {
-      data.favorability = {}
+      data.favorability = {};
     }
 
     if (!data.favorability[from]) {
-      data.favorability[from] = {}
+      data.favorability[from] = {};
     }
 
     if (!data.favorability[from][to]) {
-      data.favorability[from][to] = 0
+      data.favorability[from][to] = 0;
     }
 
-    data.favorability[from][to] += value
+    data.favorability[from][to] += value;
 
-    this.saveData(groupId, data)
+    this.saveData(groupId, data);
   }
 
   getFavorability(groupId, from, to) {
-    const data = this.readData(groupId)
-    return data.favorability[from]?.[to] || 0
+    const data = this.readData(groupId);
+    return data.favorability[from]?.[to] || 0;
   }
 
   applyConsecutiveMessagePenalty(groupId, userId) {
-    const data = this.readData(groupId)
-    let hasChange = false
+    const data = this.readData(groupId);
+    let hasChange = false;
 
     if (data.favorability) {
       for (const fromUser in data.favorability) {
         if (data.favorability[fromUser][userId] !== undefined) {
-          data.favorability[fromUser][userId] -= 1
-          hasChange = true
+          data.favorability[fromUser][userId] -= 1;
+          hasChange = true;
         }
       }
     }
 
     if (hasChange) {
-      this.saveData(groupId, data)
+      this.saveData(groupId, data);
     }
   }
 
   async accept(e) {
     if (!fs.existsSync(dataPath)) {
-      fs.mkdirSync(dataPath, { recursive: true })
+      fs.mkdirSync(dataPath, { recursive: true });
     }
 
     if (/^#?好感度.*$/.test(e.msg)) {
-      return false
+      return false;
     }
 
     if (/^#?(谁在意我|喜欢我的人|我在意谁|我喜欢的人)$/.test(e.msg)) {
-      return false
+      return false;
     }
 
-    const groupId = e.group_id.toString()
-    const currentSender = e.user_id.toString()
+    const groupId = e.group_id.toString();
+    const currentSender = e.user_id.toString();
 
     if (penaltyTimers.has(groupId)) {
-      clearTimeout(penaltyTimers.get(groupId))
-      penaltyTimers.delete(groupId)
+      clearTimeout(penaltyTimers.get(groupId));
+      penaltyTimers.delete(groupId);
     }
 
-    let targetUsers = []
-    let shouldAddFavorability = false
+    let targetUsers = [];
+    let shouldAddFavorability = false;
 
     const atMsgs = e.message?.filter(
-      msg => msg.type === "at" && msg.qq && !isNaN(msg.qq) && msg.qq != e.self_id,
-    )
+      (msg) =>
+        msg.type === "at" && msg.data?.qq && !isNaN(msg.data?.qq) && msg.data?.qq != e.self_id
+    );
     if (atMsgs && atMsgs.length > 0) {
-      targetUsers = [...new Set(atMsgs.map(msg => msg.qq.toString()))].filter(
-        qq => qq !== currentSender,
-      )
+      targetUsers = [...new Set(atMsgs.map((msg) => msg.data?.qq.toString()))].filter(
+        (qq) => qq !== currentSender
+      );
 
       if (targetUsers.length > 0) {
-        shouldAddFavorability = true
+        shouldAddFavorability = true;
       }
     }
 
     if (targetUsers.length === 0) {
-      const replySegment = e.message?.find(segment => segment.type === "reply")
-
-      if (adapter === 0 && e.source) {
-        const reply = (await e.group.getChatHistory(e.source.seq, 1)).pop()
-
-        if (reply && reply.user_id) {
-          const sourceUserId = reply.user_id.toString()
-          if (sourceUserId !== currentSender && sourceUserId != e.self_id) {
-            targetUsers.push(sourceUserId)
-            shouldAddFavorability = true
-          }
-        }
-      } else if (replySegment?.id) {
+      if (e.reply_id) {
         try {
-          const sourceMessageData = await e.group.getMsg(replySegment.id)
+          const sourceMessageData = await e.getReplyMsg();
 
           if (sourceMessageData?.user_id) {
-            const sourceUserId = sourceMessageData.user_id.toString()
+            const sourceUserId = sourceMessageData.user_id.toString();
             if (sourceUserId !== currentSender && sourceUserId != e.self_id) {
-              targetUsers.push(sourceUserId)
-              shouldAddFavorability = true
+              targetUsers.push(sourceUserId);
+              shouldAddFavorability = true;
             }
           }
         } catch (err) {}
       }
     }
 
-    const lastSenderInfo = lastSender.get(groupId)
+    const lastSenderInfo = lastSender.get(groupId);
 
     if (lastSenderInfo && lastSenderInfo.userId === currentSender) {
-      const newStreak = (lastSenderInfo.streak || 1) + 1
-      lastSender.set(groupId, { userId: currentSender, streak: newStreak })
+      const newStreak = (lastSenderInfo.streak || 1) + 1;
+      lastSender.set(groupId, { userId: currentSender, streak: newStreak });
 
       if (newStreak > 1) {
-        const timer = setTimeout(
-          () => {
-            this.applyConsecutiveMessagePenalty(groupId, currentSender)
-            penaltyTimers.delete(groupId)
-          },
-          2 * 60 * 1000,
-        )
-        penaltyTimers.set(groupId, timer)
+        const timer = setTimeout(() => {
+          this.applyConsecutiveMessagePenalty(groupId, currentSender);
+          penaltyTimers.delete(groupId);
+        }, 2 * 60 * 1000);
+        penaltyTimers.set(groupId, timer);
       }
     } else {
-      lastSender.set(groupId, { userId: currentSender, streak: 1 })
+      lastSender.set(groupId, { userId: currentSender, streak: 1 });
 
       if (shouldAddFavorability && targetUsers.length > 0) {
         for (const targetUser of targetUsers) {
-          this.addFavorability(groupId, currentSender, targetUser, 2)
+          this.addFavorability(groupId, currentSender, targetUser, 2);
         }
       } else if (lastSenderInfo) {
-        this.addFavorability(groupId, currentSender, lastSenderInfo.userId, 1)
+        this.addFavorability(groupId, currentSender, lastSenderInfo.userId, 1);
       }
     }
 
-    return false
+    return false;
   }
 
-  async queryFavorability(e) {
-    const groupId = e.group_id.toString()
-    const currentUser = e.user_id.toString()
+  queryFavorability = Command(/^#?好感度.*$/, async (e) => {
+    const groupId = e.group_id.toString();
+    const currentUser = e.user_id.toString();
 
-    let targetUser = null
-    const atMsg = e.message?.find(msg => msg.type === "at" && msg.qq && !isNaN(msg.qq))
+    let targetUser = null;
+    const atMsg = e.message?.find(
+      (msg) => msg.type === "at" && msg.data?.qq && !isNaN(msg.data?.qq)
+    );
     if (atMsg) {
-      targetUser = atMsg.qq.toString()
+      targetUser = atMsg.data?.qq.toString();
     }
 
     if (targetUser == e.self_id) {
-      await e.reply("对我产生好感是不行哦~ 笨蛋！")
-      return true
+      await e.reply("对我产生好感是不行哦~ 笨蛋！");
+      return true;
     }
 
     if (!targetUser) {
-      return false
+      return false;
     }
 
-    const favorabilityAtoB = this.getFavorability(groupId, currentUser, targetUser)
-    const favorabilityBtoA = this.getFavorability(groupId, targetUser, currentUser)
+    const favorabilityAtoB = this.getFavorability(
+      groupId,
+      currentUser,
+      targetUser
+    );
+    const favorabilityBtoA = this.getFavorability(
+      groupId,
+      targetUser,
+      currentUser
+    );
 
-    const currentUserName = e.member?.card || e.member?.nickname || currentUser
+    const currentUserName = e.member?.card || e.member?.nickname || currentUser;
 
-    let targetUserName = targetUser
+    let targetUserName = targetUser;
     try {
-      let targetInfo
-      try {
-        targetInfo = await e.group.pickMember(targetUser).getInfo(true)
-      } catch {
-        targetInfo = (await e.group.pickMember(Number(targetUser))).info
-      }
-      targetUserName = targetInfo?.card || targetInfo?.nickname || targetUser
+      const targetInfo = await e.getInfo(targetUser);
+      targetUserName = targetInfo?.card || targetInfo?.nickname || targetUser;
     } catch (err) {
-      logger.error(`[好感度] 获取用户 ${targetUser} 信息失败:`, err)
+      logger.error(`[好感度] 获取用户 ${targetUser} 信息失败:`, err);
     }
 
-    const generator = new FavorabilityImageGenerator()
+    const generator = new FavorabilityImageGenerator();
     const imageBuffer = await generator.generate(
       currentUserName,
       targetUserName,
       favorabilityAtoB,
       favorabilityBtoA,
       currentUser,
-      targetUser,
-    )
+      targetUser
+    );
 
-    await e.reply(segment.image(imageBuffer))
-    return true
-  }
+    await e.reply(segment.image(imageBuffer));
+    return true;
+  });
 
-  async whoLikesMe(e) {
-    const groupId = e.group_id.toString()
-    const currentUser = e.user_id.toString()
-    const data = this.readData(groupId)
+  whoLikesMe = Command(/^#?(谁在意我|喜欢我的人)$/, async (e) => {
+    const groupId = e.group_id.toString();
+    const currentUser = e.user_id.toString();
+    const data = this.readData(groupId);
 
-    const othersToMe = []
+    const othersToMe = [];
     for (const fromUser in data.favorability) {
       if (data.favorability[fromUser][currentUser] !== undefined) {
         othersToMe.push({
           userId: fromUser,
           favorability: data.favorability[fromUser][currentUser],
-        })
+        });
       }
     }
-    othersToMe.sort((a, b) => b.favorability - a.favorability)
+    othersToMe.sort((a, b) => b.favorability - a.favorability);
 
     if (othersToMe.length === 0) {
-      await e.reply("还没有人对你有好感哦~")
-      return true
+      await e.reply("还没有人对你有好感哦~");
+      return true;
     }
 
-    const top10 = othersToMe.slice(0, 10)
-    const rankingData = []
+    const top10 = othersToMe.slice(0, 10);
+    const rankingData = [];
     for (const item of top10) {
-      const userName = await this.getUserName(e, item.userId)
+      const userName = await this.getUserName(e, item.userId);
       rankingData.push({
         name: userName,
         favorability: item.favorability,
         userId: item.userId,
-      })
+      });
     }
 
-    const generator = new FavorabilityImageGenerator()
+    const generator = new FavorabilityImageGenerator();
     const imageBuffer = await generator.generateRanking(
       "谁在意我",
       rankingData,
-      e.member?.card || e.member?.nickname || currentUser,
-    )
+      e.member?.card || e.member?.nickname || currentUser
+    );
 
-    await e.reply(segment.image(imageBuffer))
-    return true
-  }
+    await e.reply(segment.image(imageBuffer));
+    return true;
+  });
 
-  async whoILike(e) {
-    const groupId = e.group_id.toString()
-    const currentUser = e.user_id.toString()
-    const data = this.readData(groupId)
+  whoILike = Command(/^#?(我在意谁|我喜欢的人)$/, async (e) => {
+    const groupId = e.group_id.toString();
+    const currentUser = e.user_id.toString();
+    const data = this.readData(groupId);
 
-    const myToOthers = []
+    const myToOthers = [];
     if (data.favorability[currentUser]) {
       for (const targetUser in data.favorability[currentUser]) {
         myToOthers.push({
           userId: targetUser,
           favorability: data.favorability[currentUser][targetUser],
-        })
+        });
       }
     }
-    myToOthers.sort((a, b) => b.favorability - a.favorability)
+    myToOthers.sort((a, b) => b.favorability - a.favorability);
 
     if (myToOthers.length === 0) {
-      await e.reply("你还没有对任何人产生好感哦~")
-      return true
+      await e.reply("你还没有对任何人产生好感哦~");
+      return true;
     }
 
-    const top10 = myToOthers.slice(0, 10)
-    const rankingData = []
+    const top10 = myToOthers.slice(0, 10);
+    const rankingData = [];
     for (const item of top10) {
-      const userName = await this.getUserName(e, item.userId)
+      const userName = await this.getUserName(e, item.userId);
       rankingData.push({
         name: userName,
         favorability: item.favorability,
         userId: item.userId,
-      })
+      });
     }
 
-    const generator = new FavorabilityImageGenerator()
+    const generator = new FavorabilityImageGenerator();
     const imageBuffer = await generator.generateRanking(
       "我在意谁",
       rankingData,
-      e.member?.card || e.member?.nickname || currentUser,
-    )
+      e.member?.card || e.member?.nickname || currentUser
+    );
 
-    await e.reply(segment.image(imageBuffer))
-    return true
-  }
+    await e.reply(segment.image(imageBuffer));
+    return true;
+  });
 
   async getUserName(e, userId) {
     try {
-      let userInfo
-      try {
-        userInfo = await e.group.pickMember(userId).getInfo(true)
-      } catch {
-        userInfo = (await e.group.pickMember(Number(userId))).info
-      }
-      return userInfo?.card || userInfo?.nickname || userId
+      let userInfo=await e.getInfo(userId)
+      return userInfo?.card || userInfo?.nickname || userId;
     } catch (err) {
-      return userId
+      return userId;
     }
   }
 }

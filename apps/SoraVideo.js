@@ -1,4 +1,4 @@
-import plugin from "../../../lib/plugins/plugin.js"
+
 import SoraClient from "../lib/AIUtils/SoraClient.js"
 import { connect } from "puppeteer-real-browser"
 import { getImg } from "../lib/utils.js"
@@ -13,13 +13,6 @@ export class SoraVideo extends plugin {
       dsc: "使用Sora生成视频",
       event: "message",
       priority: 1135,
-      rule: [
-        {
-          reg: "^([lps])?\\s*#v(\\+)?(.+)",
-          fnc: "generateVideo",
-          log: false,
-        },
-      ],
     })
   }
 
@@ -56,12 +49,12 @@ export class SoraVideo extends plugin {
     }
   }
 
-  async generateVideo(e) {
+  generateVideo = Command(/^([lps])?\s*#v(\+)?(.+)/, async (e) => {
     let browser = null
 
     try {
       if (isGenerating) {
-        await this.reply("⏳ 当前有视频生成任务正在进行中，请稍后再试...", false, { recallMsg: 10 })
+        await e.reply("当前有视频生成任务正在进行中，请稍后再试...", 10)
         return true
       }
 
@@ -91,11 +84,7 @@ export class SoraVideo extends plugin {
 
       isGenerating = true
 
-      if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
-        await e.group.setMsgEmojiLike(e.message_id, "124")
-      } else {
-        await this.reply("正在生成视频，请稍候...", false, { recallMsg: 10 })
-      }
+await e.react(124);
 
       const { client, browser: browserInstance } = await this.initClient()
       browser = browserInstance
@@ -122,7 +111,7 @@ export class SoraVideo extends plugin {
       return true
     } catch (error) {
       logger.error(`[SoraVideo] 生成视频失败: ${error.message}`)
-      await this.reply(`❌ 视频生成失败: ${error.message}`, true, { recallMsg: 10 })
+      await e.reply(`视频生成失败: ${error.message}`, 10, true)
       return true
     } finally {
       isGenerating = false
@@ -135,7 +124,7 @@ export class SoraVideo extends plugin {
         }
       }
     }
-  }
+  });
 
   async downloadImage(url) {
     try {

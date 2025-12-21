@@ -1,58 +1,43 @@
 import Setting from "../lib/setting.js"
-import { makeForwardMsg } from "../lib/utils.js"
 const conversationState = {}
 
 export class profileManager extends plugin {
   constructor() {
     super({
       name: "设定管理器",
-      dsc: "通过命令增加或删除config.yaml中的设定",
       event: "message",
       priority: 1135,
-      rule: [
-        {
-          reg: "^#设定(增加|添加)$",
-          fnc: "startAddProfile",
-          permission: "master",
-          log: false,
-        },
-        {
-          reg: "^#设定(删除|移除)$",
-          fnc: "startDeleteProfile",
-          permission: "master",
-          log: false,
-        },
-        {
-          reg: "^#人设(增加|添加)$",
-          fnc: "startAddRoleSetting",
-          log: false,
-        },
-        {
-          reg: "^#人设(删除|移除)$",
-          fnc: "startDeleteRoleSetting",
-          permission: "master",
-          log: false,
-        },
-        {
-          reg: "^#列出人设$",
-          fnc: "listRoleSettings",
-          permission: "master",
-          log: false,
-        },
-        {
-          reg: "^#列出渠道$",
-          fnc: "listChannels",
-          permission: "master",
-          log: false,
-        },
-        {
-          reg: "^#取消$",
-          fnc: "cancelInteraction",
-          log: false,
-        },
-      ],
     })
   }
+
+  // 命令注册
+  addProfile = Command(/^#设定(增加|添加)$/, "master", async (e) => {
+    await this.startAddProfile(e)
+  });
+
+  deleteProfile = Command(/^#设定(删除|移除)$/, "master", async (e) => {
+    await this.startDeleteProfile(e)
+  });
+
+  addRole = Command(/^#人设(增加|添加)$/, async (e) => {
+    await this.startAddRoleSetting(e)
+  });
+
+  deleteRole = Command(/^#人设(删除|移除)$/, "master", async (e) => {
+    await this.startDeleteRoleSetting(e)
+  });
+
+  listRoles = Command(/^#列出人设$/, "master", async (e) => {
+    await this.listRoleSettings(e)
+  });
+
+  listChannelCmd = Command(/^#列出渠道$/, "master", async (e) => {
+    await this.listChannels(e)
+  });
+
+  cancelCmd = Command(/^#取消$/, async (e) => {
+    await this.cancelInteraction(e)
+  });
 
   get appconfig() {
     return Setting.getConfig("AI")
@@ -82,7 +67,7 @@ export class profileManager extends plugin {
       step: "role_awaiting_name",
       data: {},
     }
-    this.setContext("handleRoleSettingAdd", e.isGroup, 60)
+    this.setContext("handleRoleSettingAdd", e.group_id, 60)
     await e.reply("请输入要新增的人设【名字】，输入“#取消”可退出")
   }
 
@@ -92,12 +77,12 @@ export class profileManager extends plugin {
     const userInput = e.raw_message?.trim()
 
     if (!state) {
-      this.finish("handleRoleSettingAdd", e.isGroup)
+      this.finish("handleRoleSettingAdd", e.group_id)
       return
     }
 
     if (userInput === "#取消") {
-      return this.cancelInteraction()
+      return this.cancelInteraction(e)
     }
 
     switch (state.step) {
@@ -127,7 +112,7 @@ export class profileManager extends plugin {
         Setting.setConfig("roles", { roles: currentRoles })
 
         await e.reply(`🎉 人设【${state.data.name}】已保存！`)
-        this.finish("handleRoleSettingAdd", e.isGroup)
+        this.finish("handleRoleSettingAdd", e.group_id)
         delete conversationState[e.user_id]
         break
     }
@@ -137,7 +122,7 @@ export class profileManager extends plugin {
     conversationState[e.user_id] = {
       step: "role_delete_awaiting_name",
     }
-    this.setContext("handleRoleSettingDelete", e.isGroup, 60)
+    this.setContext("handleRoleSettingDelete", e.group_id, 60)
     await e.reply("请输入要删除的人设【名字】，输入“#取消”可退出")
   }
 
@@ -147,12 +132,12 @@ export class profileManager extends plugin {
     const userInput = e.raw_message?.trim()
 
     if (!state) {
-      this.finish("handleRoleSettingDelete", e.isGroup)
+      this.finish("handleRoleSettingDelete", e.group_id)
       return
     }
 
     if (userInput === "#取消") {
-      this.finish("handleRoleSettingDelete", e.isGroup)
+      this.finish("handleRoleSettingDelete", e.group_id)
       delete conversationState[e.user_id]
       await e.reply("操作已取消。")
       return
@@ -172,7 +157,7 @@ export class profileManager extends plugin {
     Setting.setConfig("roles", { roles: roles })
 
     await e.reply(`人设【${deletedName}】已成功删除。`)
-    this.finish("handleRoleSettingDelete", e.isGroup)
+    this.finish("handleRoleSettingDelete", e.group_id)
     delete conversationState[e.user_id]
   }
 
@@ -185,13 +170,16 @@ export class profileManager extends plugin {
       return
     }
 
-    const messages = roles.map((role, index) => ({
-      text: `${index + 1}. ${role.name}\n设定预览: ${role.prompt.substring(0, 500)}${role.prompt.length > 500 ? "..." : ""}`,
-      senderId: e.bot.uin,
-      senderName: e.bot.nickname,
+    const nodes = roles.map((role, index) => ({
+      type: "node",
+      data: {
+        user_id: e.bot.uin,
+        nickname: e.bot.nickname,
+        content: `${index + 1}. ${role.name}\n设定预览: ${role.prompt.substring(0, 500)}${role.prompt.length > 500 ? "..." : ""}`,
+      },
     }))
 
-    await makeForwardMsg(e, messages, "当前可用人设列表")
+    await e.sendForwardMsg(nodes, { source: "当前可用人设列表" })
   }
 
   async startAddProfile(e) {
@@ -199,7 +187,7 @@ export class profileManager extends plugin {
       step: "awaiting_prefix",
       data: {},
     }
-    this.setContext("handleProfileAdd", e.isGroup, 60)
+    this.setContext("handleProfileAdd", e.group_id, 60)
     await e.reply("请输入【前缀】，输入“#取消”可退出")
   }
 
@@ -209,12 +197,12 @@ export class profileManager extends plugin {
     const userInput = e.raw_message?.trim()
 
     if (!state) {
-      this.finish("handleProfileAdd", e.isGroup)
+      this.finish("handleProfileAdd", e.group_id)
       return
     }
 
     if (userInput === "#取消") {
-      return this.cancelInteraction()
+      return this.cancelInteraction(e)
     }
 
     switch (state.step) {
@@ -281,7 +269,7 @@ export class profileManager extends plugin {
         state.data.History = settings[1] === "1"
         state.data.Tool = settings[2] === "1"
 
-        this.finish("handleProfileAdd", e.isGroup)
+        this.finish("handleProfileAdd", e.group_id)
         const finalConfig = this.appconfig
         if (!finalConfig) {
           await e.reply("配置文件读取失败，无法添加新设定。")
@@ -306,13 +294,16 @@ export class profileManager extends plugin {
       return
     }
 
-    const messages = channels.map(channel => ({
-      text: channel.name,
-      senderId: e.bot.uin,
-      senderName: e.bot.nickname,
+    const nodes = channels.map(channel => ({
+      type: "node",
+      data: {
+        user_id: e.bot.uin,
+        nickname: e.bot.nickname,
+        content: channel.name,
+      },
     }))
 
-    await makeForwardMsg(e, messages, "当前可用渠道列表")
+    await e.sendForwardMsg(nodes, { source: "当前可用渠道列表" })
   }
 
   async startDeleteProfile(e) {
@@ -328,7 +319,7 @@ export class profileManager extends plugin {
     })
     replyMsg += "\n请输入要删除的设定的【前缀】，输入“#取消”可退出。"
 
-    this.setContext("deleteByPrefix", e.isGroup, 30)
+    this.setContext("deleteByPrefix", e.group_id, 30)
     await e.reply(replyMsg)
   }
 
@@ -336,7 +327,7 @@ export class profileManager extends plugin {
     const e = this.e
     const userInput = e.raw_message?.trim()
     if (userInput === "#取消") {
-      this.finish("deleteByPrefix", e.isGroup)
+      this.finish("deleteByPrefix", e.group_id)
       await e.reply("操作已取消。")
       return
     }
@@ -359,26 +350,25 @@ export class profileManager extends plugin {
       }
     }
 
-    this.finish("deleteByPrefix", e.isGroup)
+    this.finish("deleteByPrefix", e.group_id)
   }
 
-  async cancelInteraction() {
-    const e = this.e
+  async cancelInteraction(e) {
     const userId = e.user_id
-    const isGroup = e.isGroup
+    const group_id = e.group_id
     let cancelled = false
 
     if (conversationState[userId]) {
-      this.finish("handleProfileAdd", isGroup)
-      this.finish("handleRoleSettingAdd", isGroup)
-      this.finish("handleRoleSettingDelete", isGroup)
+      this.finish("handleProfileAdd", group_id)
+      this.finish("handleRoleSettingAdd", group_id)
+      this.finish("handleRoleSettingDelete", group_id)
       delete conversationState[userId]
       cancelled = true
     }
 
-    const deleteContext = this.getContext("deleteByPrefix", isGroup)
+    const deleteContext = this.getContext("deleteByPrefix", group_id)
     if (deleteContext && deleteContext.user_id === userId) {
-      this.finish("deleteByPrefix", isGroup)
+      this.finish("deleteByPrefix", group_id)
       cancelled = true
     }
 

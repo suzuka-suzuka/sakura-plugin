@@ -1,5 +1,5 @@
 import express from "express"
-import YAML from "yaml"
+import YAML from "js-yaml"
 import fs from "node:fs"
 import path from "node:path"
 import os from "node:os"
@@ -21,10 +21,10 @@ class WebEditor {
 
     try {
       if (fs.existsSync(configPath)) {
-        const userConfig = YAML.parse(fs.readFileSync(configPath, "utf8"))
+        const userConfig = YAML.load(fs.readFileSync(configPath, "utf8"))
         config = { ...config, ...userConfig }
       } else if (fs.existsSync(defConfigPath)) {
-        const defConfig = YAML.parse(fs.readFileSync(defConfigPath, "utf8"))
+        const defConfig = YAML.load(fs.readFileSync(defConfigPath, "utf8"))
         config = { ...config, ...defConfig }
         fs.copyFileSync(defConfigPath, configPath)
       }
@@ -105,17 +105,20 @@ class WebEditor {
   }
 
   setupRoutes() {
-    this.app.get("/api/groups", (req, res) => {
+    this.app.get("/api/groups", async (req, res) => {
       try {
         const groups = []
         const bot = this.bot || global.Bot
 
-        if (bot && bot.gl) {
-          for (const [groupId, groupInfo] of bot.gl) {
-            groups.push({
-              id: String(groupId),
-              name: groupInfo.group_name || groupInfo.name || `群${groupId}`,
-            })
+        if (bot) {
+          const groupList = await bot.getGroupList()
+          if (groupList && Array.isArray(groupList)) {
+            for (const groupInfo of groupList) {
+              groups.push({
+                id: String(groupInfo.group_id),
+                name: groupInfo.group_name || groupInfo.name || `群${groupInfo.group_id}`,
+              })
+            }
           }
         }
 
@@ -206,30 +209,6 @@ class WebEditor {
         const { name } = req.params
         let { data } = req.body
 
-        if (name === 'EmojiLike') {
-          if (data.groups && Array.isArray(data.groups)) {
-            const groupsMap = {}
-            for (const groupItem of data.groups) {
-              if (!groupItem.groupId) continue
-              
-              const usersMap = {}
-              if (groupItem.users && Array.isArray(groupItem.users)) {
-                for (const userItem of groupItem.users) {
-                  if (userItem.userId && userItem.emojiId) {
-                    usersMap[userItem.userId] = userItem.emojiId
-                  }
-                }
-              }
-
-              groupsMap[groupItem.groupId] = {
-                replyAll: groupItem.replyAll,
-                default: groupItem.default,
-                users: usersMap
-              }
-            }
-            data.groups = groupsMap
-          }
-        }
 
         const success = setting.setConfig(name, data)
 
@@ -282,7 +261,7 @@ class WebEditor {
         const { content } = req.body
         const configFile = path.join(this.configPath, `${name}.yaml`)
 
-        YAML.parse(content)
+        YAML.load(content)
 
         fs.writeFileSync(configFile, content, "utf8")
 
@@ -320,7 +299,7 @@ class WebEditor {
 }
 
 let editor = null
-if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, "/")}` || global.Bot) {
+if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, "/")}` || global.bot) {
   editor = new WebEditor()
   editor.start()
 }

@@ -1,27 +1,13 @@
 import Setting from "../lib/setting.js"
 import PixivHistory from "../lib/pixiv/history.js"
-import { Recall } from "../lib/utils.js"
 import { requestApi } from "../lib/pixiv/api.js"
 import { FlipImage } from "../lib/ImageUtils/ImageUtils.js"
 export class pixivSearch extends plugin {
   constructor() {
     super({
       name: "pixiv搜图",
-      dsc: "Ppxiv搜图",
       event: "message",
       priority: 1135,
-      rule: [
-        {
-          reg: `^#涩图(\。)?(.*)$`,
-          fnc: "searchPixiv",
-          log: false,
-        },
-        {
-          reg: `^#?pid(.*)$`,
-          fnc: "getPixivByPid",
-          log: false,
-        },
-      ],
     })
   }
   get appconfig() {
@@ -32,7 +18,7 @@ export class pixivSearch extends plugin {
     return Setting.getConfig("r18")
   }
 
-  async getPixivByPid(e) {
+  getPixivByPid = Command(/^#?pid(.*)$/, async (e) => {
     const match = e.msg.match(/^#?pid\s*(\d+)(?:\s*[pP]\s*(\d+))?/)
     if (!match) {
       return false
@@ -41,14 +27,14 @@ export class pixivSearch extends plugin {
     const pid = match[1]
     const pageNum = parseInt(match[2]) || 1
 
-    await this.reply(`正在获取P站作品ID: ${pid} (第${pageNum}页)...`, false, { recallMsg: 10 })
+    await e.reply(`正在获取P站作品ID: ${pid} (第${pageNum}页)...`, 10, false)
 
     try {
       const detailUrl = `https://www.pixiv.net/ajax/illust/${pid}`
       const detailRes = await requestApi(detailUrl)
 
       if (!detailRes.body) {
-        await this.reply(`获取作品详情失败: 作品可能已被删除或为私密作品`, true, { recallMsg: 10 })
+        await e.reply(`获取作品详情失败: 作品可能已被删除或为私密作品`, 10, true)
         return true
       }
       const illust = detailRes.body
@@ -57,14 +43,14 @@ export class pixivSearch extends plugin {
       const pagesRes = await requestApi(pagesUrl)
 
       if (!pagesRes.body || pagesRes.body.length === 0) {
-        await this.reply(`获取作品图片列表失败: 未找到图片页面信息`, true, { recallMsg: 10 })
+        await this.reply(`获取作品图片列表失败: 未找到图片页面信息`, 10, true)
         return true
       }
       const pages = pagesRes.body
 
       const isR18 = illust.xRestrict !== 0
       if (isR18 && !this.r18Config.enable.includes(e.group_id)) {
-        return this.reply("本群未开启r18功能哦~", false, { recallMsg: 10 })
+        return e.reply("本群未开启r18功能哦~", 10, false)
       }
       await this.sendIllustMessage(e, illust, pages, isR18, pageNum)
     } catch (error) {
@@ -79,12 +65,12 @@ export class pixivSearch extends plugin {
       } else {
         replyMsg = `请求P站API时出错: ${error.message}`
       }
-      await this.reply(replyMsg, true, { recallMsg: 10 })
+      await e.reply(replyMsg, 10, true)
     }
     return true
-  }
+  });
 
-  async searchPixiv(e) {
+  searchPixiv = Command(/^#涩图(\。)?(.*)$/, async (e) => {
     const match = e.msg.match(/^#涩图(\。)?(.*)$/)
     if (!match) return false
 
@@ -94,7 +80,7 @@ export class pixivSearch extends plugin {
     let tag = match[2].trim()
 
     if (isR18Search && !this.r18Config.enable_group.includes(e.group_id)) {
-      return this.reply("根据插件设置，本群不可使用r18功能。", false, { recallMsg: 10 })
+      return e.reply("根据插件设置，本群不可使用r18功能。", 10, false)
     }
 
     if (!tag) {
@@ -110,11 +96,7 @@ export class pixivSearch extends plugin {
     const minBookmarks = 500
     tag += ` 500users入り`
 
-    if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
-      await e.group.setMsgEmojiLike(e.message_id, "124")
-    } else {
-      await this.reply("获取中...请稍等", false, { recallMsg: 10 })
-    }
+await e.react(124) 
 
     try {
       let illust = null
@@ -196,7 +178,7 @@ export class pixivSearch extends plugin {
       }
 
       if (!illust) {
-        await this.reply(`未能找到符合条件的图片，请换个标签再试。`, true, { recallMsg: 10 })
+        await this.reply(`未能找到符合条件的图片，请换个标签再试。`, 10, true)
 
         return true
       }
@@ -217,11 +199,11 @@ export class pixivSearch extends plugin {
       } else {
         replyMsg = `搜索失败: ${error.message}`
       }
-      await this.reply(replyMsg, true, { recallMsg: 10 })
+      await e.reply(replyMsg, 10, true)
     }
 
     return true
-  }
+  });
 
   async sendIllustMessage(e, illust, pages, isR18 = false, pageNum = 1) {
     const config = this.appconfig
@@ -230,9 +212,7 @@ export class pixivSearch extends plugin {
     const totalImagePages = Math.ceil(totalPages / imagesPerPage)
 
     if (totalPages > 0 && pageNum > totalImagePages) {
-      await this.reply(`该作品只有 ${totalImagePages} 页图片哦~ (共${totalPages}张)`, false, {
-        recallMsg: 10,
-      })
+      await this.reply(`该作品只有 ${totalImagePages} 页图片哦~ (共${totalPages}张)`, 10, false)
       return true
     }
 
@@ -290,15 +270,15 @@ export class pixivSearch extends plugin {
     }
 
     const initialMsg = [...textMsg, ...imageUrls.map(url => segment.image(url))]
-    const sendResult = await this.reply(initialMsg, true)
+    const sendResult = await this.reply(initialMsg, 0, true)
     if (sendResult?.message_id) {
       if (isR18) {
-        Recall(e, sendResult.message_id)
+        e.recall(sendResult.message_id,10)
       }
       return true
     }
 
-    this.reply("图片发送失败，正在尝试翻转后重发...", true, { recallMsg: 10 })
+    this.reply("图片发送失败，正在尝试翻转后重发...", 10, true)
 
     const processedImageBuffers = []
     for (const url of imageUrls) {
@@ -310,10 +290,10 @@ export class pixivSearch extends plugin {
 
     if (processedImageBuffers.length > 0) {
       const retryMsg = [...textMsg, ...processedImageBuffers.map(buf => segment.image(buf))]
-      const retrySendResult = await this.reply(retryMsg, true)
+      const retrySendResult = await this.reply(retryMsg, 0, true)
       if (retrySendResult?.message_id) {
         if (isR18) {
-          Recall(e, retrySendResult.message_id)
+          e.recall(retrySendResult.message_id,10)
         }
         return true
       }
@@ -326,9 +306,9 @@ export class pixivSearch extends plugin {
       ...textMsg,
       "\n\n图片最终发送失败，请点击链接查看图片：\n" + imageUrls.join("\n"),
     ]
-    const finalSendResult = await this.reply(linkMsg, true)
+    const finalSendResult = await this.reply(linkMsg, 0, true)
     if (finalSendResult?.message_id) {
-      Recall(e, finalSendResult.message_id)
+      e.recall(finalSendResult.message_id,10)
     }
 
     return true

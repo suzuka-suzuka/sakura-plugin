@@ -1,4 +1,3 @@
-import plugin from "../../../lib/plugins/plugin.js"
 import { sleepData } from "../lib/sleep/SleepData.js"
 import { drawSleepChart } from "../lib/sleep/SleepChart.js"
 
@@ -9,32 +8,15 @@ export class Sleep extends plugin {
       dsc: "记录群友睡眠时间",
       event: "message.group",
       priority: 1135,
-      rule: [
-        {
-          reg: "^(晚安|睡了|睡觉|去睡了|我睡了|我要睡了)$",
-          fnc: "goodNight",
-          log: false,
-        },
-        {
-          reg: "^(早安|早|起床|醒了|我醒了|早上好)$",
-          fnc: "goodMorning",
-          log: false,
-        },
-        {
-          reg: "^(睡眠信息|睡眠分析)$",
-          fnc: "sleepInfo",
-          log: false,
-        },
-      ],
     })
   }
 
-  async sleepInfo(e) {
+  sleepInfo = Command(/^(睡眠信息|睡眠分析)$/, async (e) => {
     const groupId = e.group_id
     const history = sleepData.getHistory(groupId, e.user_id)
 
     if (!history || history.length === 0) {
-      await this.reply("你还没有睡眠记录哦~", false, { recallMsg: 10 })
+      await e.reply("你还没有睡眠记录哦~", 10, false)
       return false
     }
 
@@ -43,9 +25,9 @@ export class Sleep extends plugin {
 
     await e.reply(segment.image(buffer))
     return true
-  }
+  });
 
-  async goodNight(e) {
+  goodNight = Command(/^(晚安|睡了|睡觉|去睡了|我睡了|我要睡了)$/, async (e) => {
     const groupId = e.group_id
 
     const order = sleepData.setSleep(groupId, e.user_id)
@@ -56,9 +38,9 @@ export class Sleep extends plugin {
 
     await e.reply(`晚安！你是本群第 ${order} 个睡觉的`, true)
     return false
-  }
+  });
 
-  async goodMorning(e) {
+  goodMorning = Command(/^(早安|早|起床|醒了|我醒了|早上好)$/, async (e) => {
     const groupId = e.group_id
 
     const result = sleepData.wakeUp(groupId, e.user_id)
@@ -79,5 +61,5 @@ export class Sleep extends plugin {
 
     await e.reply(msg, true)
     return false
-  }
+  });
 }

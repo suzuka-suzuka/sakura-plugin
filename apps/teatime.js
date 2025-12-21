@@ -14,14 +14,7 @@ export class teatime extends plugin {
     return Setting.getConfig("teatime")
   }
 
-  task = {
-    name: "teatimeTask",
-    fnc: () => this.teatimeTask(),
-    cron: this.appconfig?.cron ?? "0 0 15 * * *",
-    log: false,
-  }
-
-  async teatimeTask() {
+  teatimeTask = Cron(this.appconfig?.cron ?? "0 0 15 * * *", async () => {
     const config = this.appconfig
     if (!config) {
       return
@@ -32,8 +25,10 @@ export class teatime extends plugin {
       return
     }
 
+    if (!bot) return
+
     for (const groupId of Groups) {
-      await Bot.pickGroup(groupId).sendMsg("下午茶时间，来点萝莉")
+      await bot.pickGroup(groupId).sendMsg("下午茶时间，来点萝莉")
 
       let browser
 
@@ -73,7 +68,7 @@ export class teatime extends plugin {
             const selectedUrls = _.sampleSize(imageUrls, 5)
             for (const imageUrl of selectedUrls) {
               try {
-                await Bot.pickGroup(groupId).sendMsg(segment.image(imageUrl))
+                await bot.pickGroup(groupId).sendMsg(segment.image(imageUrl))
                 await new Promise(resolve => setTimeout(resolve, 1000))
               } catch (sendError) {
                 logger.error(`[teatime]向群 ${groupId} 发送图片消息失败: ${imageUrl}`, sendError)
@@ -96,5 +91,5 @@ export class teatime extends plugin {
         }
       }
     }
-  }
+  })
 }

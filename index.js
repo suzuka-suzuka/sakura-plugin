@@ -1,15 +1,11 @@
 import fs from "node:fs"
 
-if (!global.segment) {
-  global.segment = (await import("icqq")).segment
-}
-
 const files = fs.readdirSync("./plugins/sakura-plugin/apps").filter(file => file.endsWith(".js"))
 
 let ret = []
 
 files.forEach(file => {
-  ret.push(import(`./apps/${file}`))
+  ret.push(import(`./apps/${file}?t=${Date.now()}`))
 })
 
 ret = await Promise.allSettled(ret)
@@ -19,7 +15,7 @@ for (let i in files) {
   let name = files[i].replace(".js", "")
 
   if (ret[i].status != "fulfilled") {
-    logger.error(`载入插件错误：${logger.red(name)}`)
+    logger.error(`载入插件错误：${logger.red(`plugins/sakura-plugin/apps/${files[i]}`)}`)
     logger.error(ret[i].reason)
     continue
   }
@@ -36,8 +32,13 @@ logger.info(logger.magenta("-------------sakura插件加载成功-------------")
 setTimeout(() => {
   import("./webeditor.js")
     .then(module => {
-      if (module.default && typeof module.default.setBot === "function") {
-        module.default.setBot(global.Bot || Bot)
+      let editor = module.default;
+      if (typeof editor === 'function' && editor.prototype && editor.prototype.start) {
+          editor = new editor();
+          editor.start();
+      }
+      if (editor && typeof editor.setBot === "function") {
+        editor.setBot(global.bot)
       }
     })
     .catch(err => {

@@ -4,16 +4,8 @@ export class forwardMessage extends plugin {
   constructor() {
     super({
       name: "转发消息插件",
-      dsc: "监听指定群聊的消息并将其转发到另一个群聊",
       event: "message.group",
       priority: 35,
-      rule: [
-        {
-          reg: '',
-          fnc: "handleForwardedMessage",
-          log: false
-        },
-      ],
     });
   }
 
@@ -21,7 +13,7 @@ export class forwardMessage extends plugin {
     return Setting.getConfig("forwardMessage");
   }
 
-  async handleForwardedMessage(e) {
+  handleForwardedMessage = OnEvent("message.group", async (e) => {
     const forwardRules = this.appconfig.forwardRules || [];
     const rule = forwardRules.find(r => r.sourceGroupIds && r.sourceGroupIds.includes(e.group_id));
 
@@ -37,7 +29,7 @@ export class forwardMessage extends plugin {
         if (enableRecord) shouldForward = true;
       } else if (e.message.some(m => m.type === 'video')) {
         if (enableVideo) shouldForward = true;
-      } else if (e.message.some(m => m.type === 'image' && !(m.asface === true || m.sub_type === 1))) {
+      } else if (e.message.some(m => m.type === 'image' && !(m.sub_type === 1))) {
         if (enableImage) shouldForward = true;
       }
     }
@@ -62,5 +54,5 @@ export class forwardMessage extends plugin {
     }
 
     return false;
-  }
+  });
 }

@@ -402,10 +402,10 @@ function renderField(key, value, path) {
   let label = fieldSchema.label
   const fieldType = fieldSchema.type || (isArray ? "array" : isObject ? "object" : type)
 
-  const isGroupField = fieldType === "groupSelect" || (fieldSchema.itemType !== 'object' && /groups?|启用群|群组/i.test(key) && isArray)
+  const group_idField = fieldType === "groupSelect" || (fieldSchema.itemType !== 'object' && /groups?|启用群|群组/i.test(key) && isArray)
 
   if (isArray) {
-    if (isGroupField) {
+    if (group_idField) {
       return `
                 <div class="form-group">
                     <label>${label}</label>

@@ -1,6 +1,0 @@
-configs:
-  - group: 123456789
-    replyAll: true
-    default: "66,181"
-    users: |
-      987654321:181,66

@@ -39,7 +39,6 @@ const configSchema = {
         "AutoCleanup",
         "webeditor",
         "groupnotice",
-        "EmojiLike",
         "SoraVideo",
       ],
     },
@@ -68,7 +67,6 @@ const configSchema = {
     tenor: "Tenor表情",
     webeditor: "配置面板",
     groupnotice: "进退群通知",
-    EmojiLike: "表情回应",
     SoraVideo: "Sora视频",
     roles: "AI人设",
   },
@@ -182,7 +180,6 @@ const configSchema = {
           help: "默认渠道失败时的备用 Vertex API Key",
         },
         vertex: { label: "Vertex AI", type: "boolean", required: false },
-        requirePermission: { label: "需要权限", type: "boolean", required: false },
         tasks: {
           label: "修图提示词",
           type: "array",
@@ -209,7 +206,6 @@ const configSchema = {
       required: false,
       help: "开启后API Key只能填Vertex API Key",
     },
-    "EditImage.requirePermission": { label: "需要权限", type: "boolean" },
     "EditImage.tasks": {
       label: "修图触发词",
       type: "array",
@@ -337,11 +333,6 @@ const configSchema = {
       label: "是否启用用户锁",
       type: "boolean",
       help: "启用后，每个用户处理完当前消息前，不会处理该用户的后续消息，直到当前消息处理完毕",
-    },
-    "AI.requirePermission": {
-      label: "需要权限",
-      type: "boolean",
-      help: "启用后，只有在权限列表中的用户才能触发",
     },
     "AI.toolschannel": {
       label: "工具渠道",
@@ -610,6 +601,7 @@ const configSchema = {
     "60sNews.Groups": { label: "启用群", type: "groupSelect" },
 
     "bilicookie.cookie": { label: "B站cookie", type: "text" },
+    "bilicookie.autoResolve": { label: "自动解析", type: "boolean", help: "是否自动解析B站链接" },
 
     "AutoCleanup.groups": {
       label: "启用群",

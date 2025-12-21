@@ -1,4 +1,3 @@
-import cfg from "../../../lib/config/config.js"
 if (!global.msgStore) {
   global.msgStore = new Map()
 }
@@ -8,21 +7,13 @@ export class handleRecall extends plugin {
   constructor() {
     super({
       name: "撤回复读",
-      dsc: "撤回复读",
-      event: "notice.group.recall",
+      event: "notice.group_recall",
       priority: 35,
-      rule: [
-        {
-          reg: "",
-          fnc: "handleRecall",
-          log: false,
-        },
-      ],
     })
   }
 
-  async handleRecall(e) {
-    if (cfg.masterQQ.includes(e.operator_id)) {
+  handleRecall = OnEvent("notice.group_recall", async (e) => {
+    if (e.isMaster) {
       return false
     }
     if (!e.message_id) {
@@ -36,5 +27,5 @@ export class handleRecall extends plugin {
       msgStore.delete(e.message_id)
     }
     return false
-  }
+  });
 }

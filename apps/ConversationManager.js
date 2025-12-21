@@ -1,314 +1,298 @@
-import Setting from "../lib/setting.js"
-import fs from "fs"
-import path from "path"
-import puppeteer from "puppeteer"
-import _ from "lodash"
-import { pluginresources } from "../lib/path.js"
+import Setting from "../lib/setting.js";
+import fs from "fs";
+import path from "path";
+import puppeteer from "puppeteer";
+import _ from "lodash";
+import { pluginresources } from "../lib/path.js";
 import {
   loadConversationHistory,
   clearConversationHistory,
   clearAllPrefixesForUser,
   clearAllConversationHistories,
-} from "../lib/AIUtils/ConversationHistory.js"
-import { makeForwardMsg } from "../lib/utils.js"
+} from "../lib/AIUtils/ConversationHistory.js";
 export class Conversationmanagement extends plugin {
   constructor() {
     super({
       name: "对话管理",
-      dsc: "管理对话历史",
       event: "message",
       priority: 1135,
-      rule: [
-        {
-          reg: `^#?清空全部对话$`,
-          fnc: "handleClearAllPrefixesForCurrentUser",
-          log: false,
-        },
-        {
-          reg: `^#?清空所有用户对话$`,
-          fnc: "handleClearAllUsersAndPrefixes",
-          log: false,
-          permission: "master",
-        },
-        {
-          reg: `^#?清空对话\\s*(.+)`,
-          fnc: "handleClearSingleConversation",
-          log: false,
-        },
-        {
-          reg: `^#?列出对话\\s*(.+)`,
-          fnc: "handleListSingleConversation",
-          log: false,
-        },
-        {
-          reg: `^#?导出对话\\s*(.+)`,
-          fnc: "handleExportConversation",
-          log: false,
-        },
-      ],
-    })
+    });
   }
 
   get appconfig() {
-    return Setting.getConfig("AI")
+    return Setting.getConfig("AI");
   }
 
   getProfileName(prefix) {
-    const config = this.appconfig
-    if (!config || !config.profiles) return prefix
-    const profile = config.profiles.find(p => p.prefix === prefix)
-    return profile ? profile.name : prefix
+    const config = this.appconfig;
+    if (!config || !config.profiles) return prefix;
+    const profile = config.profiles.find((p) => p.prefix === prefix);
+    return profile ? profile.name : prefix;
   }
 
-  async handleClearSingleConversation(e) {
-    const msg = e.msg || ""
-    const prefix = msg.replace(/^#?清空对话\s*/, "").trim()
+  ClearSingle = Command(/^#?清空对话\s*(.+)/, async (e) => {
+    const prefix = e.match[1].trim();
 
     if (!prefix) {
-      return false
+      return false;
     }
 
-    const config = this.appconfig
+    const config = this.appconfig;
 
-    if (!config || !config.profiles.some(p => p.prefix === prefix)) {
-      await this.reply(`未找到前缀为「${prefix}」的设定，请检查输入。`, false, { recallMsg: 10 })
-      return true
+    if (!config || !config.profiles.some((p) => p.prefix === prefix)) {
+      await e.reply(`未找到前缀为「${prefix}」的设定，请检查输入。`, 10);
+      return true;
     }
 
-    const profileName = this.getProfileName(prefix)
-    await clearConversationHistory(e, prefix)
-    await this.reply(`您与「${prefix}」的对话历史已清空！喵~`, false, { recallMsg: 10 })
-    return true
-  }
+    const profileName = this.getProfileName(prefix);
+    await clearConversationHistory(e, prefix);
+    await e.reply(`您与「${profileName}」的对话历史已清空！喵~`, 10);
+    return true;
+  });
 
-  async handleListSingleConversation(e) {
-    const msg = e.msg || ""
-    const prefix = msg.replace(/^#?列出对话\s*/, "").trim()
+  ListSingle = Command(/^#?列出对话\s*(.+)/, async (e) => {
+    const prefix = e.match[1].trim();
 
     if (!prefix) {
-      return false
+      return false;
     }
 
-    const config = this.appconfig
+    const config = this.appconfig;
 
-    if (!config || !config.profiles.some(p => p.prefix === prefix)) {
-      await this.reply(`未找到前缀为「${prefix}」的设定，请检查输入。`, false, { recallMsg: 10 })
-      return true
+    if (!config || !config.profiles.some((p) => p.prefix === prefix)) {
+      await e.reply(`未找到前缀为「${prefix}」的设定，请检查输入。`, 10);
+      return true;
     }
 
-    const profileName = this.getProfileName(prefix)
-    const history = await loadConversationHistory(e, prefix)
+    const profileName = this.getProfileName(prefix);
+    const history = await loadConversationHistory(e, prefix);
     if (history.length === 0) {
-      await this.reply(`目前没有与「${prefix}」的对话历史记录。`, false, { recallMsg: 10 })
-      return true
+      await e.reply(`目前没有与「${profileName}」的对话历史记录。`, 10);
+      return true;
     }
 
-    const messagesWithSender = []
+    const nodes = [];
     for (const item of history) {
       if (item.role === "user") {
-        messagesWithSender.push({
-          text: `${item.parts[0].text}`,
-          senderId: e.user_id,
-          senderName: e.sender.card || e.sender.nickname || e.user_id,
-        })
+        nodes.push({
+          type: "node",
+          data: {
+            user_id: e.user_id,
+            nickname: e.sender.card || e.sender.nickname || e.user_id,
+            content: `${item.parts[0].text}`,
+          },
+        });
       } else if (item.role === "model") {
-        let name
-        if (e.isGroup) {
-          let info
-          try {
-            info = await e.group.pickMember(e.self_id).getInfo(true)
-          } catch {
-            info = (await e.group.pickMember(Number(e.self_id))).info
-          }
-          name = info?.card || info?.nickname
-        } else {
-          name = e.bot.nickname
-        }
-        messagesWithSender.push({
-          text: `${item.parts[0].text}`,
-          senderId: e.self_id,
-          senderName: name,
-        })
+        const info = await e.getInfo(e.self_id);
+        const name = info?.card || info?.nickname || e.self_id;
+        nodes.push({
+          type: "node",
+          data: {
+            user_id: e.self_id,
+            nickname: name,
+            content: `${item.parts[0].text}`,
+          },
+        });
       }
     }
 
-    await makeForwardMsg(e, messagesWithSender, `「${prefix}」对话历史`)
+    await e.sendForwardMsg(nodes, { source: `「${profileName}」对话历史` });
 
-    return true
-  }
+    return true;
+  });
 
-  async handleClearAllPrefixesForCurrentUser(e) {
-    await clearAllPrefixesForUser(e)
-    await this.reply("您的所有模式对话历史已全部清空！喵~", false, { recallMsg: 10 })
-    return true
-  }
+  ClearAllPrefixes = Command(/^#?清空全部对话$/, async (e) => {
+    await clearAllPrefixesForUser(e);
+    await e.reply("您的所有模式对话历史已全部清空！喵~", 10);
+    return true;
+  });
 
-  async handleClearAllUsersAndPrefixes(e) {
-    await clearAllConversationHistories()
-    await this.reply("所有用户的全部对话历史已成功清空！喵~", false, { recallMsg: 10 })
-    return true
-  }
+  ClearAllUsers = Command(/^#?清空所有用户对话$/, "master", async (e) => {
+    await clearAllConversationHistories();
+    await e.reply("所有用户的全部对话历史已成功清空！喵~", 10);
+    return true;
+  });
 
   async getImageUrl() {
-    const url = "https://yande.re/post.json?tags=loli+-rating:e+-nipples&limit=500"
+    const url =
+      "https://yande.re/post.json?tags=loli+-rating:e+-nipples&limit=500";
     try {
-      const response = await fetch(url)
+      const response = await fetch(url);
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const jsonData = await response.json()
+      const jsonData = await response.json();
 
       if (Array.isArray(jsonData) && jsonData.length > 0) {
-        const imageItems = jsonData.filter(item => item?.file_url && item?.id)
+        const imageItems = jsonData.filter(
+          (item) => item?.file_url && item?.id
+        );
 
         if (imageItems.length > 0) {
-          const selectedItem = _.sample(imageItems)
-          return { url: selectedItem.file_url, id: selectedItem.id }
+          const selectedItem = _.sample(imageItems);
+          return { url: selectedItem.file_url, id: selectedItem.id };
         } else {
-          logger.warn("没有获取到有效的图片URL和ID")
-          return null
+          logger.warn("没有获取到有效的图片URL和ID");
+          return null;
         }
       } else {
-        logger.warn("没有获取到有效的图片数据")
-        return null
+        logger.warn("没有获取到有效的图片数据");
+        return null;
       }
     } catch (error) {
-      logger.error("获取图片URL时出错:", error)
-      return null
+      logger.error("获取图片URL时出错:", error);
+      return null;
     }
   }
 
-  async handleExportConversation(e) {
-    const msg = e.msg || ""
-    const prefix = msg.replace(/^#?导出对话\s*/, "").trim()
+  ExportConversation = Command(/^#?导出对话\s*(.+)/, async (e) => {
+    const prefix = e.match[1].trim();
 
     if (!prefix) {
-      return false
+      return false;
     }
 
-    const config = this.appconfig
+    const config = this.appconfig;
 
-    if (!config || !config.profiles.some(p => p.prefix === prefix)) {
-      await this.reply(`未找到前缀为「${prefix}」的设定，请检查输入。`, false, { recallMsg: 10 })
-      return true
+    if (!config || !config.profiles.some((p) => p.prefix === prefix)) {
+      await e.reply(`未找到前缀为「${prefix}」的设定，请检查输入。`, 10);
+      return true;
     }
 
-    const profileName = this.getProfileName(prefix)
-    const history = await loadConversationHistory(e, prefix)
+    const profileName = this.getProfileName(prefix);
+    const history = await loadConversationHistory(e, prefix);
 
     if (history.length === 0) {
-      await this.reply(`目前没有与「${prefix}」的对话历史记录，无法导出。`, false, {
-        recallMsg: 10,
-      })
-      return true
+      await e.reply(
+        `目前没有与「${profileName}」的对话历史记录，无法导出。`,
+        10
+      );
+      return true;
     }
 
-    if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
-      await e.group.setMsgEmojiLike(e.message_id, "124")
-    } else {
-      await this.reply(`正在为您导出「${prefix}」的对话记录，请稍候...`, false, {
-        recallMsg: 10,
-      })
-    }
+    await e.react(124);
 
     try {
-      let leftBubbleBase64, rightBubbleBase64
+      let leftBubbleBase64, rightBubbleBase64;
       try {
-        const leftBubblePath = path.join(pluginresources, "AI", "left_bubble.png")
-        const rightBubblePath = path.join(pluginresources, "AI", "right_bubble.png")
+        const leftBubblePath = path.join(
+          pluginresources,
+          "AI",
+          "left_bubble.png"
+        );
+        const rightBubblePath = path.join(
+          pluginresources,
+          "AI",
+          "right_bubble.png"
+        );
 
-        const leftBubbleBuffer = fs.readFileSync(leftBubblePath)
-        const rightBubbleBuffer = fs.readFileSync(rightBubblePath)
+        const leftBubbleBuffer = fs.readFileSync(leftBubblePath);
+        const rightBubbleBuffer = fs.readFileSync(rightBubblePath);
 
-        leftBubbleBase64 = `data:image/png;base64,${leftBubbleBuffer.toString("base64")}`
-        rightBubbleBase64 = `data:image/png;base64,${rightBubbleBuffer.toString("base64")}`
+        leftBubbleBase64 = `data:image/png;base64,${leftBubbleBuffer.toString(
+          "base64"
+        )}`;
+        rightBubbleBase64 = `data:image/png;base64,${rightBubbleBuffer.toString(
+          "base64"
+        )}`;
       } catch (fileError) {
-        logger.error("读取气泡图片失败! ", fileError)
+        logger.error("读取气泡图片失败! ", fileError);
       }
 
-      let backgroundImageBase64 = ""
+      let backgroundImageBase64 = "";
       try {
-        const defaultImagePath = path.join(pluginresources, "background")
-        await fs.promises.mkdir(defaultImagePath, { recursive: true })
+        const defaultImagePath = path.join(pluginresources, "background");
+        await fs.promises.mkdir(defaultImagePath, { recursive: true });
 
         if (Math.random() < 0.2) {
-          const imageInfo = await this.getImageUrl()
-          const remoteUrl = imageInfo?.url
+          const imageInfo = await this.getImageUrl();
+          const remoteUrl = imageInfo?.url;
 
           if (remoteUrl && remoteUrl.startsWith("http")) {
             try {
-              const response = await fetch(remoteUrl)
+              const response = await fetch(remoteUrl);
               if (response.ok) {
-                const imageBuffer = Buffer.from(await response.arrayBuffer())
+                const imageBuffer = Buffer.from(await response.arrayBuffer());
 
                 if (imageInfo.id) {
-                  ;(async () => {
+                  (async () => {
                     try {
-                      const extension = path.extname(new URL(remoteUrl).pathname)
-                      const filename = `${imageInfo.id}${extension}`
-                      const savePath = path.join(defaultImagePath, filename)
-                      await fs.promises.writeFile(savePath, imageBuffer)
-                      logger.debug(`对话背景图片已保存: ${savePath}`)
+                      const extension = path.extname(
+                        new URL(remoteUrl).pathname
+                      );
+                      const filename = `${imageInfo.id}${extension}`;
+                      const savePath = path.join(defaultImagePath, filename);
+                      await fs.promises.writeFile(savePath, imageBuffer);
+                      logger.debug(`对话背景图片已保存: ${savePath}`);
                     } catch (saveError) {
-                      logger.error("保存对话背景图片失败:", saveError)
+                      logger.error("保存对话背景图片失败:", saveError);
                     }
-                  })()
+                  })();
                 }
 
-                const mimeType = response.headers.get("content-type") || "image/jpeg"
-                backgroundImageBase64 = `data:${mimeType};base64,${imageBuffer.toString("base64")}`
+                const mimeType =
+                  response.headers.get("content-type") || "image/jpeg";
+                backgroundImageBase64 = `data:${mimeType};base64,${imageBuffer.toString(
+                  "base64"
+                )}`;
               } else {
-                logger.warn(`获取对话背景图片失败，状态码: ${response.status}, URL: ${remoteUrl}`)
+                logger.warn(
+                  `获取对话背景图片失败，状态码: ${response.status}, URL: ${remoteUrl}`
+                );
               }
             } catch (err) {
-              logger.error("获取对话背景图片时网络请求出错:", err)
+              logger.error("获取对话背景图片时网络请求出错:", err);
             }
           }
         }
 
         if (!backgroundImageBase64) {
-          const files = await fs.promises.readdir(defaultImagePath)
-          const imageFiles = files.filter(file => /\.(jpg|jpeg|png|gif)$/i.test(file))
+          const files = await fs.promises.readdir(defaultImagePath);
+          const imageFiles = files.filter((file) =>
+            /\.(jpg|jpeg|png|gif)$/i.test(file)
+          );
           if (imageFiles.length > 0) {
-            const randomImage = _.sample(imageFiles)
-            const imagePath = path.join(defaultImagePath, randomImage)
-            const imageBuffer = await fs.promises.readFile(imagePath)
-            const mimeType = "image/" + path.extname(imagePath).slice(1)
-            backgroundImageBase64 = `data:${mimeType};base64,${imageBuffer.toString("base64")}`
+            const randomImage = _.sample(imageFiles);
+            const imagePath = path.join(defaultImagePath, randomImage);
+            const imageBuffer = await fs.promises.readFile(imagePath);
+            const mimeType = "image/" + path.extname(imagePath).slice(1);
+            backgroundImageBase64 = `data:${mimeType};base64,${imageBuffer.toString(
+              "base64"
+            )}`;
           } else {
-            logger.warn(`背景图片目录 ${defaultImagePath} 中没有找到图片，将使用默认背景色。`)
+            logger.warn(
+              `背景图片目录 ${defaultImagePath} 中没有找到图片，将使用默认背景色。`
+            );
           }
         }
       } catch (err) {
-        logger.error("处理对话背景图片时出错:", err)
+        logger.error("处理对话背景图片时出错:", err);
       }
 
       const user = {
         name: e.sender.card || e.sender.nickname || e.user_id,
         avatar: `http://q1.qlogo.cn/g?b=qq&nk=${e.user_id}&s=640`,
-      }
+      };
 
-      let botName = e.bot.nickname
-      if (e.isGroup) {
-        let info
-        try {
-          info = await e.group.pickMember(e.self_id).getInfo(true)
-        } catch {
-          info = (await e.group.pickMember(Number(e.self_id))).info
-        }
-        botName = info?.card || info?.nickname || botName
-      }
+      const info = await e.getInfo(e.self_id);
+      const name = info?.card || info?.nickname || e.self_id;
       const bot = {
-        name: botName,
+        name: name,
         avatar: `http://q1.qlogo.cn/g?b=qq&nk=${e.self_id}&s=640`,
-      }
+      };
 
-      const templatePath = path.join(pluginresources, "AI", "chat_history.html")
-      const templateHtml = fs.readFileSync(templatePath, "utf8")
+      const templatePath = path.join(
+        pluginresources,
+        "AI",
+        "chat_history.html"
+      );
+      const templateHtml = fs.readFileSync(templatePath, "utf8");
 
-      let messagesHtml = ""
+      let messagesHtml = "";
       for (const item of history) {
-        const textContent = `<pre>${item.parts[0].text.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`
+        const textContent = `<pre>${item.parts[0].text
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")}</pre>`;
 
         if (item.role === "user") {
           messagesHtml += `
@@ -319,7 +303,7 @@ export class Conversationmanagement extends plugin {
               </div>
               <img src="${user.avatar}" class="avatar" alt="User Avatar" />
             </div>
-          `
+          `;
         } else if (item.role === "model") {
           messagesHtml += `
             <div class="message-row left">
@@ -329,41 +313,45 @@ export class Conversationmanagement extends plugin {
                 <div class="bubble model-bubble">${textContent}</div>
               </div>
             </div>
-          `
+          `;
         }
       }
 
       const finalHtml = templateHtml
-        .replace(/{{title}}/g, `与「${prefix}」的对话记录`)
+        .replace(/{{title}}/g, `与「${profileName}」的对话记录`)
         .replace(/{{messages}}/g, messagesHtml)
         .replace(/{{left_bubble_base64}}/g, leftBubbleBase64)
         .replace(/{{right_bubble_base64}}/g, rightBubbleBase64)
-        .replace(/{{background_image_base64}}/g, backgroundImageBase64)
+        .replace(/{{background_image_base64}}/g, backgroundImageBase64);
 
       const browser = await puppeteer.launch({
         headless: "new",
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      })
-      const page = await browser.newPage()
-      await page.setViewport({ width: 800, height: 600, deviceScaleFactor: 2 })
-      await page.setContent(finalHtml, { waitUntil: "networkidle0" })
+      });
+      const page = await browser.newPage();
+      await page.setViewport({ width: 800, height: 600, deviceScaleFactor: 2 });
+      await page.setContent(finalHtml, { waitUntil: "networkidle0" });
 
-      const bodyHeight = await page.evaluate(() => document.body.scrollHeight)
-      await page.setViewport({ width: 800, height: bodyHeight || 600, deviceScaleFactor: 2 })
+      const bodyHeight = await page.evaluate(() => document.body.scrollHeight);
+      await page.setViewport({
+        width: 800,
+        height: bodyHeight || 600,
+        deviceScaleFactor: 2,
+      });
 
-      const imageBuffer = await page.screenshot({ fullPage: true })
-      await browser.close()
+      const imageBuffer = await page.screenshot({ fullPage: true });
+      await browser.close();
 
       if (imageBuffer) {
-        await e.reply(segment.image(imageBuffer))
+        await e.reply(segment.image(imageBuffer));
       } else {
-        await this.reply("对话记录图片生成失败。", true, { recallMsg: 10 })
+        await e.reply("对话记录图片生成失败。", 10, true);
       }
     } catch (error) {
-      logger.error("导出对话失败:", error)
-      await this.reply("导出对话时遇到错误，请查看后台日志。", true, { recallMsg: 10 })
+      logger.error("导出对话失败:", error);
+      await e.reply("导出对话时遇到错误，请查看后台日志。", 10, true);
     }
 
-    return true
-  }
+    return true;
+  });
 }
