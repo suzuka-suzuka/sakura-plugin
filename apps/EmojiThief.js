@@ -56,9 +56,9 @@ export class TextMsg extends plugin {
     let hasNewEmoji = false;
 
     for (const item of e.message) {
-      if (item.type === "image" && (item.sub_type === 1 || item.emoji_id)) {
+      if (item.type === "image" && (item.data?.sub_type === 1 || item.data?.emoji_id)) {
         try {
-          const response = await axios.get(item.url, {
+          const response = await axios.get(item.data?.url, {
             responseType: "arraybuffer",
             timeout: 10000,
           });
