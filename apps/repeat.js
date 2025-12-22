@@ -119,11 +119,11 @@ export class repeatPlugin extends plugin {
       if (m1.type !== m2.type) return false;
 
       if (m1.type === "text") {
-        if (m1.text !== m2.text) return false;
+        if (m1.data?.text !== m2.data?.text) return false;
       } else if (m1.type === "image") {
-        if (m1.file !== m2.file) {
-          if (m1.url && m2.url) {
-            if (m1.url !== m2.url) {
+        if (m1.data?.file !== m2.data?.file) {
+          if (m1.data?.url && m2.data?.url) {
+            if (m1.data.url !== m2.data.url) {
               return false;
             }
           } else {

@@ -40,7 +40,7 @@ export class GroupManager extends plugin {
 
       const inactiveMembers = [];
       memberMap.forEach((member) => {
-        if (member.user_id === e.bot.uin) {
+        if (member.user_id === e.bot.self_id) {
           return;
         }
         if (member.join_time === member.last_sent_time) {
@@ -59,7 +59,7 @@ export class GroupManager extends plugin {
         {
           message: `检测到 ${inactiveMembers.length} 位从未发言的成员，详情如下：`,
           nickname: bot.card || bot.nickname,
-          user_id: e.bot.uin,
+          user_id: e.bot.self_id,
         },
       ];
 
@@ -73,7 +73,7 @@ export class GroupManager extends plugin {
             `\nQQ: ${member.user_id}`,
           ],
           nickname: bot.card || bot.nickname,
-          user_id: e.bot.uin,
+          user_id: e.bot.self_id,
         });
       }
 
@@ -168,7 +168,7 @@ export class GroupManager extends plugin {
       const inactiveMembers = [];
 
       memberMap.forEach((member) => {
-        if (member.user_id === e.bot.uin) {
+        if (member.user_id === e.bot.self_id) {
           return;
         }
         const timeDifference = currentTime - member.last_sent_time;
@@ -192,7 +192,7 @@ export class GroupManager extends plugin {
         {
           message: `检测到 ${inactiveMembers.length} 位超过 ${value}${unit} 未发言的成员，详情如下：`,
           nickname: bot.card || bot.nickname,
-          user_id: e.bot.uin,
+          user_id: e.bot.self_id,
         },
       ];
 
@@ -210,7 +210,7 @@ export class GroupManager extends plugin {
             `\n最后发言: ${lastSentDate}`,
           ],
           nickname: bot.card || bot.nickname,
-          user_id: e.bot.uin,
+          user_id: e.bot.self_id,
         });
       }
 
@@ -294,7 +294,7 @@ export class GroupManager extends plugin {
 
       const lowLevelMembers = [];
       memberMap.forEach((member) => {
-        if (member.user_id === e.bot.uin || member.role !== "member") {
+        if (member.user_id === e.bot.self_id || member.role !== "member") {
           return;
         }
         if (member.level < level) {
@@ -314,7 +314,7 @@ export class GroupManager extends plugin {
         {
           message: `检测到 ${lowLevelMembers.length} 位群等级低于 ${level} 级的成员，详情如下：`,
           nickname: bot.card || bot.nickname,
-          user_id: e.bot.uin,
+          user_id: e.bot.self_id,
         },
       ];
 
@@ -329,7 +329,7 @@ export class GroupManager extends plugin {
             `\n群等级: ${member.level}`,
           ],
           nickname: bot.card || bot.nickname,
-          user_id: e.bot.uin,
+          user_id: e.bot.self_id,
         });
       }
 

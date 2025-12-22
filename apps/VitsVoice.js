@@ -160,8 +160,8 @@ export class VitsVoice extends plugin {
       nodes.push({
         type: "node",
         data: {
-          user_id: Bot.uin,
-          nickname: Bot.nickname,
+          user_id: bot.self_id,
+          nickname: bot.nickname,
           content: chunk.join("，"),
         },
       });

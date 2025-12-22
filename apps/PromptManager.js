@@ -173,7 +173,7 @@ export class profileManager extends plugin {
     const nodes = roles.map((role, index) => ({
       type: "node",
       data: {
-        user_id: e.bot.uin,
+        user_id: e.bot.self_id,
         nickname: e.bot.nickname,
         content: `${index + 1}. ${role.name}\n设定预览: ${role.prompt.substring(0, 500)}${role.prompt.length > 500 ? "..." : ""}`,
       },
@@ -297,7 +297,7 @@ export class profileManager extends plugin {
     const nodes = channels.map(channel => ({
       type: "node",
       data: {
-        user_id: e.bot.uin,
+        user_id: e.bot.self_id,
         nickname: e.bot.nickname,
         content: channel.name,
       },
