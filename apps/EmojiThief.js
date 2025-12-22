@@ -112,7 +112,7 @@ export class TextMsg extends plugin {
           return false;
         }
         logger.info(`触发表情包`);
-        await e.reply(Segment.image(emojiPath, 1));
+        await e.reply(segment.image(emojiPath, 1));
       } catch (error) {
         logger.error(`表情包发送失败: ${error}`);
       }
