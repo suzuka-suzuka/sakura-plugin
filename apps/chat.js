@@ -6,6 +6,7 @@ import {
 } from "../lib/AIUtils/ConversationHistory.js";
 import { executeToolCalls } from "../lib/AIUtils/tools/tools.js";
 import { parseAtMessage, getQuoteContent } from "../lib/AIUtils/messaging.js";
+import { randomReact } from "../lib/utils.js";
 export class AIChat extends plugin {
   constructor() {
     super({
@@ -114,7 +115,7 @@ export class AIChat extends plugin {
     const { Channel, Prompt, GroupContext, History, Tool } = matchedProfile;
 
     logger.info(`Chat触发`);
-    await e.react(124);
+    await randomReact(e);
 
     let finalResponseText = "";
     let currentFullHistory = [];

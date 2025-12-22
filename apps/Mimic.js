@@ -9,6 +9,7 @@ import {
   getQuoteContent,
 } from "../lib/AIUtils/messaging.js";
 import Setting from "../lib/setting.js";
+import { randomReact } from "../lib/utils.js";
 
 export class Mimic extends plugin {
   constructor() {
@@ -216,7 +217,7 @@ export class Mimic extends plugin {
     }
 
     logger.info(`mimic触发`);
-    await e.react(124);
+    await randomReact(e);
     let finalResponseText = "";
     let currentFullHistory = [];
     let toolCallCount = 0;
