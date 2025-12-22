@@ -241,7 +241,7 @@ export class Favorability extends plugin {
       currentUser
     );
 
-    const currentUserName = e.member?.card || e.member?.nickname || currentUser;
+    const currentUserName = e.sender?.card || e.sender?.nickname || currentUser;
 
     let targetUserName = targetUser;
     try {
@@ -301,7 +301,7 @@ export class Favorability extends plugin {
     const imageBuffer = await generator.generateRanking(
       "谁在意我",
       rankingData,
-      e.member?.card || e.member?.nickname || currentUser
+      e.sender?.card || e.sender?.nickname || currentUser
     );
 
     await e.reply(segment.image(imageBuffer));
@@ -344,7 +344,7 @@ export class Favorability extends plugin {
     const imageBuffer = await generator.generateRanking(
       "我在意谁",
       rankingData,
-      e.member?.card || e.member?.nickname || currentUser
+      e.sender?.card || e.sender?.nickname || currentUser
     );
 
     await e.reply(segment.image(imageBuffer));

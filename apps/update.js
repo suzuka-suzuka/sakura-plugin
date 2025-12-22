@@ -6,6 +6,7 @@ const { exec, execSync } = require("child_process")
 
 const pluginName = "sakura-plugin"
 const pluginRepo = "https://github.com/suzuka-suzuka/sakura-plugin"
+const pluginBranch = "sakura"
 
 let uping = false
 
@@ -61,10 +62,10 @@ export class Update extends plugin {
     const pluginPath = `./plugins/${pluginName}/`
     let command
     if (isForce) {
-      command = `git -C ${pluginPath} fetch --all && git -C ${pluginPath} reset --hard origin/main && git -C ${pluginPath} clean -fd`
+      command = `git -C ${pluginPath} fetch --all && git -C ${pluginPath} reset --hard origin/${pluginBranch} && git -C ${pluginPath} clean -fd`
       await e.reply("正在执行强制更新操作，将丢弃所有本地修改...")
     } else {
-      command = `git -C ${pluginPath} pull --no-rebase`
+      command = `git -C ${pluginPath} pull origin ${pluginBranch} --no-rebase`
       await e.reply("正在执行更新操作，请稍等...")
     }
     this.oldCommitId = await this.getcommitId(pluginName)
