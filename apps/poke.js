@@ -91,7 +91,6 @@ export class poke extends plugin {
     }
 
     await e.ban(duration, e.user_id);
-    logger.info(`[戳一戳] 用户 ${e.user_id} 已被禁言 ${duration} 秒。`);
     return true;
   }
 
@@ -166,10 +165,6 @@ export class poke extends plugin {
     if (!pokeConfig.enable) {
       return false;
     }
-
-    logger.info(
-      `[戳一戳] 群 ${e.group_id} 中 ${e.user_id} 戳了戳 ${e.target_id}`
-    );
 
     if (await this.checkIgnorePoke(e.group_id)) {
       return false;
