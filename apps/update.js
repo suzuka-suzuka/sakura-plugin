@@ -86,8 +86,7 @@ export class Update extends plugin {
     } else {
       await e.reply(`${pluginName} 更新成功\n最后更新时间：${time}`)
       this.isUp = true
-      let log = await this.getLog(pluginName, e)
-      await e.reply(log)
+      await this.getLog(pluginName, e)
     }
 
     logger.mark(`最后更新时间：${time}`)
@@ -124,9 +123,13 @@ export class Update extends plugin {
 
     let end = `更多详细信息，请前往github查看\n${pluginRepo}`
 
-    log = await this.makeForwardMsg(`${pluginName}更新日志，共${line}条`, log, end, e)
+    await e.sendForwardMsg([log, end].filter(Boolean), {
+      prompt: `${pluginName}更新日志`,
+      summary: `共${line}条`,
+      source: "更新日志",
+    })
 
-    return log
+    return null
   }
 
   async getcommitId(plugin = "") {
@@ -153,66 +156,6 @@ export class Update extends plugin {
       time = "获取时间失败"
     }
     return time
-  }
-
-  async makeForwardMsg(title, msg, end, e) {
-    const _bot = e.bot
-    if (!_bot) {
-      logger.warn("makeForwardMsg: e.bot is not available.")
-      return [title, msg, end].filter(Boolean).join("\n\n")
-    }
-    let nickname = _bot.nickname
-    if (e.group_id) {
-      let info =
-        (await _bot?.pickMember?.(e.group_id, _bot.uin)) ||
-        (await _bot?.getGroupMemberInfo?.(e.group_id, _bot.uin))
-      nickname = info.card || info.nickname
-    }
-    let userInfo = {
-      user_id: _bot.uin,
-      nickname,
-    }
-
-    let forwardMsg = [
-      {
-        ...userInfo,
-        message: title,
-      },
-      {
-        ...userInfo,
-        message: msg,
-      },
-    ]
-
-    if (end) {
-      forwardMsg.push({
-        ...userInfo,
-        message: end,
-      })
-    }
-
-    if (e.group?.makeForwardMsg) {
-      forwardMsg = await e.group.makeForwardMsg(forwardMsg)
-    } else if (e?.friend?.makeForwardMsg) {
-      forwardMsg = await e.friend.makeForwardMsg(forwardMsg)
-    } else {
-      return msg.join("\n")
-    }
-
-    let dec = `${pluginName} 更新日志`
-    if (typeof forwardMsg.data === "object") {
-      let detail = forwardMsg.data?.meta?.detail
-      if (detail) {
-        detail.news = [{ text: dec }]
-      }
-    } else {
-      forwardMsg.data = forwardMsg.data
-        .replace(/\n/g, "")
-        .replace(/<title color="#777777" size="26">(.+?)<\/title>/g, "___")
-        .replace(/___+/, `<title color="#777777" size="26">${dec}</title>`)
-    }
-
-    return forwardMsg
   }
 
   async gitErr(err, stdout, e) {
