@@ -12,7 +12,7 @@ const __dirname = path.dirname(__filename)
 class WebEditor {
   constructor(bot = null) {
     this.app = express()
-    this.bot = bot || global.Bot
+    this.bot = bot || global.bot
 
     const configPath = path.join(__dirname, "config", "webeditor.yaml")
     const defConfigPath = path.join(__dirname, "defSet", "webeditor.yaml")
@@ -108,22 +108,21 @@ class WebEditor {
     this.app.get("/api/groups", async (req, res) => {
       try {
         const groups = []
-        const bot = this.bot || global.Bot
+        const bot = this.bot || global.bot
 
-        if (bot) {
+        if (bot?.getGroupList) {
           const groupList = await bot.getGroupList()
-          if (groupList && Array.isArray(groupList)) {
-            for (const groupInfo of groupList) {
+          if (Array.isArray(groupList)) {
+            for (const g of groupList) {
               groups.push({
-                id: String(groupInfo.group_id),
-                name: groupInfo.group_name || groupInfo.name || `群${groupInfo.group_id}`,
+                id: String(g.group_id),
+                name: g.group_name || `群${g.group_id}`,
               })
             }
           }
         }
 
         groups.sort((a, b) => Number(a.id) - Number(b.id))
-
         res.json({ success: true, data: groups })
       } catch (error) {
         console.error("[sakura] 获取群列表失败:", error)
