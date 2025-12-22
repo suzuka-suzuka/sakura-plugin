@@ -51,7 +51,7 @@ export class SplitImage extends plugin {
 
       const msgList = [];
       const botId = e.self_id || 2854196310;
-      const botName = e.bot?.nickname || "Bot";
+      const botName = e.bot?.nickname ;
 
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {

@@ -36,7 +36,7 @@ export class AutoCleanup extends plugin {
 
     let botInfo;
     try {
-      botInfo = await group.getMemberInfo(bot.selfId, true);
+      botInfo = await group.getMemberInfo(bot.self_id, true);
     } catch (err) {
       logger.error(`[自动清理] 获取群 ${groupId} Bot自身信息失败`);
       return;
@@ -60,7 +60,7 @@ export class AutoCleanup extends plugin {
     const toCleanup = [];
 
     for (const member of memberList) {
-      if (member.user_id == bot.selfId) continue;
+      if (member.user_id == bot.self_id) continue;
 
       if (member.role !== "member") continue;
 

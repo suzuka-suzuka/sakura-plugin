@@ -98,7 +98,7 @@ export class ActiveChatScheduler extends plugin {
             const mockE = {
               group_id: group_id,
               user_id: user_id,
-              self_id: bot.selfId,
+              self_id: bot.self_id,
               bot: bot,
               sender: memberInfo,
             };
