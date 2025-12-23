@@ -75,28 +75,25 @@ export class Conversationmanagement extends plugin {
     for (const item of history) {
       if (item.role === "user") {
         nodes.push({
-          type: "node",
-          data: {
-            user_id: e.user_id,
-            nickname: e.sender.card || e.sender.nickname || e.user_id,
-            content: `${item.parts[0].text}`,
-          },
+          user_id: e.user_id,
+          nickname: e.sender.card || e.sender.nickname || e.user_id,
+          content: `${item.parts[0].text}`,
         });
       } else if (item.role === "model") {
         const info = await e.getInfo(e.self_id);
         const name = info?.card || info?.nickname || e.self_id;
         nodes.push({
-          type: "node",
-          data: {
-            user_id: e.self_id,
-            nickname: name,
-            content: `${item.parts[0].text}`,
-          },
+          user_id: e.self_id,
+          nickname: name,
+          content: `${item.parts[0].text}`,
         });
       }
     }
 
-    await e.sendForwardMsg(nodes, { source: `「${profileName}」对话历史` });
+    await e.sendForwardMsg(nodes, {
+      source: `「${profileName}」对话历史`,
+      prompt: "查看对话详情",
+    });
 
     return true;
   });

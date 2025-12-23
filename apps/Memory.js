@@ -122,15 +122,15 @@ export class Memory extends plugin {
       }
 
       const nodes = memories.map((m, index) => ({
-        type: "node",
-        data: {
-          user_id: e.user_id,
-          nickname: e.sender.card || e.sender.nickname || "",
-          content: `${index + 1}. ${m}`,
-        },
+        user_id: e.user_id,
+        nickname: e.sender.card || e.sender.nickname || "",
+        content: `${index + 1}. ${m}`,
       }))
 
-      await e.sendForwardMsg(nodes, { source: "用户的记忆列表" })
+      await e.sendForwardMsg(nodes, {
+        source: "用户的记忆列表",
+        prompt: "我记得你的一切...",
+      })
     } catch (err) {
       logger.error(`读取记忆文件失败: ${err}`)
       await e.reply("读取记忆失败，请稍后再试", false, { recallMsg: 10 })

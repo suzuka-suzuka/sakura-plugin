@@ -30,9 +30,13 @@ export class bilibili extends plugin {
     return setting.getConfig("bilicookie");
   }
 
-  handleBiliLink = Command(
-    /(b23.tv|bilibili.com|BV[a-zA-Z0-9]{10})|^#?(b|B站解析)$/i,
-    async (e) => {
+  handleBiliLink = OnEvent("message", async (e) => {
+    if (
+      !/(b23.tv|bilibili.com|BV[a-zA-Z0-9]{10})|^#?(b|B站解析)$/i.test(e.msg) &&
+      !e.message?.some((s) => s.type === "json")
+    ) {
+      return false;
+    }
       const isCommand = /^#?(b|B站解析)$/i.test(e.msg);
       const autoResolve = this.appconfig.autoResolve !== false;
 
@@ -121,13 +125,21 @@ export class bilibili extends plugin {
       );
       if (jsonMessage) {
         try {
-          const innerJsonData = JSON.parse(jsonMessage.data);
+          let jsonData = jsonMessage.data;
+          if (typeof jsonData === "object" && jsonData.data) {
+            jsonData = jsonData.data;
+          }
+          const innerJsonData =
+            typeof jsonData === "string" ? JSON.parse(jsonData) : jsonData;
+
           const rawUrl = innerJsonData?.meta?.detail_1?.qqdocurl;
           if (rawUrl) {
             url = rawUrl.replace(/\\/g, "");
             logger.info(`从JSON消息提取到URL: ${url}`);
           }
-        } catch (error) {}
+        } catch (error) {
+          logger.error("解析JSON消息失败:", error);
+        }
       }
 
       if (!url) {
@@ -252,31 +264,18 @@ export class bilibili extends plugin {
 
       const { title, owner, stat, pic, desc } = videoInfo;
 
-      const infoText = [
-        `标题：${title}`,
-        `UP主：${owner.name}`,
-        `播放：${formatNum(stat.view)} | 弹幕：${formatNum(
-          stat.danmaku
-        )} | 评论：${formatNum(stat.reply)}`,
-        `点赞：${formatNum(stat.like)} | 投币：${formatNum(
-          stat.coin
-        )} | 收藏：${formatNum(stat.favorite)}`,
-        ...(desc
-          ? [`简介：${desc.substring(0, 100)}${desc.length > 100 ? "..." : ""}`]
-          : []),
-      ].join("\n");
+      const infoText = desc
+        ? `${desc.substring(0, 200)}${desc.length > 200 ? "..." : ""}`
+        : "暂无简介";
 
-      const nodes = [];
+      const messages = [];
       const nickname =
         e.sender?.card || e.sender?.nickname || e.user_id.toString();
 
-      nodes.push({
-        type: "node",
-        data: {
-          user_id: e.user_id,
-          nickname: nickname,
-          content: [segment.image(pic), infoText],
-        },
+      messages.push({
+        user_id: e.user_id,
+        nickname: nickname,
+        content: [segment.image(pic), segment.text(infoText)],
       });
 
       if (comments && comments.length > 0) {
@@ -290,7 +289,7 @@ export class bilibili extends plugin {
           if (content || hasPictures) {
             const messageParts = [];
             if (content) {
-              messageParts.push(content);
+              messageParts.push(segment.text(content));
             }
             if (hasPictures) {
               comment.content.pictures.forEach((p) =>
@@ -299,20 +298,26 @@ export class bilibili extends plugin {
             }
 
             if (messageParts.length > 0) {
-              nodes.push({
-                type: "node",
-                data: {
-                  user_id: e.user_id,
-                  nickname: nickname,
-                  content: messageParts,
-                },
+              messages.push({
+                user_id: e.user_id,
+                nickname: nickname,
+                content: messageParts,
               });
             }
           }
         }
       }
 
-      await e.sendForwardMsg(nodes);
+      await e.sendForwardMsg(messages, {
+        source: title,
+        prompt: "点击查看视频详情",
+        news: [
+          { text: `UP主: ${owner.name}` },
+          { text: `播放: ${formatNum(stat.view)}  弹幕: ${formatNum(stat.danmaku)}` },
+          { text: `评论: ${formatNum(stat.reply)}  点赞: ${formatNum(stat.like)}` },
+          { text: `投币: ${formatNum(stat.coin)}  收藏: ${formatNum(stat.favorite)}` },
+        ],
+      });
     } catch (error) {
       logger.error("发送视频信息时出错:", error);
     }

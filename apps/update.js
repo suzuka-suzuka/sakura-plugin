@@ -125,7 +125,6 @@ export class Update extends plugin {
 
     await e.sendForwardMsg([log, end].filter(Boolean), {
       prompt: `${pluginName}更新日志`,
-      summary: `共${line}条`,
       source: "更新日志",
     })
 

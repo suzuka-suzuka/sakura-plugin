@@ -93,6 +93,8 @@ export class AutoCleanup extends plugin {
 
     await group.sendMsg(`午夜时刻，开杀了喵`);
 
-    await group.kickMemberBatch(toCleanup);
+    for (const userId of toCleanup) {
+      await group.kick(userId);
+    }
   }
 }

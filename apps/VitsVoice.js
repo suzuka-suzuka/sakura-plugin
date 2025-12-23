@@ -1,6 +1,5 @@
-import axios from "axios";
 import setting from "../lib/setting.js";
-
+import axios from "axios";
 const API_URL = "https://mikusfan-vits-uma-genshin-honkai.hf.space/api/predict";
 let speakersCache = [];
 
@@ -158,16 +157,16 @@ export class VitsVoice extends plugin {
     for (let i = 0; i < speakersCache.length; i += 50) {
       const chunk = speakersCache.slice(i, i + 50);
       nodes.push({
-        type: "node",
-        data: {
-          user_id: bot.self_id,
-          nickname: bot.nickname,
-          content: chunk.join("，"),
-        },
+        user_id: e.bot.self_id,
+        nickname: e.bot.nickname,
+        content: chunk.join("，"),
       });
     }
 
-    await e.sendForwardMsg(nodes, { source: `语音角色列表（共${speakersCache.length}个）` });
+    await e.sendForwardMsg(nodes, {
+      source: `语音角色列表（共${speakersCache.length}个）`,
+      prompt: "快来选一个喜欢的角色吧！",
+    });
   });
 
   changeDefaultSpeaker = Command(/^#?切换语音(.*)$/, async (e) => {

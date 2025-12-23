@@ -69,17 +69,17 @@ export class SplitImage extends plugin {
             .toBuffer();
 
           msgList.push({
-            type: "node",
-            data: {
-              user_id: botId,
-              nickname: botName,
-              content: segment.image(pieceBuffer),
-            },
+            user_id: botId,
+            nickname: botName,
+            content: segment.image(pieceBuffer),
           });
         }
       }
 
-      await e.sendForwardMsg(msgList, { source: `图片已切割为 ${cols}列 x ${rows}行` });
+      await e.sendForwardMsg(msgList, {
+        source: `图片已切割为 ${cols}列 x ${rows}行`,
+        prompt: "拼图碎片已送达！",
+      });
     } catch (err) {
       logger.error("[SplitImage] 切割图片失败", err);
     }

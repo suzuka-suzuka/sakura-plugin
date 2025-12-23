@@ -77,11 +77,18 @@ export class GroupManager extends plugin {
         });
       }
 
-      const nodes = forwardMsgNodes.map((n) => ({
-        type: "node",
-        data: { user_id: n.user_id, nickname: n.nickname, content: n.message },
-      }));
-      await e.sendForwardMsg(nodes);
+      await e.sendForwardMsg(
+        forwardMsgNodes.map((n) => ({
+          user_id: n.user_id,
+          nickname: n.nickname,
+          content: n.message,
+        })),
+        {
+          source: "从未发言成员列表",
+          prompt: "快来看看是谁在潜水！",
+          news: [{ text: `共检测到 ${inactiveMembers.length} 人` }],
+        }
+      );
 
       conversationStateNeverSpoken[e.user_id] = { inactiveMembers };
       this.setContext("confirmCleanupNeverSpoken", true, 30);
@@ -118,8 +125,9 @@ export class GroupManager extends plugin {
       10
     );
 
-    const userIds = inactiveMembers.map((m) => m.user_id);
-    await e.kick(userIds);
+    for (const member of inactiveMembers) {
+      await e.kick(member.user_id);
+    }
 
     await e.reply(`清理完成。成功清理 ${inactiveMembers.length} 人。`, 10);
   }
@@ -214,11 +222,18 @@ export class GroupManager extends plugin {
         });
       }
 
-      const nodes = forwardMsgNodes.map((n) => ({
-        type: "node",
-        data: { user_id: n.user_id, nickname: n.nickname, content: n.message },
-      }));
-      await e.sendForwardMsg(nodes);
+      await e.sendForwardMsg(
+        forwardMsgNodes.map((n) => ({
+          user_id: n.user_id,
+          nickname: n.nickname,
+          content: n.message,
+        })),
+        {
+          source: "长期潜水成员列表",
+          prompt: "这些人都好久没说话了...",
+          news: [{ text: `共检测到 ${inactiveMembers.length} 人` }],
+        }
+      );
 
       conversationStateInactive[e.user_id] = { inactiveMembers };
       this.setContext("confirmCleanupInactive", true, 30);
@@ -255,8 +270,9 @@ export class GroupManager extends plugin {
       10
     );
 
-    const userIds = inactiveMembers.map((m) => m.user_id);
-    await e.kick(userIds);
+    for (const member of inactiveMembers) {
+      await e.kick(member.user_id);
+    }
 
     await e.reply(`清理完成。成功清理 ${inactiveMembers.length} 人。`, 10);
   }
@@ -333,11 +349,18 @@ export class GroupManager extends plugin {
         });
       }
 
-      const nodes = forwardMsgNodes.map((n) => ({
-        type: "node",
-        data: { user_id: n.user_id, nickname: n.nickname, content: n.message },
-      }));
-      await e.sendForwardMsg(nodes);
+      await e.sendForwardMsg(
+        forwardMsgNodes.map((n) => ({
+          user_id: n.user_id,
+          nickname: n.nickname,
+          content: n.message,
+        })),
+        {
+          source: "低等级成员列表",
+          prompt: "萌新抓捕行动！",
+          news: [{ text: `共检测到 ${lowLevelMembers.length} 人` }],
+        }
+      );
 
       conversationStateLevel[e.user_id] = { lowLevelMembers };
       this.setContext("confirmCleanupByLevel", true, 30);
@@ -374,8 +397,9 @@ export class GroupManager extends plugin {
       10
     );
 
-    const userIds = lowLevelMembers.map((m) => m.user_id);
-    await e.kick(userIds);
+    for (const member of lowLevelMembers) {
+      await e.kick(member.user_id);
+    }
 
     await e.reply(`清理完成。成功清理 ${lowLevelMembers.length} 人。`, 10);
   }
