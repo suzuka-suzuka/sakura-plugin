@@ -16,8 +16,8 @@ export class Memory extends plugin {
     if (e.message && Array.isArray(e.message)) {
       fullText = e.message
         .map(m => {
-          if (m.type === "text") return m.text
-          if (m.type === "at") return `@${m.qq}`
+          if (m.type === "text") return m.data?.text || ""
+          if (m.type === "at") return `@${m.data?.qq || ""}`
           return ""
         })
         .join("")
@@ -50,7 +50,7 @@ export class Memory extends plugin {
 
     memories.push(memoryContent)
     fs.writeFileSync(memoryFile, JSON.stringify(memories, null, 2))
-    await this.reply(`已添加记忆`, false, { recallMsg: 10 })
+    await e.reply(`已添加记忆`, 10)
     return true
   });
 
@@ -83,18 +83,18 @@ export class Memory extends plugin {
       memories = JSON.parse(fs.readFileSync(memoryFile, "utf8"))
     } catch (err) {
       logger.error(`读取记忆文件失败: ${err}`)
-      await e.reply("读取记忆失败，请稍后再试", false, { recallMsg: 10 })
+      await e.reply("读取记忆失败，请稍后再试", 10)
       return true
     }
 
     if (index < 1 || index > memories.length) {
-      await e.reply(`找不到第 ${index} 条记忆，请检查序号是否正确`, false, { recallMsg: 10 })
+      await e.reply(`找不到第 ${index} 条记忆，请检查序号是否正确`, 10)
       return true
     }
 
     const deletedMemory = memories.splice(index - 1, 1)
     fs.writeFileSync(memoryFile, JSON.stringify(memories, null, 2))
-    await e.reply(`已删除第 ${index} 条记忆: ${deletedMemory[0]}`, false, { recallMsg: 10 })
+    await e.reply(`已删除第 ${index} 条记忆: ${deletedMemory[0]}`, 10)
     return true
   });
 
@@ -133,7 +133,7 @@ export class Memory extends plugin {
       })
     } catch (err) {
       logger.error(`读取记忆文件失败: ${err}`)
-      await e.reply("读取记忆失败，请稍后再试", false, { recallMsg: 10 })
+      await e.reply("读取记忆失败，请稍后再试", 10)
     }
     return true
   });
