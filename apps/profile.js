@@ -14,9 +14,6 @@ export class UserProfilePlugin extends plugin {
   }
 
   generateUserProfile = Command(/^#画像$/, async (e) => {
-    if (!e.isGroup) {
-      return false;
-    }
     await e.react(124);
     const targetUserId = e.user_id;
     const messageCount = 100;
@@ -117,12 +114,15 @@ ${rawChatHistory}`;
 
           await e.reply(segment.image(imageBuffer));
         } else {
-          await e.reply("画像分析失败，未能获取到有效的返回结果。", 10,true
-          );
+          await e.reply("画像分析失败，未能获取到有效的返回结果。", 10, true);
         }
       } catch (error) {
         logger.error("调用画像分析或生成消息时出错:", error);
-        await e.reply("画像分析或消息生成过程中出现错误，请稍后再试。", 10,true);
+        await e.reply(
+          "画像分析或消息生成过程中出现错误，请稍后再试。",
+          10,
+          true
+        );
       }
     }
     return true;
@@ -130,7 +130,6 @@ ${rawChatHistory}`;
 }
 
 async function getUserTextHistory(e, userId, num) {
-
   try {
     let userChats = [];
     let seq = e.message_id;

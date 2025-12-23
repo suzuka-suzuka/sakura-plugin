@@ -69,7 +69,7 @@ export class Memory extends plugin {
     }
     const index = parseInt(match[1], 10);
 
-    const groupId = e.isGroup ? e.group_id : "private";
+    const groupId = e.group_id || "private";
     const userId = e.user_id;
     const memoryFile = path.join(
       _path,
