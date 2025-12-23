@@ -76,9 +76,12 @@ export class SaveToAlbum extends plugin {
 
     let targetAlbum = null;
     if (albumName) {
-      targetAlbum = groupAlbums.find(
-        (a) => a.name && a.name.includes(albumName)
-      );
+      targetAlbum = groupAlbums.find((a) => a.name === albumName);
+      if (!targetAlbum) {
+        targetAlbum = groupAlbums.find(
+          (a) => a.name && a.name.includes(albumName)
+        );
+      }
       if (!targetAlbum) return false;
     } else {
       return false;
