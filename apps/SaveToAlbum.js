@@ -41,7 +41,12 @@ export class SaveToAlbum extends plugin {
 
     fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
 
-    e.react(124);
+    const messages = albumList.map((item) => `${item.name}`);
+    await e.sendForwardMsg(messages, {
+      prompt: "私密相册列表",
+      source: `共 ${albumList.length} 个相册`,
+      news: [{ text: "相册名" }],
+    });
   });
 
   saveToAlbum = Command(/^#?传相册\s*(.*)$/, async (e) => {
