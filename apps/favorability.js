@@ -209,7 +209,7 @@ export class Favorability extends plugin {
     return false;
   }
 
-  queryFavorability = Command(/^#?好感度.*$/, async (e) => {
+  queryFavorability = Command(/^#?好感度$/, async (e) => {
     const groupId = e.group_id.toString();
     const currentUser = e.user_id.toString();
 
