@@ -504,26 +504,19 @@ export class GroupManager extends plugin {
     1135,
     async (e) => {
       const bot = await e.getInfo(e.self_id);
-      if (bot.role === "member") {
-        return false;
-      }
-      const replySegment = e.message.find(
-        (segment) => segment.type === "reply"
-      );
-      if (!replySegment?.id) {
+      if (bot.role === "member" || !e.reply_id) {
         return false;
       }
 
       const action = e.msg.replace(/^#?/, "").includes("设为精华")
         ? "set"
         : "remove";
-      const messageId = replySegment.id;
 
       if (action === "set") {
-        await e.setGroupEssence(messageId);
+        await e.setGroupEssence(e.reply_id);
         await e.reply("✅ 已将该消息设为群精华！", 10);
       } else {
-        await e.deleteGroupEssence(messageId);
+        await e.deleteGroupEssence(e.reply_id);
         await e.reply("✅ 已取消该消息的精华状态。", 10);
       }
       return true;
