@@ -96,7 +96,7 @@ export class Favorability extends plugin {
         } catch (err) {
           logger.error(`[好感度] 保存数据失败: ${err}`);
         }
-      }, 5000);
+      }, 60000);
       this.saveTasks.set(groupId, debouncedWrite);
     }
 
