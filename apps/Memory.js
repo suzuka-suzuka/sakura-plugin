@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { _path } from "../lib/path.js";
+import { plugindata as data } from "../lib/path.js";
 
 export class Memory extends plugin {
   constructor() {
@@ -34,10 +34,7 @@ export class Memory extends plugin {
     const userId = e.user_id;
 
     const memoryDir = path.join(
-      _path,
-      "plugins",
-      "sakura-plugin",
-      "data",
+      data,
       "mimic",
       String(groupId)
     );
@@ -72,10 +69,7 @@ export class Memory extends plugin {
     const groupId = e.group_id || "private";
     const userId = e.user_id;
     const memoryFile = path.join(
-      _path,
-      "plugins",
-      "sakura-plugin",
-      "data",
+      data,
       "mimic",
       String(groupId),
       `${userId}.json`
@@ -109,10 +103,7 @@ export class Memory extends plugin {
     const groupId = e.group_id || "private";
     const userId = e.user_id;
     const memoryFile = path.join(
-      _path,
-      "plugins",
-      "sakura-plugin",
-      "data",
+      data,
       "mimic",
       String(groupId),
       `${userId}.json`

@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { _path } from "../lib/path.js";
+import { plugindata as data } from "../lib/path.js";
 import { getAI } from "../lib/AIUtils/getAI.js";
 import { executeToolCalls } from "../lib/AIUtils/tools/tools.js";
 import {
@@ -194,10 +194,7 @@ export class Mimic extends plugin {
     const userName = e.sender.card || e.sender.nickname || "";
 
     const memoryFile = path.join(
-      _path,
-      "plugins",
-      "sakura-plugin",
-      "data",
+      data,
       "mimic",
       String(groupId),
       `${userId}.json`

@@ -3,7 +3,7 @@ import { plugindata } from "../lib/path.js";
 import fs from "fs";
 import path from "path";
 
-const dataFile = path.join(plugindata, "albumData.json");
+const dataFile = path.join(plugindata, "album", "albumData.json");
 
 export class SaveToAlbum extends plugin {
   constructor() {
