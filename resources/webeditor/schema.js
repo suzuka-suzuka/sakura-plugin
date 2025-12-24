@@ -175,6 +175,12 @@ const configSchema = {
       schema: {
         model: { label: "模型名称", type: "text", required: true },
         api: { label: "API Key", type: "text", required: true },
+        baseURL: {
+          label: "反代地址",
+          type: "text",
+          required: false,
+          help: "可选，Gemini API 反代地址，例如 https://your-proxy.com/",
+        },
         vertexApi: {
           label: "Vertex API Key",
           type: "text",
@@ -298,6 +304,12 @@ const configSchema = {
           type: "textarea",
           help: "支持多个apikey轮询，一行一个",
           required: true,
+        },
+        baseURL: {
+          label: "反代地址",
+          type: "text",
+          required: false,
+          help: "可选，Gemini API 反代地址，例如 https://your-proxy.com/",
         },
         vertex: { label: "Vertex AI", type: "boolean", required: false },
       },

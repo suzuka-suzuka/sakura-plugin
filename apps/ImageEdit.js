@@ -217,15 +217,19 @@ export class EditImage extends plugin {
       API_KEY = API_KEY.trim()
 
       const callAI = async (apiKey, isVertex) => {
-        let ai
+        const geminiOptions = { apiKey: apiKey }
+
         if (isVertex) {
-          ai = new GoogleGenAI({
-            vertexai: true,
-            apiKey: apiKey,
-          })
-        } else {
-          ai = new GoogleGenAI({ apiKey: apiKey })
+          geminiOptions.vertexai = true
         }
+
+        if (imageConfig.baseURL) {
+          geminiOptions.httpOptions = {
+            baseUrl: imageConfig.baseURL,
+          }
+        }
+
+        let ai = new GoogleGenAI(geminiOptions)
 
         const config = {
           tools: [{ googleSearch: {} }],
