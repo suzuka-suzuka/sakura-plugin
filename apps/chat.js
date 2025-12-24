@@ -99,7 +99,7 @@ export class AIChat extends plugin {
         );
         return false;
       }
-      await redis.set(lockKey, "1", { EX: 120 });
+      await redis.set(lockKey, "1", "EX", 120);
     }
 
     try {
