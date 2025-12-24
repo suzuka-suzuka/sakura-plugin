@@ -1,5 +1,6 @@
 model: gemini-3-pro-image-preview
 api: "请在这里填写你的 Gemini API Key，支持多个"
+baseURL: "" # 可选，Gemini API 反代地址，例如 https://your-proxy.com/
 vertex: false
 vertexApi: "" # Vertex API Key，填写后如果默认渠道失败将尝试使用 Vertex 重试
 requirePermission: false
