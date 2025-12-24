@@ -37,7 +37,7 @@ export class AIChat extends plugin {
             contentParts.push(`@${msgPart.data?.qq}`);
             break;
           case "image":
-            const seq = e.seq || e.message_seq;
+            const seq = e.message_id || e.message_seq;
             contentParts.push(`[图片]${seq ? `(seq:${seq})` : ""}`);
             break;
         }

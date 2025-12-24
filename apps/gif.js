@@ -22,7 +22,7 @@ export class gifPlugin extends plugin {
     if (imageUrl) {
       await e.reply(segment.image(imageUrl, 1));
     } else {
-      await e.reply("找不到相关的表情包呢~", true);
+      await e.reply("找不到相关的表情包呢~", 10);
     }
   });
 }
