@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import _ from "lodash";
 import { plugindata } from "../lib/path.js";
 import FavorabilityImageGenerator from "../lib/favorability/ImageGenerator.js";
 
@@ -12,13 +13,14 @@ export class Favorability extends plugin {
   constructor() {
     super({
       name: "好感度",
-      dsc: "记录群友之间的好感度",
       event: "message.group",
       priority: 35,
     });
+    this.cache = new Map();
+    this.saveTasks = new Map();
   }
 
-  cleanupFavorabilityTask = Cron("0 0 0 * * *", async () => {
+  cleanupFavorabilityTask = Cron("0 0 4 * * *", async () => {
     this.cleanupFavorability();
   });
 
@@ -56,19 +58,27 @@ export class Favorability extends plugin {
         this.saveData(groupId, data);
       }
     }
+    this.cache.clear();
+    this.saveTasks.clear();
   }
   getDataFile(groupId) {
     return path.join(dataPath, `${groupId}.json`);
   }
 
   readData(groupId) {
+    if (this.cache.has(groupId)) {
+      return _.cloneDeep(this.cache.get(groupId));
+    }
+
     const file = this.getDataFile(groupId);
     if (!fs.existsSync(file)) {
       return { favorability: {} };
     }
     try {
       const data = fs.readFileSync(file, "utf-8");
-      return JSON.parse(data);
+      const parsedData = JSON.parse(data);
+      this.cache.set(groupId, parsedData);
+      return parsedData;
     } catch (err) {
       logger.error(`[好感度] 读取数据失败: ${err}`);
       return { favorability: {} };
@@ -76,12 +86,21 @@ export class Favorability extends plugin {
   }
 
   saveData(groupId, data) {
-    const file = this.getDataFile(groupId);
-    try {
-      fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
-    } catch (err) {
-      logger.error(`[好感度] 保存数据失败: ${err}`);
+    this.cache.set(groupId, data);
+
+    if (!this.saveTasks.has(groupId)) {
+      const debouncedWrite = _.debounce((gId, dataToWrite) => {
+        const file = this.getDataFile(gId);
+        try {
+          fs.writeFileSync(file, JSON.stringify(dataToWrite, null, 2), "utf-8");
+        } catch (err) {
+          logger.error(`[好感度] 保存数据失败: ${err}`);
+        }
+      }, 5000);
+      this.saveTasks.set(groupId, debouncedWrite);
     }
+
+    this.saveTasks.get(groupId)(groupId, data);
   }
 
   addFavorability(groupId, from, to, value) {
@@ -153,12 +172,15 @@ export class Favorability extends plugin {
 
     const atMsgs = e.message?.filter(
       (msg) =>
-        msg.type === "at" && msg.data?.qq && !isNaN(msg.data?.qq) && msg.data?.qq != e.self_id
+        msg.type === "at" &&
+        msg.data?.qq &&
+        !isNaN(msg.data?.qq) &&
+        msg.data?.qq != e.self_id
     );
     if (atMsgs && atMsgs.length > 0) {
-      targetUsers = [...new Set(atMsgs.map((msg) => msg.data?.qq.toString()))].filter(
-        (qq) => qq !== currentSender
-      );
+      targetUsers = [
+        ...new Set(atMsgs.map((msg) => msg.data?.qq.toString())),
+      ].filter((qq) => qq !== currentSender);
 
       if (targetUsers.length > 0) {
         shouldAddFavorability = true;
@@ -353,7 +375,7 @@ export class Favorability extends plugin {
 
   async getUserName(e, userId) {
     try {
-      let userInfo=await e.getInfo(userId)
+      let userInfo = await e.getInfo(userId);
       return userInfo?.card || userInfo?.nickname || userId;
     } catch (err) {
       return userId;

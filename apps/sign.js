@@ -54,7 +54,7 @@ export default class DailySign extends plugin {
   constructor() {
     super({
       name: "每日签到图",
-      event: "message",
+      event: "message.group",
       priority: 1135,
     })
   }
