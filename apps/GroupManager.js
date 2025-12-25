@@ -636,11 +636,11 @@ export class GroupManager extends plugin {
   );
 
   /**
-   * 设置群代办
-   * 引用消息并发送 #设为代办 即可将该消息设为群代办
+   * 设置群待办
+   * 引用消息并发送 #设为待办 即可将该消息设为群待办
    */
   handleGroupTodo = Command(
-    /^#?设为代办$/,
+    /^#?设为(群)?待办$/,
     "message.group",
     1135,
     async (e) => {
@@ -659,10 +659,10 @@ export class GroupManager extends plugin {
 
       try {
         await e.group.setTodo(e.reply_id);
-        await e.reply("✅ 已将该消息设为群代办！", 10);
+        await e.reply("✅ 已将该消息设为群待办！", 10);
       } catch (err) {
-        logger.error("设置群代办失败:", err);
-        await e.reply("❌ 设置群代办失败，请稍后再试。", 10);
+        logger.error("设置群待办失败:", err);
+        await e.reply("❌ 设置群待办失败，请稍后再试。", 10);
       }
       return true;
     }
