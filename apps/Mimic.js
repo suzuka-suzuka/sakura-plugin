@@ -6,7 +6,7 @@ import { executeToolCalls } from "../lib/AIUtils/tools/tools.js"
 import { splitAndReplyMessages, parseAtMessage, getQuoteContent } from "../lib/AIUtils/messaging.js"
 import Setting from "../lib/setting.js"
 import cfg from "../../../lib/config/config.js"
-import { randomEmojiLike } from "../lib/utils.js"
+import { randomEmojiLike, getImg } from "../lib/utils.js"
 import { PermissionManager } from "../lib/PermissionManager.js"
 
 export class Mimic extends plugin {
@@ -237,7 +237,17 @@ export class Mimic extends plugin {
     let toolCallCount = 0
     const Channel = config.Channel
     try {
-      const queryParts = [{ text: query }]
+      const imgBase64List = (await getImg(e, false, true)) || []
+
+      const queryParts = [
+        { text: query },
+        ...imgBase64List.map((img) => ({
+          inlineData: {
+            mimeType: img.mimeType,
+            data: img.base64,
+          },
+        })),
+      ]
 
       const geminiInitialResponse = await getAI(
         Channel,
@@ -253,7 +263,10 @@ export class Mimic extends plugin {
         return false
       }
 
-      currentFullHistory.push({ role: "user", parts: queryParts })
+      const historyParts = queryParts.filter((part) => !part.inlineData)
+      if (historyParts.length > 0) {
+        currentFullHistory.push({ role: "user", parts: historyParts })
+      }
 
       let currentGeminiResponse = geminiInitialResponse
 
