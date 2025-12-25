@@ -66,7 +66,7 @@ export class Update extends plugin {
       await e.reply("正在执行强制更新操作，将丢弃所有本地修改...")
     } else {
       command = `git -C ${pluginPath} pull origin ${pluginBranch} --no-rebase`
-      await e.reply("正在执行更新操作，请稍等...")
+      await e.react(124);
     }
     this.oldCommitId = await this.getcommitId(pluginName)
     uping = true
