@@ -43,7 +43,7 @@ export class pixivSearch extends plugin {
       const pagesRes = await requestApi(pagesUrl)
 
       if (!pagesRes.body || pagesRes.body.length === 0) {
-        await this.reply(`获取作品图片列表失败: 未找到图片页面信息`, 10, true)
+        await e.reply(`获取作品图片列表失败: 未找到图片页面信息`, 10, true)
         return true
       }
       const pages = pagesRes.body
@@ -178,7 +178,7 @@ await e.react(124)
       }
 
       if (!illust) {
-        await this.reply(`未能找到符合条件的图片，请换个标签再试。`, 10, true)
+        await e.reply(`未能找到符合条件的图片，请换个标签再试。`, 10, true)
 
         return true
       }
@@ -212,7 +212,7 @@ await e.react(124)
     const totalImagePages = Math.ceil(totalPages / imagesPerPage)
 
     if (totalPages > 0 && pageNum > totalImagePages) {
-      await this.reply(`该作品只有 ${totalImagePages} 页图片哦~ (共${totalPages}张)`, 10, false)
+      await e.reply(`该作品只有 ${totalImagePages} 页图片哦~ (共${totalPages}张)`, 10, false)
       return true
     }
 
@@ -270,7 +270,7 @@ await e.react(124)
     }
 
     const initialMsg = [...textMsg, ...imageUrls.map(url => segment.image(url))]
-    const sendResult = await this.reply(initialMsg, 0, true)
+    const sendResult = await e.reply(initialMsg, 0, true)
     if (sendResult?.message_id) {
       if (isR18) {
         e.recall(sendResult.message_id,10)
@@ -278,7 +278,7 @@ await e.react(124)
       return true
     }
 
-    this.reply("图片发送失败，正在尝试翻转后重发...", 10, true)
+    e.reply("图片发送失败，正在尝试翻转后重发...", 10, true)
 
     const processedImageBuffers = []
     for (const url of imageUrls) {
@@ -290,7 +290,7 @@ await e.react(124)
 
     if (processedImageBuffers.length > 0) {
       const retryMsg = [...textMsg, ...processedImageBuffers.map(buf => segment.image(buf))]
-      const retrySendResult = await this.reply(retryMsg, 0, true)
+      const retrySendResult = await e.reply(retryMsg, 0, true)
       if (retrySendResult?.message_id) {
         if (isR18) {
           e.recall(retrySendResult.message_id,10)
@@ -306,7 +306,7 @@ await e.react(124)
       ...textMsg,
       "\n\n图片最终发送失败，请点击链接查看图片：\n" + imageUrls.join("\n"),
     ]
-    const finalSendResult = await this.reply(linkMsg, 0, true)
+    const finalSendResult = await e.reply(linkMsg, 0, true)
     if (finalSendResult?.message_id) {
       e.recall(finalSendResult.message_id,10)
     }

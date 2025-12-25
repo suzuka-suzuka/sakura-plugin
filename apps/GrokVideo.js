@@ -70,7 +70,7 @@ export class GrokVideo extends plugin {
       const result = await grokRequest(request, grokConfig, e);
 
       if (!result || typeof result === "string") {
-        await this.reply(`视频生成失败: ${result || "未知错误"}`, true, {
+        await e.reply(`视频生成失败: ${result || "未知错误"}`, true, {
           recallMsg: 10,
         });
         return true;
@@ -81,14 +81,14 @@ export class GrokVideo extends plugin {
         if (video.localPath) {
           await e.reply(segment.video(video.localPath));
         } else {
-          await this.reply("视频下载失败", true, { recallMsg: 10 });
+          await e.reply("视频下载失败", true, { recallMsg: 10 });
         }
       } else {
-        await this.reply("未返回视频", true, { recallMsg: 10 });
+        await e.reply("未返回视频", true, { recallMsg: 10 });
       }
     } catch (error) {
       logger.error("[GrokVideo] 生成视频时出错:", error);
-      await this.reply(`视频生成出错: ${error.message}`, true, {
+      await e.reply(`视频生成出错: ${error.message}`, true, {
         recallMsg: 10,
       });
     }

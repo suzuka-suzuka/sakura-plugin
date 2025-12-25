@@ -49,7 +49,7 @@ await e.react(124)
 
     let sendResult
     try {
-      sendResult = await this.reply(segment.image(imageUrl), recallTime, false)
+      sendResult = await e.reply(segment.image(imageUrl), recallTime, false)
     } catch (err) {
       logger.error(`初次发送图片失败 (URL): ${err.message}`)
       sendResult = null
@@ -58,12 +58,12 @@ await e.react(124)
     let finalSuccess = !!sendResult?.message_id
 
     if (!finalSuccess) {
-      await this.reply("图片发送失败，可能被风控，正在尝试翻转后重发...", 10, true)
+      await e.reply("图片发送失败，可能被风控，正在尝试翻转后重发...", 10, true)
 
       const flippedImageBuffer = await FlipImage(imageUrl)
 
       if (flippedImageBuffer) {
-        sendResult = await this.reply(segment.image(flippedImageBuffer), recallTime, false).catch(
+        sendResult = await e.reply(segment.image(flippedImageBuffer), recallTime, false).catch(
           err => {
             logger.error(`第二次尝试发送图片失败 (flipped): ${err.message}`)
             return null
@@ -72,19 +72,19 @@ await e.react(124)
         finalSuccess = !!sendResult?.message_id
       } else {
         logger.error("翻转图片失败，很可能是源图片链接已失效")
-        await this.reply("图片链接已失效，无法获取。", 10, true)
+        await e.reply("图片链接已失效，无法获取。", 10, true)
         return false
       }
     }
 
     if (finalSuccess) {
       if (messageText) {
-        await this.reply(messageText, 60, false)
+        await e.reply(messageText, 60, false)
       }
       await common.sleep(500)
-      await this.reply("图片已发送", 10, true)
+      await e.reply("图片已发送", 10, true)
     } else {
-      await this.reply(`图片发送仍然失败，请自行查看图片链接：\n${imageUrl}`, 10, true)
+      await e.reply(`图片发送仍然失败，请自行查看图片链接：\n${imageUrl}`, 10, true)
     }
 
     return finalSuccess
