@@ -6,7 +6,8 @@ import {
 } from "../lib/AIUtils/ConversationHistory.js";
 import { executeToolCalls } from "../lib/AIUtils/tools/tools.js";
 import { parseAtMessage, getQuoteContent } from "../lib/AIUtils/messaging.js";
-import { randomReact } from "../lib/utils.js";
+import { randomReact, getImg } from "../lib/utils.js";
+
 export class AIChat extends plugin {
   constructor() {
     super({
@@ -129,7 +130,17 @@ export class AIChat extends plugin {
         );
       }
 
-      const queryParts = [{ text: query }];
+      const imgBase64List = (await getImg(e, false, true)) || [];
+
+      const queryParts = [
+        { text: query },
+        ...imgBase64List.map((img) => ({
+          inlineData: {
+            mimeType: img.mimeType,
+            data: img.base64,
+          },
+        })),
+      ];
       const { prefix } = matchedProfile;
 
       let currentAIResponse = await getAI(
@@ -147,7 +158,10 @@ export class AIChat extends plugin {
         return true;
       }
 
-      currentFullHistory.push({ role: "user", parts: queryParts });
+      const historyParts = queryParts.filter((part) => !part.inlineData);
+      if (historyParts.length > 0) {
+        currentFullHistory.push({ role: "user", parts: historyParts });
+      }
 
       while (true) {
         const textContent = currentAIResponse.text;
@@ -209,10 +223,10 @@ export class AIChat extends plugin {
 
       if (History) {
         const historyToSave = currentFullHistory.filter(
-          (part) =>
-            part.role === "user" ||
-            (part.role === "model" &&
-              part.parts.every((p) => p.hasOwnProperty("text")))
+          (item) =>
+            item.role === "user" ||
+            (item.role === "model" &&
+              item.parts.every((p) => p.hasOwnProperty("text")))
         );
         await saveConversationHistory(e, historyToSave, prefix);
       }

@@ -417,10 +417,10 @@ const configSchema = {
       type: "boolean",
       help: "启用后,伪人模式的每个群处理完当前消息前,不会处理该群的后续消息,直到当前消息处理完毕",
     },
-    "mimic.enableLevelLimit": {
-      label: "启用等级限制",
+    "mimic.enableHonorLimit": {
+      label: "启用荣誉限制",
       type: "boolean",
-      help: "启用后，群等级小于等于10级的用户无法触发",
+      help: "启用后，只有群聊龙王和群聊之火用户可触发",
     },
     "mimic.splitMessage": {
       label: "启用消息分割",
@@ -466,10 +466,10 @@ const configSchema = {
           type: "boolean",
           help: "启用后,伪人模式的每个群处理完当前消息前,不会处理该群的后续消息,直到当前消息处理完毕",
         },
-        enableLevelLimit: {
-          label: "启用等级限制",
+        enableHonorLimit: {
+          label: "启用荣誉限制",
           type: "boolean",
-          help: "启用后，群等级小于等于10级的用户无法触发",
+          help: "启用后，只有群聊龙王和群聊之火用户可触发",
         },
         splitMessage: {
           label: "启用消息分割",

@@ -8,7 +8,7 @@ alternatePromptProbability: 0.1
 recalltime: 10
 Channel: "2.5"
 enableGroupLock: false
-enableLevelLimit: false
+enableHonorLimit: false
 splitMessage: true
 Groups: []
 GroupConfigs:

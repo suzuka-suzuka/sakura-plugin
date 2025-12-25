@@ -9,7 +9,7 @@ import {
   getQuoteContent,
 } from "../lib/AIUtils/messaging.js";
 import Setting from "../lib/setting.js";
-import { randomReact } from "../lib/utils.js";
+import { randomReact, getImg } from "../lib/utils.js";
 
 export class Mimic extends plugin {
   constructor() {
@@ -119,13 +119,23 @@ export class Mimic extends plugin {
       messageText.includes(word)
     );
 
-    if (!e.isWhite && e.group_id && config.enableLevelLimit && hasKeyword) {
-      const memberInfo = await e.getInfo(null, true);
-
-      const level = memberInfo?.level || 100;
-
-      if (level <= 10) {
-        return false;
+    if (!e.isWhite && e.group_id && config.enableHonorLimit && hasKeyword) {
+      const userId = e.user_id;
+      try {
+        const [performerInfo, legendInfo] = await Promise.all([
+          e.group.getHonorInfo("performer"),
+          e.group.getHonorInfo("legend"),
+        ]);
+        const performerList = performerInfo?.performer_list || [];
+        const legendList = legendInfo?.legend_list || [];
+        const isHonorMember =
+          performerList.some((m) => String(m.user_id) === String(userId)) ||
+          legendList.some((m) => String(m.user_id) === String(userId));
+        if (!isHonorMember) {
+          return false;
+        }
+      } catch (err) {
+        logger.debug("[Mimic] 获取群荣誉信息失败:", err.message);
       }
     }
 
@@ -220,7 +230,17 @@ export class Mimic extends plugin {
     let toolCallCount = 0;
     const Channel = config.Channel;
     try {
-      const queryParts = [{ text: query }];
+      const imgBase64List = (await getImg(e, false, true)) || [];
+
+      const queryParts = [
+        { text: query },
+        ...imgBase64List.map((img) => ({
+          inlineData: {
+            mimeType: img.mimeType,
+            data: img.base64,
+          },
+        })),
+      ];
 
       const geminiInitialResponse = await getAI(
         Channel,
@@ -236,7 +256,10 @@ export class Mimic extends plugin {
         return false;
       }
 
-      currentFullHistory.push({ role: "user", parts: queryParts });
+      const historyParts = queryParts.filter((part) => !part.inlineData);
+      if (historyParts.length > 0) {
+        currentFullHistory.push({ role: "user", parts: historyParts });
+      }
 
       let currentGeminiResponse = geminiInitialResponse;
 

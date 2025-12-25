@@ -17,7 +17,7 @@ export class UserProfilePlugin extends plugin {
     await e.react(124);
     const targetUserId = e.user_id;
     const messageCount = 100;
-    const senderNickname = e.member.card || e.member.nickname;
+    const senderNickname = e.sender.card || e.sender.nickname || targetUserId;
     const messages = await getUserTextHistory(e, targetUserId, messageCount);
     if (messages && messages.length > 0) {
       const formattedLines = await Promise.all(

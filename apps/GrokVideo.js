@@ -16,9 +16,9 @@ export class GrokVideo extends plugin {
     if (!match) return false;
 
     const prompt = match[1].trim();
-    const imageUrls = await getImg(e, true);
+    const imgBase64List = await getImg(e, true, true);
 
-    if (!prompt && (!imageUrls || imageUrls.length === 0)) {
+    if (!prompt && (!imgBase64List || imgBase64List.length === 0)) {
       return false;
     }
 
@@ -33,8 +33,12 @@ export class GrokVideo extends plugin {
 
     try {
       const content = [];
-      if (imageUrls && imageUrls.length > 0) {
-        content.push({ type: "image_url", image_url: { url: imageUrls[0] } });
+      if (imgBase64List && imgBase64List.length > 0) {
+        const img = imgBase64List[0];
+        content.push({
+          type: "image_url",
+          image_url: { url: `data:${img.mimeType};base64,${img.base64}` },
+        });
       }
       if (prompt) {
         content.push({ type: "text", text: prompt });

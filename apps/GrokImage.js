@@ -21,7 +21,7 @@ export class GrokImage extends plugin {
       return false;
     }
 
-    const imageUrls = await getImg(e, true);
+    const imgBase64List = await getImg(e, true, true);
 
     const channelsConfig = Setting.getConfig("Channels");
     const grokList = channelsConfig?.grok || [];
@@ -35,12 +35,16 @@ export class GrokImage extends plugin {
     try {
       let messages = [];
 
-      if (imageUrls && imageUrls.length > 0) {
+      if (imgBase64List && imgBase64List.length > 0) {
+        const img = imgBase64List[0];
         messages = [
           {
             role: "user",
             content: [
-              { type: "image_url", image_url: { url: imageUrls[0] } },
+              {
+                type: "image_url",
+                image_url: { url: `data:${img.mimeType};base64,${img.base64}` },
+              },
               { type: "text", text: prompt },
             ],
           },

@@ -1,7 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { getImg } from "../lib/utils.js";
 import Setting from "../lib/setting.js";
-import sharp from "sharp";
 
 export class EditImage extends plugin {
   constructor() {
@@ -91,9 +90,9 @@ export class EditImage extends plugin {
   }
 
   async dynamicImageHandler(e, matchedTask, match) {
-    let imageUrls = await getImg(e, true);
+    const imgBase64List = await getImg(e, true, true);
 
-    if (!imageUrls || imageUrls.length === 0) {
+    if (!imgBase64List || imgBase64List.length === 0) {
       return false;
     }
 
@@ -154,7 +153,7 @@ export class EditImage extends plugin {
       finalPrompt = finalPrompt ? `${finalPrompt} ${userPrompt}` : userPrompt;
     }
 
-    return this._processAndCallAPI(e, finalPrompt, imageUrls, {
+    return this._processAndCallAPI(e, finalPrompt, imgBase64List, {
       aspectRatio,
       imageSize,
     });
@@ -162,7 +161,7 @@ export class EditImage extends plugin {
 
   async editImageHandler(e) {
     let msg = e.msg.replace(/^#i/, "").trim();
-    let imageUrls = await getImg(e, true);
+    const imgBase64List = await getImg(e, true, true);
 
     const {
       aspectRatio,
@@ -177,39 +176,29 @@ export class EditImage extends plugin {
       return true;
     }
 
-    return this._processAndCallAPI(e, promptText, imageUrls, {
+    return this._processAndCallAPI(e, promptText, imgBase64List, {
       aspectRatio,
       imageSize,
     });
   }
 
-  async _processAndCallAPI(e, promptText, imageUrls, options = {}) {
+  async _processAndCallAPI(e, promptText, imgBase64List, options = {}) {
     await e.react(124);
     const { aspectRatio, imageSize = "1K" } = options;
     const contents = [];
-    const hasImage = imageUrls && imageUrls.length > 0;
 
     if (promptText) {
       contents.push({ text: promptText });
     }
 
-    if (hasImage) {
-      for (const imageUrl of imageUrls) {
-        try {
-          const { base64Data, finalMimeType } = await this._processImage(
-            imageUrl
-          );
-          contents.push({
-            inlineData: {
-              mimeType: finalMimeType,
-              data: base64Data,
-            },
-          });
-        } catch (error) {
-          logger.error("处理其中一张图片时出错:", error);
-          await e.reply("处理图片时失败，请重试", 10, true);
-          return true;
-        }
+    if (imgBase64List && imgBase64List.length > 0) {
+      for (const img of imgBase64List) {
+        contents.push({
+          inlineData: {
+            mimeType: img.mimeType,
+            data: img.base64,
+          },
+        });
       }
     }
 
@@ -328,24 +317,5 @@ export class EditImage extends plugin {
     }
 
     return true;
-  }
-
-  async _processImage(imageUrl) {
-    const response = await fetch(imageUrl);
-    if (!response.ok) {
-      throw new Error(`图片下载失败: ${response.statusText}`);
-    }
-    const arrayBuffer = await response.arrayBuffer();
-    let buffer = Buffer.from(arrayBuffer);
-    const contentType = response.headers.get("content-type") || "image/jpeg";
-    let finalMimeType = contentType;
-
-    if (contentType === "image/gif") {
-      buffer = await sharp(buffer).toFormat("png").toBuffer();
-      finalMimeType = "image/png";
-    }
-
-    const base64Data = buffer.toString("base64");
-    return { base64Data, finalMimeType };
   }
 }
