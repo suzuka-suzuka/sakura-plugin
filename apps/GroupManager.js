@@ -634,4 +634,37 @@ export class GroupManager extends plugin {
       return true;
     }
   );
+
+  /**
+   * 设置群代办
+   * 引用消息并发送 #设为代办 即可将该消息设为群代办
+   */
+  handleGroupTodo = Command(
+    /^#?设为代办$/,
+    "message.group",
+    1135,
+    async (e) => {
+      if (!e.isAdmin && !e.isWhite) {
+        return false;
+      }
+
+      const bot = await e.getInfo(e.self_id);
+      if (bot.role === "member") {
+        return false;
+      }
+
+      if (!e.reply_id) {
+        return false
+      }
+
+      try {
+        await e.group.setTodo(e.reply_id);
+        await e.reply("✅ 已将该消息设为群代办！", 10);
+      } catch (err) {
+        logger.error("设置群代办失败:", err);
+        await e.reply("❌ 设置群代办失败，请稍后再试。", 10);
+      }
+      return true;
+    }
+  );
 }
