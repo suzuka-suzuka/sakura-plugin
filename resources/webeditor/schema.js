@@ -420,7 +420,7 @@ const configSchema = {
     "mimic.enableHonorLimit": {
       label: "启用荣誉限制",
       type: "boolean",
-      help: "启用后，只有群聊龙王和群聊之火用户可触发",
+      help: "启用后，只有有群聊之火的人可触发",
     },
     "mimic.splitMessage": {
       label: "启用消息分割",
@@ -469,7 +469,7 @@ const configSchema = {
         enableHonorLimit: {
           label: "启用荣誉限制",
           type: "boolean",
-          help: "启用后，只有群聊龙王和群聊之火用户可触发",
+          help: "启用后，只有有群聊之火的人可触发",
         },
         splitMessage: {
           label: "启用消息分割",
