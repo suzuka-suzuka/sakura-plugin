@@ -9,7 +9,7 @@ import {
   getQuoteContent,
 } from "../lib/AIUtils/messaging.js";
 import Setting from "../lib/setting.js";
-import { randomReact, getImg } from "../lib/utils.js";
+import { randomReact } from "../lib/utils.js";
 
 export class Mimic extends plugin {
   constructor() {
@@ -230,17 +230,7 @@ export class Mimic extends plugin {
     let toolCallCount = 0;
     const Channel = config.Channel;
     try {
-      const imgBase64List = (await getImg(e, false, true)) || [];
-
-      const queryParts = [
-        { text: query },
-        ...imgBase64List.map((img) => ({
-          inlineData: {
-            mimeType: img.mimeType,
-            data: img.base64,
-          },
-        })),
-      ];
+      const queryParts = [{ text: query }];
 
       const geminiInitialResponse = await getAI(
         Channel,
@@ -256,10 +246,7 @@ export class Mimic extends plugin {
         return false;
       }
 
-      const historyParts = queryParts.filter((part) => !part.inlineData);
-      if (historyParts.length > 0) {
-        currentFullHistory.push({ role: "user", parts: historyParts });
-      }
+      currentFullHistory.push({ role: "user", parts: queryParts });
 
       let currentGeminiResponse = geminiInitialResponse;
 

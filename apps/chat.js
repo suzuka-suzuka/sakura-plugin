@@ -130,17 +130,21 @@ export class AIChat extends plugin {
         );
       }
 
-      const imgBase64List = (await getImg(e, false, true)) || [];
-
-      const queryParts = [
-        { text: query },
-        ...imgBase64List.map((img) => ({
-          inlineData: {
-            mimeType: img.mimeType,
-            data: img.base64,
-          },
-        })),
-      ];
+      let queryParts;
+      if (Tool) {
+        queryParts = [{ text: query }];
+      } else {
+        const imgBase64List = (await getImg(e, false, true)) || [];
+        queryParts = [
+          { text: query },
+          ...imgBase64List.map((img) => ({
+            inlineData: {
+              mimeType: img.mimeType,
+              data: img.base64,
+            },
+          })),
+        ];
+      }
       const { prefix } = matchedProfile;
 
       let currentAIResponse = await getAI(

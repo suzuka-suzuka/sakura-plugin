@@ -9,7 +9,10 @@ export class EditImage extends plugin {
       event: "message",
       priority: 1135,
     });
-    this.task = Setting.getConfig("EditImage");
+  }
+
+  get task() {
+    return Setting.getConfig("EditImage");
   }
 
   dispatchHandler = OnEvent("message", async (e) => {

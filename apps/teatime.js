@@ -78,7 +78,7 @@ export class teatime extends plugin {
             logger.warn(`[teatime]群 ${groupId} 获取到的图片URL列表为空。`)
           }
         } else {
-          logger.info(`[teatime]群 ${groupId} 获取到 API 数据，但数据为空或格式不正确。`, jsonData)
+          logger.error(`[teatime]群 ${groupId} 获取到 API 数据，但数据为空或格式不正确。`, jsonData)
           if (browser) {
             await browser.close()
           }
