@@ -1,6 +1,6 @@
-import EconomyManager from "../lib/EconomyManager.js";
+import EconomyManager from "../lib/managers/EconomyManager.js";
 import EconomyImageGenerator from "../lib/economy/ImageGenerator.js";
-import GiftManager from "../lib/GiftManager.js";
+import GiftManager from "../lib/managers/GiftManager.js";
 
 export default class Economy extends plugin {
   constructor() {
@@ -44,7 +44,7 @@ export default class Economy extends plugin {
   myGifts = Command(/^#?我的礼物$/, async (e) => {
     const inventory = GiftManager.getInventory(e.group_id, e.user_id);
     if (Object.keys(inventory).length === 0) {
-      await e.reply("你还没有购买任何礼物哦~");
+      await e.reply("你还没有购买任何礼物哦~",10);
       return true;
     }
 
@@ -61,17 +61,15 @@ export default class Economy extends plugin {
     const targetId = e.at;
 
     if (!targetId) {
-      await e.reply("请艾特你要赠送礼物的人哦~");
-      return true;
+      return false
     }
 
     if (targetId == e.user_id) {
-      await e.reply("不能给自己送礼物哦~");
-      return true;
+      return false
     }
 
     const result = await GiftManager.sendGift(e, giftName, targetId);
-    await e.reply(result.msg);
+    await e.reply(result.msg,10);
     return true;
   });
 

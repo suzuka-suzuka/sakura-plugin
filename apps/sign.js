@@ -3,7 +3,7 @@ import fs from "node:fs";
 import _ from "lodash";
 import { plugindata } from "../lib/path.js";
 import ImageGenerator from "../lib/sign/ImageGenerator.js";
-import EconomyManager from "../lib/EconomyManager.js";
+import EconomyManager from "../lib/managers/EconomyManager.js";
 const dataPath = path.join(plugindata, "sign");
 if (!fs.existsSync(dataPath)) {
   fs.mkdirSync(dataPath, { recursive: true });

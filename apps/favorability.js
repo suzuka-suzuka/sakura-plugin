@@ -3,7 +3,7 @@ import path from "path";
 import _ from "lodash";
 import { plugindata } from "../lib/path.js";
 import FavorabilityImageGenerator from "../lib/favorability/ImageGenerator.js";
-import FavorabilityManager from "../lib/FavorabilityManager.js";
+import FavorabilityManager from "../lib/managers/FavorabilityManager.js";
 
 const dataPath = path.join(plugindata, "favorability");
 
