@@ -99,13 +99,11 @@ export default class DailySign extends plugin {
       newCoins = _.random(5, 15);
     }
 
-    // 连续签到奖励：连续2天+1，连续3天+2...最多+10
     let continuousBonus = 0;
     if (userData.lastingTimes >= 2) {
       continuousBonus = Math.min(userData.lastingTimes - 1, 10);
     }
 
-    // 每日前三名奖励
     let rankingBonus = 0;
     if (signRanking === 1) {
       rankingBonus = 10;
