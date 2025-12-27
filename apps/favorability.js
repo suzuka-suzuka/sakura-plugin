@@ -3,6 +3,7 @@ import path from "path";
 import _ from "lodash";
 import { plugindata } from "../lib/path.js";
 import FavorabilityImageGenerator from "../lib/favorability/ImageGenerator.js";
+import FavorabilityManager from "../lib/FavorabilityManager.js";
 
 const dataPath = path.join(plugindata, "favorability");
 
@@ -16,120 +17,14 @@ export class Favorability extends plugin {
       event: "message.group",
       priority: 35,
     });
-    this.cache = new Map();
-    this.saveTasks = new Map();
   }
 
   cleanupFavorabilityTask = Cron("0 0 4 * * *", async () => {
-    this.cleanupFavorability();
+    FavorabilityManager.cleanupFavorability();
   });
 
-  async cleanupFavorability() {
-    const files = fs
-      .readdirSync(dataPath)
-      .filter((file) => file.endsWith(".json"));
-    for (const file of files) {
-      const groupId = path.basename(file, ".json");
-      const data = this.readData(groupId);
-
-      if (!data.favorability || Object.keys(data.favorability).length === 0) {
-        continue;
-      }
-
-      let minFavorability = Infinity;
-      let minFrom = null;
-      let minTo = null;
-
-      for (const from in data.favorability) {
-        for (const to in data.favorability[from]) {
-          if (data.favorability[from][to] < minFavorability) {
-            minFavorability = data.favorability[from][to];
-            minFrom = from;
-            minTo = to;
-          }
-        }
-      }
-
-      if (minFrom && minTo) {
-        delete data.favorability[minFrom][minTo];
-        if (Object.keys(data.favorability[minFrom]).length === 0) {
-          delete data.favorability[minFrom];
-        }
-        this.saveData(groupId, data);
-      }
-    }
-    this.cache.clear();
-    this.saveTasks.clear();
-  }
-  getDataFile(groupId) {
-    return path.join(dataPath, `${groupId}.json`);
-  }
-
-  readData(groupId) {
-    if (this.cache.has(groupId)) {
-      return _.cloneDeep(this.cache.get(groupId));
-    }
-
-    const file = this.getDataFile(groupId);
-    if (!fs.existsSync(file)) {
-      return { favorability: {} };
-    }
-    try {
-      const data = fs.readFileSync(file, "utf-8");
-      const parsedData = JSON.parse(data);
-      this.cache.set(groupId, parsedData);
-      return parsedData;
-    } catch (err) {
-      logger.error(`[好感度] 读取数据失败: ${err}`);
-      return { favorability: {} };
-    }
-  }
-
-  saveData(groupId, data) {
-    this.cache.set(groupId, data);
-
-    if (!this.saveTasks.has(groupId)) {
-      const debouncedWrite = _.debounce((gId, dataToWrite) => {
-        const file = this.getDataFile(gId);
-        try {
-          fs.writeFileSync(file, JSON.stringify(dataToWrite, null, 2), "utf-8");
-        } catch (err) {
-          logger.error(`[好感度] 保存数据失败: ${err}`);
-        }
-      }, 60000);
-      this.saveTasks.set(groupId, debouncedWrite);
-    }
-
-    this.saveTasks.get(groupId)(groupId, data);
-  }
-
-  addFavorability(groupId, from, to, value) {
-    const data = this.readData(groupId);
-
-    if (!data.favorability) {
-      data.favorability = {};
-    }
-
-    if (!data.favorability[from]) {
-      data.favorability[from] = {};
-    }
-
-    if (!data.favorability[from][to]) {
-      data.favorability[from][to] = 0;
-    }
-
-    data.favorability[from][to] += value;
-
-    this.saveData(groupId, data);
-  }
-
-  getFavorability(groupId, from, to) {
-    const data = this.readData(groupId);
-    return data.favorability[from]?.[to] || 0;
-  }
-
   applyConsecutiveMessagePenalty(groupId, userId) {
-    const data = this.readData(groupId);
+    const data = FavorabilityManager.readData(groupId);
     let hasChange = false;
 
     if (data.favorability) {
@@ -142,7 +37,7 @@ export class Favorability extends plugin {
     }
 
     if (hasChange) {
-      this.saveData(groupId, data);
+      FavorabilityManager.saveData(groupId, data);
     }
   }
 
@@ -221,10 +116,10 @@ export class Favorability extends plugin {
 
       if (shouldAddFavorability && targetUsers.length > 0) {
         for (const targetUser of targetUsers) {
-          this.addFavorability(groupId, currentSender, targetUser, 2);
+          FavorabilityManager.addFavorability(groupId, currentSender, targetUser, 2);
         }
       } else if (lastSenderInfo) {
-        this.addFavorability(groupId, currentSender, lastSenderInfo.userId, 1);
+        FavorabilityManager.addFavorability(groupId, currentSender, lastSenderInfo.userId, 1);
       }
     }
 
@@ -252,12 +147,12 @@ export class Favorability extends plugin {
       return false;
     }
 
-    const favorabilityAtoB = this.getFavorability(
+    const favorabilityAtoB = FavorabilityManager.getFavorability(
       groupId,
       currentUser,
       targetUser
     );
-    const favorabilityBtoA = this.getFavorability(
+    const favorabilityBtoA = FavorabilityManager.getFavorability(
       groupId,
       targetUser,
       currentUser
@@ -290,7 +185,7 @@ export class Favorability extends plugin {
   whoLikesMe = Command(/^#?(谁在意我|喜欢我的人)$/, async (e) => {
     const groupId = e.group_id.toString();
     const currentUser = e.user_id.toString();
-    const data = this.readData(groupId);
+    const data = FavorabilityManager.readData(groupId);
 
     const othersToMe = [];
     for (const fromUser in data.favorability) {
@@ -333,7 +228,7 @@ export class Favorability extends plugin {
   whoILike = Command(/^#?(我在意谁|我喜欢的人)$/, async (e) => {
     const groupId = e.group_id.toString();
     const currentUser = e.user_id.toString();
-    const data = this.readData(groupId);
+    const data = FavorabilityManager.readData(groupId);
 
     const myToOthers = [];
     if (data.favorability[currentUser]) {

@@ -49,7 +49,7 @@ export class pixivSearch extends plugin {
       const pages = pagesRes.body
 
       const isR18 = illust.xRestrict !== 0
-      if (isR18 && !this.r18Config.enable.includes(e.group_id)) {
+      if (isR18 && !this.r18Config.Groups.includes(e.group_id)) {
         return e.reply("本群未开启r18功能哦~", 10, false)
       }
       await this.sendIllustMessage(e, illust, pages, isR18, pageNum)
@@ -79,7 +79,7 @@ export class pixivSearch extends plugin {
     const isR18Search = !!match[1]
     let tag = match[2].trim()
 
-    if (isR18Search && !this.r18Config.enable_group.includes(e.group_id)) {
+    if (isR18Search && !this.r18Config.Groups.includes(e.group_id)) {
       return e.reply("根据插件设置，本群不可使用r18功能。", 10, false)
     }
 

@@ -1,0 +1,14 @@
+- name: 鲜花
+  price: 100
+  favorability: 10
+  description: 一朵美丽的鲜花，送给喜欢的人吧。
+
+- name: 巧克力
+  price: 500
+  favorability: 55
+  description: 甜甜的巧克力，象征着甜蜜的爱情。
+
+- name: 钻戒
+  price: 10000
+  favorability: 1200
+  description: 闪耀的钻戒，承诺一生的誓言。

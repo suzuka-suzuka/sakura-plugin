@@ -16,10 +16,7 @@ export class handleRecall extends plugin {
   }
 
   recordMessage = OnEvent("message.group", async (e) => {
-    if (!this.appconfig.enable) {
-      return false
-    }
-    if (this.appconfig.Groups?.length > 0 && !this.appconfig.Groups.includes(e.group_id)) {
+    if (!Array.isArray(this.appconfig.Groups) || !this.appconfig.Groups.includes(e.group_id)) {
       return false
     }
     const hasContentToRecord =

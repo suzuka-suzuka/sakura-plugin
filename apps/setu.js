@@ -24,7 +24,7 @@ export class setuPlugin extends plugin {
     isR18 = !!match?.[1]
     tag = match?.[2]?.trim() || ""
 
-    if (isR18 && !this.r18Config.enable.includes(e.group_id)) {
+    if (isR18 && !this.r18Config.Groups.includes(e.group_id)) {
       return e.reply("本群未开启r18功能哦~", 10, false)
     }
 await e.react(124) 
