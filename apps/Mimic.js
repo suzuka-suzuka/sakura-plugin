@@ -9,7 +9,7 @@ import {
   getQuoteContent,
 } from "../lib/AIUtils/messaging.js";
 import Setting from "../lib/setting.js";
-import { randomReact } from "../lib/utils.js";
+import EconomyManager from "../lib/EconomyManager.js";
 
 export class Mimic extends plugin {
   constructor() {
@@ -119,23 +119,15 @@ export class Mimic extends plugin {
       messageText.includes(word)
     );
 
-    if (!e.isWhite && e.group_id && config.enableHonorLimit && hasKeyword) {
-      const userId = e.user_id;
-      try {
-        const [performerInfo, legendInfo] = await Promise.all([
-          e.group.getHonorInfo("performer"),
-          e.group.getHonorInfo("legend"),
-        ]);
-        const performerList = performerInfo?.performer_list || [];
-        const legendList = legendInfo?.legend_list || [];
-        const isHonorMember =
-          performerList.some((m) => String(m.user_id) === String(userId)) ||
-          legendList.some((m) => String(m.user_id) === String(userId));
-        if (!isHonorMember) {
-          return false;
-        }
-      } catch (err) {
-        logger.debug("[Mimic] 获取群荣誉信息失败:", err.message);
+    if (
+      !e.isWhite &&
+      e.group_id &&
+      (hasKeyword || (config.enableAtReply && isAt))
+    ) {
+      const economyManager = new EconomyManager(e);
+      const cost = 10;
+      if (!economyManager.pay(e, cost)) {
+        return false;
       }
     }
 

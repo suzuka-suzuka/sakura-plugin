@@ -15,7 +15,7 @@ export class setuPlugin extends plugin {
     return setting.getConfig("r18")
   }
 
-  handleApiRequest = Command(/^#来张浩图(。)?(.*)$/, async (e) => {
+  handleApiRequest = Command(/^#来张涩图(。)?(.*)$/, async (e) => {
     let apiType = "lolicon",
       tag,
       isR18 = false
