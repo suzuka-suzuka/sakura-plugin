@@ -10,6 +10,7 @@ import {
 } from "../lib/AIUtils/messaging.js";
 import Setting from "../lib/setting.js";
 import EconomyManager from "../lib/EconomyManager.js";
+import { randomReact } from "../lib/utils.js";
 
 export class Mimic extends plugin {
   constructor() {
