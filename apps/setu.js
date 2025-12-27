@@ -81,7 +81,6 @@ await e.react(124)
       if (messageText) {
         await e.reply(messageText, 60, false)
       }
-      await common.sleep(500)
       await e.reply("图片已发送", 10, true)
     } else {
       await e.reply(`图片发送仍然失败，请自行查看图片链接：\n${imageUrl}`, 10, true)
