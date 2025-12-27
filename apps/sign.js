@@ -99,6 +99,25 @@ export default class DailySign extends plugin {
       newCoins = _.random(5, 15);
     }
 
+    // 连续签到奖励：连续2天+1，连续3天+2...最多+10
+    let continuousBonus = 0;
+    if (userData.lastingTimes >= 2) {
+      continuousBonus = Math.min(userData.lastingTimes - 1, 10);
+    }
+
+    // 每日前三名奖励
+    let rankingBonus = 0;
+    if (signRanking === 1) {
+      rankingBonus = 10;
+    } else if (signRanking === 2) {
+      rankingBonus = 5;
+    } else if (signRanking === 3) {
+      rankingBonus = 3;
+    }
+
+    const totalBonus = continuousBonus + rankingBonus;
+    newCoins += totalBonus;
+
     const newExperience = _.random(5, 15);
 
     economyManager.addCoins(e, newCoins);
@@ -125,6 +144,9 @@ export default class DailySign extends plugin {
       currentLevelExpRange: totalExperienceInLevel / nextLevelRequiredExp,
       fortune: this.getFortune(),
       sentence: await this.getSentence(),
+      continuousBonus: continuousBonus,
+      rankingBonus: rankingBonus,
+      totalBonus: totalBonus,
     };
 
     signData.save();
