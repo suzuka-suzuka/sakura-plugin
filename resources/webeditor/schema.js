@@ -40,6 +40,7 @@ const configSchema = {
         "webeditor",
         "groupnotice",
         "SoraVideo",
+        "economy",
       ],
     },
   ],
@@ -69,6 +70,7 @@ const configSchema = {
     groupnotice: "进退群通知",
     SoraVideo: "Sora视频",
     roles: "AI人设",
+    economy: "经济系统",
   },
 
   fields: {
@@ -90,6 +92,8 @@ const configSchema = {
     },
 
     "SoraVideo.access_token": { label: "Access Token", type: "textarea" },
+
+    "economy.enable": { label: "启用", type: "boolean" },
 
     "summary.enable": { label: "启用", type: "boolean" },
     "poke.enable": { label: "戳一戳总开关", type: "boolean" },
@@ -417,11 +421,6 @@ const configSchema = {
       type: "boolean",
       help: "启用后,伪人模式的每个群处理完当前消息前,不会处理该群的后续消息,直到当前消息处理完毕",
     },
-    "mimic.enableHonorLimit": {
-      label: "启用荣誉限制",
-      type: "boolean",
-      help: "启用后，只有有群聊之火的人可触发",
-    },
     "mimic.splitMessage": {
       label: "启用消息分割",
       type: "boolean",
@@ -465,11 +464,6 @@ const configSchema = {
           label: "是否启用群聊锁",
           type: "boolean",
           help: "启用后,伪人模式的每个群处理完当前消息前,不会处理该群的后续消息,直到当前消息处理完毕",
-        },
-        enableHonorLimit: {
-          label: "启用荣誉限制",
-          type: "boolean",
-          help: "启用后，只有有群聊之火的人可触发",
         },
         splitMessage: {
           label: "启用消息分割",

@@ -19,24 +19,26 @@ export class Update extends plugin {
     });
   }
 
-  update = Command(/^#?(sakura|樱花)(插件)?(强制)?更新$/, async (e) => {
-    if (!e.isMaster) return false;
+  update = Command(
+    /^#?(sakura|樱花)(插件)?(强制)?更新$/,
+    "master",
+    async (e) => {
+      if (uping) {
+        await e.reply("已有命令更新中..请勿重复操作");
+        return;
+      }
 
-    if (uping) {
-      await e.reply("已有命令更新中..请勿重复操作");
-      return;
+      if (!(await this.checkGit(e))) return;
+
+      const isForce = e.msg.includes("强制");
+      await e.react(124);
+      await this.runUpdate(isForce, e);
+
+      if (this.isUp) {
+        setTimeout(() => this.restart(e), 2000);
+      }
     }
-
-    if (!(await this.checkGit(e))) return;
-
-    const isForce = e.msg.includes("强制");
-    await e.react(124);
-    await this.runUpdate(isForce, e);
-
-    if (this.isUp) {
-      setTimeout(() => this.restart(e), 2000);
-    }
-  });
+  );
 
   async restart(e) {
     const restartInfo = {
