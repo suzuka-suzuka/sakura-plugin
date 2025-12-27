@@ -15,7 +15,7 @@ export class Favorability extends plugin {
     super({
       name: "好感度",
       event: "message.group",
-      priority: 35,
+      priority: 1135,
     });
   }
 
@@ -41,7 +41,7 @@ export class Favorability extends plugin {
     }
   }
 
-  async accept(e) {
+  accept = OnEvent("message.group", 35, async (e) => {
     if (!fs.existsSync(dataPath)) {
       fs.mkdirSync(dataPath, { recursive: true });
     }
@@ -116,15 +116,25 @@ export class Favorability extends plugin {
 
       if (shouldAddFavorability && targetUsers.length > 0) {
         for (const targetUser of targetUsers) {
-          FavorabilityManager.addFavorability(groupId, currentSender, targetUser, 2);
+          FavorabilityManager.addFavorability(
+            groupId,
+            currentSender,
+            targetUser,
+            2
+          );
         }
       } else if (lastSenderInfo) {
-        FavorabilityManager.addFavorability(groupId, currentSender, lastSenderInfo.userId, 1);
+        FavorabilityManager.addFavorability(
+          groupId,
+          currentSender,
+          lastSenderInfo.userId,
+          1
+        );
       }
     }
 
     return false;
-  }
+  });
 
   queryFavorability = Command(/^#?好感度$/, async (e) => {
     const groupId = e.group_id.toString();
