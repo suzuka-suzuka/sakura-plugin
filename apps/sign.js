@@ -90,7 +90,7 @@ export default class DailySign extends plugin {
     let newCoins = 0;
     try {
       const senderInfo = await e.getInfo();
-      const groupLevel = senderInfo?.level || 1;
+      const groupLevel = Number(senderInfo?.level) || 1;
       const baseCoins = groupLevel;
       const fluctuation = _.random(-10, 10);
       newCoins = Math.max(0, baseCoins + fluctuation);
