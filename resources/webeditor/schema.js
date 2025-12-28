@@ -5,7 +5,7 @@ const configSchema = {
     {
       name: "图片功能",
       icon: "🖼️",
-      configs: ["cool", "teatime", "EmojiThief", "summary", "pixiv", "r18", "EditImage", "tenor"],
+      configs: ["cool", "teatime", "EmojiThief", "summary", "pixiv", "r18", "EditImage"],
     },
     {
       name: "AI渠道",
@@ -65,7 +65,6 @@ const configSchema = {
     repeat: "复读",
     summary: "图片外显",
     teatime: "下午茶",
-    tenor: "Tenor表情",
     webeditor: "配置面板",
     groupnotice: "进退群通知",
     SoraVideo: "Sora视频",
@@ -624,12 +623,6 @@ const configSchema = {
       label: "启用群",
       type: "groupSelect",
       help: "每天0点自动清理：1.半年未发言的人 2.进群超24小时但群等级为1级的号",
-    },
-
-    "tenor.apiKey": {
-      label: "Tenor API Key",
-      type: "text",
-      help: "从 https://developers.google.com/tenor/guides/quickstart 获取API密钥，用于戳一戳和表情包获取",
     },
 
     "webeditor.port": {

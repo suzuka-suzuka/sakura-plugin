@@ -7,6 +7,7 @@ import {
 import { executeToolCalls } from "../lib/AIUtils/tools/tools.js";
 import { parseAtMessage, getQuoteContent } from "../lib/AIUtils/messaging.js";
 import { randomReact, getImg } from "../lib/utils.js";
+import EconomyManager from "../lib/economy/EconomyManager.js";
 
 export class AIChat extends plugin {
   constructor() {
@@ -21,7 +22,7 @@ export class AIChat extends plugin {
     return Setting.getConfig("AI");
   }
 
-  Chat = OnEvent("message", "white", async (e) => {
+  Chat = OnEvent("message", async (e) => {
     const config = this.appconfig;
     if (!config || !config.profiles || config.profiles.length === 0) {
       return false;
@@ -62,6 +63,11 @@ export class AIChat extends plugin {
     );
 
     if (!matchedProfile) {
+      return false;
+    }
+
+    const economyManager = new EconomyManager(e);
+    if (!e.isMaster && !economyManager.pay(e, 15)) {
       return false;
     }
 

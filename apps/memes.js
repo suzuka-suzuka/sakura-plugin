@@ -214,7 +214,7 @@ export class memesPlugin extends plugin {
     super({
       name: "表情包制作",
       event: "message",
-      priority: 5000,
+      priority: 1135,
       log: false,
     });
   }
@@ -419,7 +419,7 @@ export class memesPlugin extends plugin {
     }
 
     const economyManager = new EconomyManager(e);
-    if (!economyManager.pay(e, 5)) {
+    if (!e.isMaster && !economyManager.pay(e, 5)) {
       return false;
     }
 

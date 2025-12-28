@@ -1,7 +1,7 @@
 import { grokRequest } from "../lib/AIUtils/GrokClient.js";
 import { getImg } from "../lib/utils.js";
 import Setting from "../lib/setting.js";
-
+import EconomyManager from "../lib/economy/EconomyManager.js";
 export class GrokVideo extends plugin {
   constructor() {
     super({
@@ -21,7 +21,10 @@ export class GrokVideo extends plugin {
     if (!prompt && (!imgBase64List || imgBase64List.length === 0)) {
       return false;
     }
-
+    const economyManager = new EconomyManager(e);
+    if (!e.isMaster && !economyManager.pay(e, 20)) {
+      return false;
+    }
     const channelsConfig = Setting.getConfig("Channels");
     const grokList = channelsConfig?.grok || [];
     const grokChannel = grokList[Math.floor(Math.random() * grokList.length)];

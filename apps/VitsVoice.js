@@ -1,5 +1,6 @@
 import setting from "../lib/setting.js";
 import axios from "axios";
+import EconomyManager from "../lib/economy/EconomyManager.js";
 const API_URL = "https://mikusfan-vits-uma-genshin-honkai.hf.space/api/predict";
 let speakersCache = [];
 
@@ -32,7 +33,11 @@ export class VitsVoice extends plugin {
     }
 
     if (!text) return false;
-    await e.react(124) ;
+    const economyManager = new EconomyManager(e);
+    if (!e.isMaster && !economyManager.pay(e, 5)) {
+      return false;
+    }
+    await e.react(124);
     let lang = "中文";
     if (/[\u3040-\u309F\u30A0-\u30FF]/.test(text)) {
       lang = "日语";
@@ -65,14 +70,16 @@ export class VitsVoice extends plugin {
           const audioUrl = `https://mikusfan-vits-uma-genshin-honkai.hf.space/file=${audioData.name}`;
           await e.reply(segment.record(audioUrl));
         } else {
-          await e.reply("API 返回数据格式异常，无法获取音频。",10,true);
+          await e.reply("API 返回数据格式异常，无法获取音频。", 10, true);
           logger.warn(
             `[VitsVoice] API Response Error: ${JSON.stringify(data)}`
           );
         }
       } else {
         await e.reply(
-          "生成失败，API 未返回有效数据。可能是角色名不正确或服务繁忙。",10,true
+          "生成失败，API 未返回有效数据。可能是角色名不正确或服务繁忙。",
+          10,
+          true
         );
         logger.warn(`[VitsVoice] API Error Response: ${JSON.stringify(data)}`);
       }
@@ -97,7 +104,7 @@ export class VitsVoice extends plugin {
     if (!keyword) {
       return false;
     }
-    await e.react(124) ;
+    await e.react(124);
     try {
       const payload = {
         fn_index: 2,
@@ -128,12 +135,12 @@ export class VitsVoice extends plugin {
         errMsg += ` [Status: ${err.response.status}]`;
       }
       logger.error(`[VitsVoice] 搜索出错: ${errMsg}`);
-      await e.reply("搜索出错，请稍后再试。", 10,true);
+      await e.reply("搜索出错，请稍后再试。", 10, true);
     }
   });
 
   getSpeakersList = Command(/^#?语音角色列表\s*(\d*)$/, async (e) => {
-    await e.react(124) ;
+    await e.react(124);
     if (!speakersCache || speakersCache.length === 0) {
       try {
         const response = await axios.get(
@@ -150,7 +157,7 @@ export class VitsVoice extends plugin {
     }
 
     if (!speakersCache || speakersCache.length === 0) {
-      return e.reply("未获取到角色列表。", 10,true);
+      return e.reply("未获取到角色列表。", 10, true);
     }
 
     let nodes = [];

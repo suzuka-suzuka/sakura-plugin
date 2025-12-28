@@ -2,6 +2,7 @@ import Setting from "../lib/setting.js"
 import PixivHistory from "../lib/pixiv/history.js"
 import { requestApi } from "../lib/pixiv/api.js"
 import { FlipImage } from "../lib/ImageUtils/ImageUtils.js"
+import EconomyManager from "../lib/economy/EconomyManager.js";
 export class pixivSearch extends plugin {
   constructor() {
     super({
@@ -23,7 +24,10 @@ export class pixivSearch extends plugin {
     if (!match) {
       return false
     }
-
+    const economyManager = new EconomyManager(e);
+    if (!e.isMaster && !economyManager.pay(e, 5)) {
+      return false;
+    }
     const pid = match[1]
     const pageNum = parseInt(match[2]) || 1
 
@@ -70,8 +74,8 @@ export class pixivSearch extends plugin {
     return true
   });
 
-  searchPixiv = Command(/^#涩图(\。)?(.*)$/, async (e) => {
-    const match = e.msg.match(/^#涩图(\。)?(.*)$/)
+  searchPixiv = Command(/^#?来张色图(\。)?(.*)$/, async (e) => {
+    const match = e.msg.match(/^#?来张色图(\。)?(.*)$/)
     if (!match) return false
 
     const config = this.appconfig
@@ -82,7 +86,10 @@ export class pixivSearch extends plugin {
     if (isR18Search && !this.r18Config.Groups.includes(e.group_id)) {
       return e.reply("根据插件设置，本群不可使用r18功能。", 10, false)
     }
-
+    const economyManager = new EconomyManager(e);
+    if (!e.isMaster && !economyManager.pay(e, 5)) {
+      return false;
+    }
     if (!tag) {
       const defaultTags = config.defaultTags
       if (Array.isArray(defaultTags) && defaultTags.length > 0) {

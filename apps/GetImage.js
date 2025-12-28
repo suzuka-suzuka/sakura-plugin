@@ -1,7 +1,7 @@
 import { connect } from "puppeteer-real-browser";
 import { FlipImage } from "../lib/ImageUtils/ImageUtils.js";
 import _ from "lodash";
-
+import EconomyManager from "../lib/economy/EconomyManager.js";
 const IMAGE_SOURCES = {
   yande: {
     url: "https://yande.re/post.json?tags=loli+-rating:e+-nipples&limit=500",
@@ -22,14 +22,23 @@ export class GetImagePlugin extends plugin {
     });
   }
 
-  handleImage = Command(/^#?图(y|k)$/, async (e) => {
+  handleImage = Command(/^#?来张萝莉图(y|k)?$/, async (e) => {
     const sourceMap = {
       y: "yande",
       k: "konachan",
     };
 
-    if (!e.match) return false;
-    const sourceKey = sourceMap[e.match[1]];
+    const economyManager = new EconomyManager(e);
+    if (!e.isMaster && !economyManager.pay(e, 5)) {
+      return false;
+    }
+
+    let suffix = e.match?.[1];
+    if (!suffix) {
+      suffix = Math.random() < 0.9 ? "y" : "k";
+    }
+
+    const sourceKey = sourceMap[suffix];
     return await this.fetchAndSendImage(e, sourceKey);
   });
 

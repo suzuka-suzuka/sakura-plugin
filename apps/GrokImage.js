@@ -1,12 +1,11 @@
 import { grokRequest } from "../lib/AIUtils/GrokClient.js";
 import { getImg } from "../lib/utils.js";
 import Setting from "../lib/setting.js";
-
+import EconomyManager from "../lib/economy/EconomyManager.js";
 export class GrokImage extends plugin {
   constructor() {
     super({
       name: "Grok图片编辑",
-      dsc: "使用Grok编辑或生成图片",
       event: "message",
       priority: 1135,
     });
@@ -20,7 +19,10 @@ export class GrokImage extends plugin {
     if (!prompt) {
       return false;
     }
-
+    const economyManager = new EconomyManager(e);
+    if (!e.isMaster && !economyManager.pay(e, 10)) {
+      return false;
+    }
     const imgBase64List = await getImg(e, true, true);
 
     const channelsConfig = Setting.getConfig("Channels");

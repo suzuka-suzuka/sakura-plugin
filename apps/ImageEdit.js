@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { getImg } from "../lib/utils.js";
 import Setting from "../lib/setting.js";
+import EconomyManager from "../lib/economy/EconomyManager.js";
 
 export class EditImage extends plugin {
   constructor() {
@@ -18,11 +19,12 @@ export class EditImage extends plugin {
   dispatchHandler = OnEvent("message", async (e) => {
     if (!e.msg) return false;
 
-    if (!this.checkPermission(e)) {
+    const economyManager = new EconomyManager(e);
+    if (!e.isMaster && !economyManager.pay(e, 20)) {
       return false;
     }
 
-    if (/^#i/.test(e.msg)) {
+    if (/^#?i/.test(e.msg)) {
       return this.editImageHandler(e);
     }
 
@@ -46,14 +48,6 @@ export class EditImage extends plugin {
 
     return false;
   });
-
-  checkPermission(e) {
-    if (!this.task?.requirePermission) {
-      return true;
-    }
-
-    return e.isWhite;
-  }
 
   parseArgs(msg) {
     let aspectRatio = null;
@@ -163,7 +157,7 @@ export class EditImage extends plugin {
   }
 
   async editImageHandler(e) {
-    let msg = e.msg.replace(/^#i/, "").trim();
+    let msg = e.msg.replace(/^#?i/, "").trim();
     const imgBase64List = await getImg(e, true, true);
 
     const {

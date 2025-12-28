@@ -7,6 +7,7 @@ import _ from "lodash";
 import { getAI } from "../lib/AIUtils/getAI.js";
 import fsp from "fs/promises";
 import common from "../../../src/utils/common.js";
+import EconomyManager from "../lib/economy/EconomyManager.js";
 
 export class poke extends plugin {
   constructor() {
@@ -555,7 +556,7 @@ export class poke extends plugin {
   }
 
   async replyWithSpecialEasterEgg(e) {
-    const retype = _.random(1, 10);
+    const retype = _.random(1, 11);
 
     switch (retype) {
       case 1:
@@ -651,6 +652,14 @@ export class poke extends plugin {
           await e.poke(e.user_id);
           await common.sleep(500);
         }
+        break;
+      case 11:
+        const coinAmount = _.random(1, 5);
+        const economyManager = new EconomyManager(e);
+        economyManager.addCoins(e, coinAmount);
+        await e.reply(`✨ 哇！戳中了隐藏宝箱！`);
+        await common.sleep(500);
+        await e.reply(`🌸 恭喜获得 ${coinAmount} 个樱花币！`);
         break;
     }
   }

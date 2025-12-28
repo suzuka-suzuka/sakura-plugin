@@ -121,7 +121,7 @@ export class Mimic extends plugin {
     );
 
     if (
-      !e.isWhite &&
+      !e.isMaster &&
       e.group_id &&
       (hasKeyword || (config.enableAtReply && isAt))
     ) {
