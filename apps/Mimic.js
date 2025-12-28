@@ -9,7 +9,7 @@ import {
   getQuoteContent,
 } from "../lib/AIUtils/messaging.js";
 import Setting from "../lib/setting.js";
-import EconomyManager from "../lib/managers/EconomyManager.js";
+import EconomyManager from "../lib/economy/EconomyManager.js";
 import { randomReact } from "../lib/utils.js";
 
 export class Mimic extends plugin {

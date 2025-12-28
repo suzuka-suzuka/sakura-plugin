@@ -1,6 +1,6 @@
-import EconomyManager from "../lib/managers/EconomyManager.js";
+import EconomyManager from "../lib/economy/EconomyManager.js";
 import EconomyImageGenerator from "../lib/economy/ImageGenerator.js";
-import GiftManager from "../lib/managers/GiftManager.js";
+import GiftManager from "../lib/favorability/GiftManager.js";
 
 export default class Economy extends plugin {
   constructor() {
