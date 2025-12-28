@@ -7,7 +7,7 @@ export default class Economy extends plugin {
     super({
       name: "经济系统",
       event: "message.group",
-      priority: 1000,
+      priority: 1135,
     });
   }
 

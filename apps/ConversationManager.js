@@ -110,38 +110,6 @@ export class Conversationmanagement extends plugin {
     return true;
   });
 
-  async getImageUrl() {
-    const url =
-      "https://yande.re/post.json?tags=loli+-rating:e+-nipples&limit=500";
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const jsonData = await response.json();
-
-      if (Array.isArray(jsonData) && jsonData.length > 0) {
-        const imageItems = jsonData.filter(
-          (item) => item?.file_url && item?.id
-        );
-
-        if (imageItems.length > 0) {
-          const selectedItem = _.sample(imageItems);
-          return { url: selectedItem.file_url, id: selectedItem.id };
-        } else {
-          logger.warn("没有获取到有效的图片URL和ID");
-          return null;
-        }
-      } else {
-        logger.warn("没有获取到有效的图片数据");
-        return null;
-      }
-    } catch (error) {
-      logger.error("获取图片URL时出错:", error);
-      return null;
-    }
-  }
-
   ExportConversation = Command(/^#?导出对话\s*(.+)/, async (e) => {
     const prefix = e.match[1].trim();
 
@@ -198,72 +166,17 @@ export class Conversationmanagement extends plugin {
 
       let backgroundImageBase64 = "";
       try {
-        const defaultImagePath = path.join(pluginresources, "background");
-        await fs.promises.mkdir(defaultImagePath, { recursive: true });
-
-        if (Math.random() < 0.2) {
-          const imageInfo = await this.getImageUrl();
-          const remoteUrl = imageInfo?.url;
-
-          if (remoteUrl && remoteUrl.startsWith("http")) {
-            try {
-              const response = await fetch(remoteUrl);
-              if (response.ok) {
-                const imageBuffer = Buffer.from(await response.arrayBuffer());
-
-                if (imageInfo.id) {
-                  (async () => {
-                    try {
-                      const extension = path.extname(
-                        new URL(remoteUrl).pathname
-                      );
-                      const filename = `${imageInfo.id}${extension}`;
-                      const savePath = path.join(defaultImagePath, filename);
-                      await fs.promises.writeFile(savePath, imageBuffer);
-                      logger.debug(`对话背景图片已保存: ${savePath}`);
-                    } catch (saveError) {
-                      logger.error("保存对话背景图片失败:", saveError);
-                    }
-                  })();
-                }
-
-                const mimeType =
-                  response.headers.get("content-type") || "image/jpeg";
-                backgroundImageBase64 = `data:${mimeType};base64,${imageBuffer.toString(
-                  "base64"
-                )}`;
-              } else {
-                logger.warn(
-                  `获取对话背景图片失败，状态码: ${response.status}, URL: ${remoteUrl}`
-                );
-              }
-            } catch (err) {
-              logger.error("获取对话背景图片时网络请求出错:", err);
-            }
-          }
-        }
-
-        if (!backgroundImageBase64) {
-          const files = await fs.promises.readdir(defaultImagePath);
-          const imageFiles = files.filter((file) =>
-            /\.(jpg|jpeg|png|gif)$/i.test(file)
-          );
-          if (imageFiles.length > 0) {
-            const randomImage = _.sample(imageFiles);
-            const imagePath = path.join(defaultImagePath, randomImage);
-            const imageBuffer = await fs.promises.readFile(imagePath);
-            const mimeType = "image/" + path.extname(imagePath).slice(1);
-            backgroundImageBase64 = `data:${mimeType};base64,${imageBuffer.toString(
-              "base64"
-            )}`;
-          } else {
-            logger.warn(
-              `背景图片目录 ${defaultImagePath} 中没有找到图片，将使用默认背景色。`
-            );
-          }
-        }
+        const backgroundImagePath = path.join(
+          pluginresources,
+          "background",
+          "sakura.jpg"
+        );
+        const imageBuffer = await fs.promises.readFile(backgroundImagePath);
+        backgroundImageBase64 = `data:image/jpeg;base64,${imageBuffer.toString(
+          "base64"
+        )}`;
       } catch (err) {
-        logger.error("处理对话背景图片时出错:", err);
+        logger.error("读取背景图片失败:", err);
       }
 
       const user = {
