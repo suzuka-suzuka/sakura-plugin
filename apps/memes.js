@@ -418,7 +418,6 @@ export class memesPlugin extends plugin {
       return true;
     }
 
-    // 扣除樱花币
     const economyManager = new EconomyManager(e);
     if (!economyManager.pay(e, 5)) {
       return false;
