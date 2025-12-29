@@ -64,9 +64,7 @@ export default class Economy extends plugin {
     const levelDiff = Math.max(0, attackerLevel - targetLevel);
     const successRate = Math.min(90, 10 + levelDiff * 1);
 
-    await redis.set(cooldownKey, String(Math.floor(Date.now() / 1000)), {
-      EX: 3600,
-    });
+    await redis.set(cooldownKey, String(Math.floor(Date.now() / 1000)), 'EX', 3600);
 
     const roll = _.random(1, 100);
     const attackerName = e.sender.card || e.sender.nickname || e.user_id;
@@ -99,7 +97,7 @@ export default class Economy extends plugin {
         amount: robAmount,
         time: Date.now(),
       });
-      await redis.set(counterKey, counterData, { EX: 300 });
+      await redis.set(counterKey, counterData, 'EX', 300);
 
       await e.reply(
         `🌸 抢夺成功！${attackerName} 从 ${targetName} 那里抢走了 ${robAmount} 樱花币！`
