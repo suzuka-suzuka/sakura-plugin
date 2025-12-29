@@ -77,7 +77,7 @@ export default class Economy extends plugin {
     } catch (err) {}
 
     if (roll <= successRate) {
-      const robPercent = _.random(0, 10);
+      const robPercent = _.random(0, 20);
       const robAmount = Math.floor((targetCoins * robPercent) / 100);
 
       if (robAmount <= 0) {
