@@ -45,7 +45,20 @@ export class handleRecall extends plugin {
     const recalledMsg = msgStore.get(e.message_id)
     if (recalledMsg) {
       if (e.user_id === e.operator_id) {
-        await e.group.sendMsg(recalledMsg.message)
+        let nickname = e.user_id
+        try {
+          const member = await e.group.getMemberInfo(e.user_id)
+          nickname = member?.card || member?.nickname || e.user_id
+        } catch (err) {}
+
+        const forwardMsg = [
+          {
+            nickname: nickname,
+            user_id: e.user_id,
+            content: recalledMsg.message,
+          },
+        ]
+        await e.sendForwardMsg(forwardMsg)
       }
       msgStore.delete(e.message_id)
     }

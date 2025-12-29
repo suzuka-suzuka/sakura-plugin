@@ -13,7 +13,6 @@ export class Ludo extends plugin {
   }
 
   async init() {
-    logger.info("[飞行棋] 插件启动，开始加载图像资源...")
     await loadAssets()
   }
   createLudoGame = Command(/^#创建飞行棋$/, async (e) => {

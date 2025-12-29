@@ -19,11 +19,6 @@ export class EditImage extends plugin {
   dispatchHandler = OnEvent("message", async (e) => {
     if (!e.msg) return false;
 
-    const economyManager = new EconomyManager(e);
-    if (!e.isMaster && !economyManager.pay(e, 20)) {
-      return false;
-    }
-
     if (/^#?i/.test(e.msg)) {
       return this.editImageHandler(e);
     }
@@ -180,6 +175,11 @@ export class EditImage extends plugin {
   }
 
   async _processAndCallAPI(e, promptText, imgBase64List, options = {}) {
+    const economyManager = new EconomyManager(e);
+    if (!e.isMaster && !economyManager.pay(e, 20)) {
+      return false;
+    }
+
     await e.react(124);
     const { aspectRatio, imageSize = "1K" } = options;
     const contents = [];
