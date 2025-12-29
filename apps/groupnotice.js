@@ -24,6 +24,7 @@ export class GroupNotice extends plugin {
   constructor() {
     super({
       name: "群成员变动",
+      event: "",
       priority: 1135,
     });
   }
@@ -68,7 +69,7 @@ export class GroupNotice extends plugin {
 
   handleDecrease = OnEvent("notice.group_decrease", async (e) => {
     if (e.user_id === e.self_id) return;
-    if (e.operator_id !== e.user_id) return;
+    if (e.operator_id !== 0) return;
 
     const config = Setting.getConfig("groupnotice");
     if (!config.leaveEnable) return;
