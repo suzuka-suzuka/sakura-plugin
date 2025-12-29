@@ -61,8 +61,8 @@ export default class Economy extends plugin {
       logger.warn(`获取目标群等级失败: ${err}`);
     }
 
-    const levelDiff = Math.max(0, attackerLevel - targetLevel);
-    const successRate = Math.min(80, 20 + levelDiff * 1);
+    const levelDiff = attackerLevel - targetLevel;
+    const successRate = Math.max(20, Math.min(80, 50 + levelDiff));
 
     await redis.set(cooldownKey, String(Math.floor(Date.now() / 1000)), 'EX', 3600);
 
