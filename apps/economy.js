@@ -62,7 +62,7 @@ export default class Economy extends plugin {
     }
 
     const levelDiff = Math.max(0, attackerLevel - targetLevel);
-    const successRate = Math.min(90, 10 + levelDiff * 1);
+    const successRate = Math.min(80, 20 + levelDiff * 1);
 
     await redis.set(cooldownKey, String(Math.floor(Date.now() / 1000)), 'EX', 3600);
 
