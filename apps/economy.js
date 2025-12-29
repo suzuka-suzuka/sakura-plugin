@@ -100,7 +100,7 @@ export default class Economy extends plugin {
       await redis.set(counterKey, counterData, 'EX', 300);
 
       await e.reply(
-        `🌸 抢夺成功！${attackerName} 从 ${targetName} 那里抢走了 ${robAmount} 樱花币！`
+        `🌸 抢夺成功！\n${attackerName} 从 ${targetName} 那里抢走了 ${robAmount} 樱花币！`
       );
     } else {
       const attackerCoins = economyManager.getCoins(e);
@@ -108,7 +108,7 @@ export default class Economy extends plugin {
       economyManager.reduceCoins(e, penalty);
 
       await e.reply(
-        `🚨 抢夺失败！${attackerName} 被神使当场抓获！\n受到神罚，失去 ${penalty} 樱花币！`
+        `🚨 抢夺失败！\n${attackerName} 被神使当场抓获！\n受到神罚，失去 ${penalty} 樱花币！`
       );
     }
 
