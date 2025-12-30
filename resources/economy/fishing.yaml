@@ -5,31 +5,31 @@ rods:
     name: 竹竿
     price: 50
     minLevel: 0
-    description: 简陋的竹竿，什么鱼都能钓到。
+    description: 随处可见的普通竹竿，虽然简陋，但也许能创造奇迹？
 
   - id: rod_carbon
     name: 碳素鱼竿
     price: 200
     minLevel: 20
-    description: 轻便的碳素鱼竿，可以过滤掉20级以下的小鱼。
+    description: 轻盈强韧的碳素纤维打造，能敏锐感知鱼讯，过滤掉那些不起眼的小鱼。
 
   - id: rod_titanium
     name: 钛合金鱼竿
     price: 500
     minLevel: 40
-    description: 坚固的钛合金鱼竿，可以过滤掉40级以下的小鱼。
+    description: 泛着冷光的钛合金鱼竿，坚不可摧，只有真正的强者才配得上它。
 
   - id: rod_golden
     name: 黄金鱼竿
     price: 1200
     minLevel: 60
-    description: 奢华的黄金鱼竿，可以过滤掉60级以下的小鱼。
+    description: 纯金打造的奢华鱼竿，光芒耀眼，据说能吸引珍稀鱼类的目光。
 
   - id: rod_legendary
     name: 传说之竿
     price: 3000
     minLevel: 80
-    description: 传说中的神器，只钓大鱼！过滤掉80级以下的群友。
+    description: 散发着神秘气息的传说之竿，据说连海怪都能征服的神器！
 
 # 鱼饵配置
 # maxInactiveDays: 过滤掉超过此天数未发言的群友 (0表示不过滤)
@@ -38,16 +38,64 @@ baits:
     name: 蚯蚓
     price: 10
     maxInactiveDays: 0
-    description: 普通的蚯蚓，什么鱼都可能上钩。
+    description: 刚挖出来的鲜活蚯蚓，最基础的诱饵，来者不拒。
 
   - id: bait_shrimp
     name: 鲜虾饵
     price: 30
     maxInactiveDays: 60
-    description: 新鲜的虾饵，只吸引两个月内活跃的鱼。
+    description: 鲜嫩多汁的虾肉，对那些还有活力的鱼儿有着致命的诱惑。
 
   - id: bait_premium
     name: 秘制鱼饵
     price: 80
     maxInactiveDays: 30
-    description: 神社秘制鱼饵，只吸引一个月内活跃的鱼。
+    description: 巫女亲手调制的秘制团子，香气扑鼻，只有最活跃的鱼儿才能闻到！
+
+# 垃圾物品配置 (5%概率钓到，无价值)
+trashItems:
+  - name: 破靴子
+    emoji: "👢"
+    description: 一只破旧的靴子，散发着鱼腥味
+  - name: 海草
+    emoji: "🌿"
+    description: 缠绕在鱼钩上的海草
+  - name: 生锈的罐头
+    emoji: "🥫"
+    description: 一个锈迹斑斑的空罐头
+  - name: 塑料袋
+    emoji: "🛍️"
+    description: 漂浮在水中的塑料袋
+  - name: 破轮胎
+    emoji: "⭕"
+    description: 一个废弃的轮胎
+  - name: 旧报纸
+    emoji: "📰"
+    description: 泡烂的旧报纸
+  - name: 空瓶子
+    emoji: "🍾"
+    description: 一个空酒瓶
+  - name: 烂木板
+    emoji: "🪵"
+    description: 一块腐烂的木板
+
+# 危险生物配置 (5%概率钓到，会吞掉鱼竿)
+dangerousCreatures:
+  - name: 尼斯湖水怪
+    emoji: "🦕"
+    description: 传说中的神秘生物从水底浮现！
+  - name: 巨型章鱼
+    emoji: "🐙"
+    description: 一只巨大的章鱼缠住了你的鱼竿！
+  - name: 深海巨鲸
+    emoji: "🐋"
+    description: 一头庞大的鲸鱼跃出水面！
+  - name: 远古巨齿鲨
+    emoji: "🦈"
+    description: 一只史前巨鲨从深渊中浮现！
+  - name: 海底巨龙
+    emoji: "🐉"
+    description: 传说中的海龙王现身了！
+  - name: 克拉肯
+    emoji: "🦑"
+    description: 北欧神话中的海怪克拉肯出现了！

@@ -153,7 +153,7 @@ export default class Economy extends plugin {
     } catch (err) {}
 
     const elapsedTime = (Date.now() - counterData.time) / 1000;
-    const successRate = Math.max(20, Math.floor(80 - (elapsedTime / 300) * 60));
+    const successRate = Math.max(0, Math.floor(100 - (elapsedTime / 300) * 100));
 
     const roll = _.random(1, 100);
     if (roll <= successRate) {
@@ -204,7 +204,7 @@ export default class Economy extends plugin {
   });
 
   buyGift = Command(/^#?(购买|兑换)\s*(.+)$/, async (e) => {
-    const giftName = e.match[1].trim();
+    const giftName = e.match[2].trim();
     const result = await GiftManager.buyGift(e, giftName);
     await e.reply(result.msg);
     return true;
@@ -235,7 +235,7 @@ export default class Economy extends plugin {
   });
 
   sendGift = Command(/^#?(赠送|送礼)\s*(.+)$/, async (e) => {
-    const giftName = e.match[1].trim();
+    const giftName = e.match[2].trim();
     const targetId = e.at;
 
     if (!targetId) {
@@ -277,8 +277,8 @@ export default class Economy extends plugin {
     return true;
   });
 
-  transfer = Command(/^#?(转账|投喂|给钱)(\d+).*$/, async (e) => {
-    const amount = parseInt(e.match[1]);
+  transfer = Command(/^#?(转账|投喂|给钱)\s*(\d+).*$/, async (e) => {
+    const amount = parseInt(e.match[2]);
     if (isNaN(amount) || amount <= 0) {
       return false;
     }
