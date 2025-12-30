@@ -159,9 +159,9 @@ export default class Fishing extends plugin {
       state.phase = "biting";
       state.biteTime = Date.now();
 
-      await e.reply(`🌊 浮漂沉下去了！\n快发送"收杆"或"拉杆"！`, false, true);
+      await e.reply(`🌊 浮漂沉下去了！快收杆"！`, false, true);
 
-      this.setContext("pullRod", groupId, 60);
+      this.setContext("pullRod", `${groupId}:${userId}`, 60);
 
       state.timeoutTimer = setTimeout(() => {
         const currentState = fishingState[`${groupId}:${userId}`];
@@ -199,7 +199,7 @@ export default class Fishing extends plugin {
       clearTimeout(state.timeoutTimer);
     }
 
-    this.finish("pullRod", groupId);
+    this.finish("pullRod", `${groupId}:${userId}`);
     delete fishingState[`${groupId}:${userId}`];
 
     const { fish, fishName, catchType, catchData } = state;
