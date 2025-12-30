@@ -152,8 +152,11 @@ export default class Economy extends plugin {
       }
     } catch (err) {}
 
+    const elapsedTime = (Date.now() - counterData.time) / 1000;
+    const successRate = Math.max(20, Math.floor(80 - (elapsedTime / 300) * 60));
+
     const roll = _.random(1, 100);
-    if (roll <= 50) {
+    if (roll <= successRate) {
       const counterAmount = Math.floor(counterData.amount * 1.5);
       const targetCoins = economyManager.getCoins({
         user_id: targetId,
@@ -168,10 +171,10 @@ export default class Economy extends plugin {
       economyManager.addCoins(e, actualAmount);
 
       await e.reply(
-        `反击成功！\n${attackerName} 用岩浆烫伤了 ${targetName}！\n夺回并获得了 ${actualAmount} 樱花币！`
+        `⚔️ 反击成功！\n${attackerName} 用岩浆烫伤了 ${targetName}！\n夺回并获得了 ${actualAmount} 樱花币！`
       );
     } else {
-      await e.reply(`反击失败！\n${targetName} 早就跑得比Miko还快了...`);
+      await e.reply(`💨 反击失败！\n${targetName} 早就跑得比Miko还快了...`);
     }
 
     return true;

@@ -1,0 +1,53 @@
+# 鱼竿配置
+# minLevel: 过滤掉等级低于此值的群友 (0表示不过滤)
+rods:
+  - id: rod_basic
+    name: 竹竿
+    price: 50
+    minLevel: 0
+    description: 简陋的竹竿，什么鱼都能钓到。
+
+  - id: rod_carbon
+    name: 碳素鱼竿
+    price: 200
+    minLevel: 20
+    description: 轻便的碳素鱼竿，可以过滤掉20级以下的小鱼。
+
+  - id: rod_titanium
+    name: 钛合金鱼竿
+    price: 500
+    minLevel: 40
+    description: 坚固的钛合金鱼竿，可以过滤掉40级以下的小鱼。
+
+  - id: rod_golden
+    name: 黄金鱼竿
+    price: 1200
+    minLevel: 60
+    description: 奢华的黄金鱼竿，可以过滤掉60级以下的小鱼。
+
+  - id: rod_legendary
+    name: 传说之竿
+    price: 3000
+    minLevel: 80
+    description: 传说中的神器，只钓大鱼！过滤掉80级以下的群友。
+
+# 鱼饵配置
+# maxInactiveDays: 过滤掉超过此天数未发言的群友 (0表示不过滤)
+baits:
+  - id: bait_basic
+    name: 蚯蚓
+    price: 10
+    maxInactiveDays: 0
+    description: 普通的蚯蚓，什么鱼都可能上钩。
+
+  - id: bait_shrimp
+    name: 鲜虾饵
+    price: 30
+    maxInactiveDays: 60
+    description: 新鲜的虾饵，只吸引两个月内活跃的鱼。
+
+  - id: bait_premium
+    name: 秘制鱼饵
+    price: 80
+    maxInactiveDays: 30
+    description: 神社秘制鱼饵，只吸引一个月内活跃的鱼。
