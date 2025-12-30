@@ -46,7 +46,7 @@ export default class Fishing extends plugin {
     const lastFishTime = await redis.get(cooldownKey);
     if (lastFishTime) {
       const remainingTime = Math.ceil(
-        (3600 - (Date.now() / 1000 - Number(lastFishTime))) / 60
+        (1800 - (Date.now() / 1000 - Number(lastFishTime))) / 60
       );
       await e.reply(
         `🎣 鱼儿被吓跑了！\n请等待 ${remainingTime} 分钟，等它们放松警惕再来！`,
@@ -210,7 +210,7 @@ export default class Fishing extends plugin {
       cooldownKey,
       String(Math.floor(Date.now() / 1000)),
       "EX",
-      3600
+      1800
     );
 
     if (catchType === "trash") {
