@@ -238,6 +238,9 @@ export default class Economy extends plugin {
     const itemName = e.match[2].trim();
     const count = parseInt(e.match[3]) || 1;
     const result = await ShopManager.buyItem(e, itemName, count);
+    if (!result.success && !ShopManager.findItemByName(itemName)) {
+      return false;
+    }
     await e.reply(result.msg);
     return true;
   });
