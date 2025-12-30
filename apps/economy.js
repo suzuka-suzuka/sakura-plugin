@@ -308,7 +308,7 @@ export default class Economy extends plugin {
     return true;
   });
 
-  myStatus = Command(/^#?(我的(信息|等级|资产))$/, async (e) => {
+  myStatus = Command(/^#?((我|咱)的(信息|等级|资产))$/, async (e) => {
     const economyManager = new EconomyManager(e);
     const coins = economyManager.getCoins(e);
     const level = economyManager.getLevel(e);
