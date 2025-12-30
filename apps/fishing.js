@@ -271,6 +271,14 @@ export default class Fishing extends plugin {
       }
     }
 
+    let fishNameBonus = "";
+    const fishNameData = fishingManager.getFishName(fish.user_id);
+    if (fishNameData) {
+      fishNameBonus = `【${fishNameData.name}】`;
+      price += 10;
+      priceNote += "（命名鱼 +10）";
+    }
+
     const economyManager = new EconomyManager(e);
     economyManager.addCoins(e, price);
 
@@ -279,7 +287,7 @@ export default class Fishing extends plugin {
     const rarity = getRarityByLevel(fishLevel);
     const resultMsg = [
       `🎉 钓鱼成功！\n`,
-      `🐟 钓到了${roleBonus}【${fishName}】！\n`,
+      `🐟 钓到了${fishNameBonus}${roleBonus}【${fishName}】！\n`,
       segment.image(`https://q1.qlogo.cn/g?b=qq&nk=${fish.user_id}&s=640`),
       `\n📊 稀有度：${rarity.color}${rarity.name}\n`,
       `💰 获得：${price} 樱花币${priceNote}\n`,
@@ -299,7 +307,8 @@ export default class Fishing extends plugin {
     forwardMsg.push({
       nickname: "钓鱼商店老板",
       user_id: e.self_id,
-      content: "🏪 欢迎光临「Sakura 渔具屋」！\n这里有适合您的装备哦~\n\n💡 现在可以使用 #商店 查看所有商品\n或使用 #购买 商品名 [数量] 直接购买",
+      content:
+        "🏪 欢迎光临「Sakura 渔具屋」！\n这里有适合您的装备哦~\n\n💡 现在可以使用 #商店 查看所有商品\n或使用 #购买 商品名 [数量] 直接购买",
     });
 
     if (rods.length > 0) {
@@ -380,6 +389,52 @@ export default class Fishing extends plugin {
     fishingManager.equipBait(e.user_id, bait.id);
     await e.reply(
       `🪱 饵料挂好啦！当前使用【${bait.name}】，库存 ${count} 个。`
+    );
+    return true;
+  });
+
+  nameFish = Command(/^#?鱼命名\s*(\S+)\s*.*$/, async (e) => {
+    const targetId = e.at;
+    if (!targetId) {
+      return false;
+    }
+
+    if (targetId == e.user_id) {
+      return false;
+    }
+
+    const fishName = e.msg.match(/^#?鱼命名\s*(\S+)/)?.[1]?.trim();
+    if (!fishName) {
+      return false;
+    }
+
+    if (fishName.length > 10) {
+      await e.reply("鱼名太长了，最多10个字符~", 10);
+      return true;
+    }
+
+    const economyManager = new EconomyManager(e);
+    const coins = economyManager.getCoins(e);
+    if (coins < 10) {
+      await e.reply("樱花币不足！命名需要 10 樱花币~", 10);
+      return true;
+    }
+
+    economyManager.reduceCoins(e, 10);
+
+    const fishingManager = new FishingManager(e.group_id);
+    fishingManager.setFishName(targetId, fishName, e.user_id);
+
+    let targetName = targetId;
+    try {
+      const info = await e.getInfo(targetId);
+      if (info) {
+        targetName = info.card || info.nickname || targetId;
+      }
+    } catch (err) {}
+
+    await e.reply(
+      `🐟 命名成功！\n【${targetName}】现在是【${fishName}】了！\n💰 花费：10 樱花币`
     );
     return true;
   });
@@ -506,9 +561,15 @@ export default class Fishing extends plugin {
 
     for (const item of history) {
       let fishName = item.targetUserId;
-      if (memberMap && memberMap.has(Number(item.targetUserId))) {
-        const m = memberMap.get(Number(item.targetUserId));
-        fishName = m.card || m.nickname || item.targetUserId;
+      if (memberMap) {
+        const member = memberMap.get(Number(item.targetUserId));
+        if (member) {
+          fishName = member.card || member.nickname || item.targetUserId;
+        }
+      }
+      const fishNameData = fishingManager.getFishName(item.targetUserId);
+      if (fishNameData) {
+        fishName = `【${fishNameData.name}】${fishName}`;
       }
       item.name = fishName;
     }
