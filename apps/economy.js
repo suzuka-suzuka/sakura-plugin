@@ -1,5 +1,6 @@
 import EconomyManager from "../lib/economy/EconomyManager.js";
 import EconomyImageGenerator from "../lib/economy/ImageGenerator.js";
+import ShopManager from "../lib/economy/ShopManager.js";
 import GiftManager from "../lib/favorability/GiftManager.js";
 import _ from "lodash";
 
@@ -64,7 +65,12 @@ export default class Economy extends plugin {
     const levelDiff = attackerLevel - targetLevel;
     const successRate = Math.max(20, Math.min(80, 50 + levelDiff));
 
-    await redis.set(cooldownKey, String(Math.floor(Date.now() / 1000)), 'EX', 3600);
+    await redis.set(
+      cooldownKey,
+      String(Math.floor(Date.now() / 1000)),
+      "EX",
+      3600
+    );
 
     const roll = _.random(1, 100);
     const attackerName = e.sender.card || e.sender.nickname || e.user_id;
@@ -97,7 +103,7 @@ export default class Economy extends plugin {
         amount: robAmount,
         time: Date.now(),
       });
-      await redis.set(counterKey, counterData, 'EX', 300);
+      await redis.set(counterKey, counterData, "EX", 300);
 
       await e.reply(
         `🌸 抢夺成功！\n${attackerName} 从 ${targetName} 那里抢走了 ${robAmount} 樱花币！`
@@ -153,7 +159,10 @@ export default class Economy extends plugin {
     } catch (err) {}
 
     const elapsedTime = (Date.now() - counterData.time) / 1000;
-    const successRate = Math.max(0, Math.floor(100 - (elapsedTime / 300) * 100));
+    const successRate = Math.max(
+      0,
+      Math.floor(100 - (elapsedTime / 300) * 100)
+    );
 
     const roll = _.random(1, 100);
     if (roll <= successRate) {
@@ -180,51 +189,96 @@ export default class Economy extends plugin {
     return true;
   });
 
-  giftList = Command(/^#?(礼物列表|神社商店|樱神社商店)$/, async (e) => {
-    const gifts = GiftManager.getAllGifts();
-    if (gifts.length === 0) {
-      await e.reply("神社商店暂时缺货哦~", 10);
-      return true;
-    }
-
-    const forwardMsg = gifts.map((gift) => {
-      return {
-        nickname: "樱神社商店",
-        user_id: e.self_id,
-        content: `🎁 ${gift.name}\n💰 价格：${gift.price} 樱花币\n❤️ 好感度：+${gift.favorability}\n📝 描述：${gift.description}`,
-      };
-    });
+  shopList = Command(/^#?(商店|商城|樱神社商店|神社商店)$/, async (e) => {
+    const forwardMsg = ShopManager.generateShopMessage(e);
+    const items = ShopManager.getAllItems();
 
     await e.sendForwardMsg(forwardMsg, {
-      prompt: "查看礼物列表",
-      news: [{ text: `共 ${gifts.length} 种礼物` }],
-      source: "樱神社",
+      prompt: "查看樱神社商店",
+      news: [{ text: `共 ${items.length} 种商品` }],
+      source: "樱神社商店",
     });
     return true;
   });
 
-  buyGift = Command(/^#?(购买|兑换)\s*(.+)$/, async (e) => {
-    const giftName = e.match[2].trim();
-    const result = await GiftManager.buyGift(e, giftName);
+  giftShop = Command(/^#?(礼物商店|礼物商城|礼物列表)$/, async (e) => {
+    const gifts = GiftManager.getAllGifts();
+    if (gifts.length === 0) {
+      await e.reply("礼物商店暂时缺货哦~", 10);
+      return true;
+    }
+
+    const forwardMsg = [];
+    forwardMsg.push({
+      nickname: "礼物商店",
+      user_id: e.self_id,
+      content:
+        "🎁 欢迎光临「礼物商店」！\n送礼物可以增加对方的好感度哦~\n\n💡 购买：#购买 礼物名\n💝 赠送：#赠送 礼物名 @某人",
+    });
+
+    let giftMsg = "🎁 【礼物】\n━━━━━━━━━━━━━━━━\n";
+    for (const gift of gifts) {
+      giftMsg += `\n📦 ${gift.name}\n💰 价格：${gift.price} 樱花币\n❤️ 好感度：+${gift.favorability}\n📝 ${gift.description}\n`;
+    }
+    forwardMsg.push({
+      nickname: "礼物商店",
+      user_id: e.self_id,
+      content: giftMsg.trim(),
+    });
+
+    await e.sendForwardMsg(forwardMsg, {
+      prompt: "查看礼物商店",
+      news: [{ text: `共 ${gifts.length} 种礼物` }],
+      source: "礼物商店",
+    });
+    return true;
+  });
+
+  buyItem = Command(/^#?(购买|兑换)\s*(\S+)\s*(\d*)$/, async (e) => {
+    const itemName = e.match[2].trim();
+    const count = parseInt(e.match[3]) || 1;
+    const result = await ShopManager.buyItem(e, itemName, count);
     await e.reply(result.msg);
     return true;
   });
 
-  myGifts = Command(/^#?(我的礼物|我的背包)$/, async (e) => {
-    const inventory = GiftManager.getInventory(e.group_id, e.user_id);
-    if (Object.keys(inventory).length === 0) {
-      await e.reply("你的收藏品空空如也~", 10);
-      return true;
-    }
+  myBag = Command(/^#?(我的礼物|我的背包|背包)$/, async (e) => {
+    const inventory = ShopManager.getInventory(e.group_id, e.user_id);
+    const buffs = ShopManager.getActiveBuffs(e.group_id, e.user_id);
 
     const nickname = e.sender.card || e.sender.nickname || e.user_id;
-    const forwardMsg = Object.entries(inventory).map(([name, count]) => {
-      return {
+    const forwardMsg = [];
+
+    if (Object.keys(inventory).length > 0) {
+      let bagMsg = "🎒 背包物品\n━━━━━━━━━━━━━━━━\n";
+      for (const [name, count] of Object.entries(inventory)) {
+        bagMsg += `📦 ${name} x ${count}\n`;
+      }
+      forwardMsg.push({
         nickname: nickname,
         user_id: e.user_id,
-        content: `🎁 ${name} x ${count}`,
-      };
-    });
+        content: bagMsg.trim(),
+      });
+    }
+
+    if (Object.keys(buffs).length > 0) {
+      let buffMsg = "✨ 活跃增益\n━━━━━━━━━━━━━━━━\n";
+      const now = Date.now();
+      for (const buff of Object.values(buffs)) {
+        const remainingTime = Math.ceil((buff.expireTime - now) / 1000 / 60);
+        buffMsg += `💫 ${buff.name}（剩余 ${remainingTime} 分钟）\n`;
+      }
+      forwardMsg.push({
+        nickname: nickname,
+        user_id: e.user_id,
+        content: buffMsg.trim(),
+      });
+    }
+
+    if (forwardMsg.length === 0) {
+      await e.reply("你的背包空空如也~", 10);
+      return true;
+    }
 
     await e.sendForwardMsg(forwardMsg, {
       prompt: "查看我的背包",

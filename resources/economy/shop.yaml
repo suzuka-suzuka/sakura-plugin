@@ -1,0 +1,135 @@
+# 统一商店配置
+# category: 商品分类
+# type: 商品类型 (consumable=消耗品, equipment=装备, buff=增益效果)
+# stackable: 是否可叠加 (consumable默认true, equipment默认false)
+# handler: 特殊处理器 (fishing=钓鱼系统, gift=礼物系统, buff=增益系统)
+
+categories:
+  # 礼物分类 - 可赠送给他人增加好感度
+  gifts:
+    name: "🎁 礼物"
+    description: "送给心仪的人，增加好感度"
+    handler: gift
+    items:
+      - id: gift_flower
+        name: 鲜花
+        price: 100
+        type: consumable
+        favorability: 10
+        description: 一朵美丽的鲜花，送给喜欢的人吧。
+
+      - id: gift_chocolate
+        name: 巧克力
+        price: 500
+        type: consumable
+        favorability: 55
+        description: 甜甜的巧克力，象征着甜蜜的爱情。
+
+      - id: gift_ring
+        name: 钻戒
+        price: 10000
+        type: consumable
+        favorability: 1200
+        description: 闪耀的钻戒，承诺一生的誓言。
+
+  # 鱼竿分类 - 永久装备
+  rods:
+    name: "🎣 鱼竿"
+    description: "钓鱼必备工具，永久拥有"
+    handler: fishing_rod
+    items:
+      - id: rod_basic
+        name: 竹竿
+        price: 50
+        type: equipment
+        minLevel: 0
+        description: 随处可见的普通竹竿，虽然简陋，但也许能创造奇迹？
+
+      - id: rod_carbon
+        name: 碳素鱼竿
+        price: 200
+        type: equipment
+        minLevel: 20
+        description: 轻盈强韧的碳素纤维打造，能敏锐感知鱼讯，过滤掉那些不起眼的小鱼。
+
+      - id: rod_titanium
+        name: 钛合金鱼竿
+        price: 500
+        type: equipment
+        minLevel: 40
+        description: 泛着冷光的钛合金鱼竿，坚不可摧，只有真正的强者才配得上它。
+
+      - id: rod_golden
+        name: 黄金鱼竿
+        price: 1200
+        type: equipment
+        minLevel: 60
+        description: 纯金打造的奢华鱼竿，光芒耀眼，据说能吸引珍稀鱼类的目光。
+
+      - id: rod_legendary
+        name: 传说之竿
+        price: 3000
+        type: equipment
+        minLevel: 80
+        description: 散发着神秘气息的传说之竿，据说连海怪都能征服的神器！
+
+  # 鱼饵分类 - 消耗品
+  baits:
+    name: "🪱 鱼饵"
+    description: "钓鱼消耗品，用完需要补充"
+    handler: fishing_bait
+    items:
+      - id: bait_basic
+        name: 蚯蚓
+        price: 10
+        type: consumable
+        maxInactiveDays: 0
+        description: 刚挖出来的鲜活蚯蚓，最基础的诱饵，来者不拒。
+
+      - id: bait_shrimp
+        name: 鲜虾饵
+        price: 30
+        type: consumable
+        maxInactiveDays: 60
+        description: 鲜嫩多汁的虾肉，对那些还有活力的鱼儿有着致命的诱惑。
+
+      - id: bait_premium
+        name: 秘制鱼饵
+        price: 80
+        type: consumable
+        maxInactiveDays: 30
+        description: 巫女亲手调制的秘制团子，香气扑鼻，只有最活跃的鱼儿才能闻到！
+
+  # 增益道具分类 - 临时效果（暂未上架）
+  # buffs:
+  #   name: "✨ 增益道具"
+  #   description: "获得临时增益效果"
+  #   handler: buff
+  #   items:
+  #     - id: buff_double_coin
+  #       name: 双倍金币卡
+  #       price: 200
+  #       type: buff
+  #       duration: 3600
+  #       effect:
+  #         type: coinMultiplier
+  #         value: 2
+  #       description: 使用后1小时内，所有金币收入翻倍！
+  #     - id: buff_rob_shield
+  #       name: 防盗护盾
+  #       price: 150
+  #       type: buff
+  #       duration: 7200
+  #       effect:
+  #         type: robShield
+  #         value: true
+  #       description: 使用后2小时内，免受打劫！
+  #     - id: buff_fishing_luck
+  #       name: 幸运鱼饵
+  #       price: 100
+  #       type: buff
+  #       duration: 1800
+  #       effect:
+  #         type: fishingLuck
+  #         value: 1.5
+  #       description: 使用后30分钟内，钓到稀有鱼的概率提升50%！

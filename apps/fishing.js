@@ -299,7 +299,7 @@ export default class Fishing extends plugin {
     forwardMsg.push({
       nickname: "钓鱼商店老板",
       user_id: e.self_id,
-      content: "🏪 欢迎光临「Sakura 渔具屋」！\n这里有适合您的装备哦~",
+      content: "🏪 欢迎光临「Sakura 渔具屋」！\n这里有适合您的装备哦~\n\n💡 现在可以使用 #商店 查看所有商品\n或使用 #购买 商品名 [数量] 直接购买",
     });
 
     if (rods.length > 0) {
@@ -330,7 +330,7 @@ export default class Fishing extends plugin {
       nickname: "钓鱼商店老板",
       user_id: e.self_id,
       content:
-        "💡 贴士：\n🛍️ 购买：#购买鱼竿 名称 / #购买鱼饵 名称 数量\n🎒 装备：#装备鱼竿 名称 / #装备鱼饵 名称\n📦 查看：#我的渔具",
+        "💡 贴士：\n🛍️ 购买：#购买 商品名 [数量]\n🎒 装备：#装备鱼竿 名称 / #装备鱼饵 名称\n📦 查看：#我的渔具",
     });
 
     await e.sendForwardMsg(forwardMsg, {
@@ -338,72 +338,6 @@ export default class Fishing extends plugin {
       news: [{ text: `共 ${rods.length + baits.length} 件商品` }],
       source: "钓鱼商店",
     });
-    return true;
-  });
-
-  buyRod = Command(/^#?购买鱼竿\s*(.+)$/, async (e) => {
-    const rodName = e.msg.match(/^#?购买鱼竿\s*(.+)$/)[1].trim();
-    const fishingManager = new FishingManager(e.group_id);
-    const economyManager = new EconomyManager(e);
-
-    const rod = fishingManager.getAllRods().find((r) => r.name === rodName);
-    if (!rod) {
-      await e.reply(`店里没有叫【${rodName}】的鱼竿呢...`, 10);
-      return true;
-    }
-
-    if (fishingManager.hasRod(e.user_id, rod.id)) {
-      await e.reply(`您已有【${rod.name}】，无需重复购买~`, 10);
-      return true;
-    }
-
-    const coins = economyManager.getCoins(e);
-    if (coins < rod.price) {
-      await e.reply(
-        `钱不够呢... 购买【${rod.name}】需 ${rod.price} 樱花币，您只有 ${coins}。`,
-        10
-      );
-      return true;
-    }
-
-    economyManager.reduceCoins(e, rod.price);
-    fishingManager.buyRod(e.user_id, rod.id);
-
-    await e.reply(`成功购买了【${rod.name}】！`);
-    return true;
-  });
-
-  buyBait = Command(/^#?购买鱼饵\s*(\S+)\s*(\d*)$/, async (e) => {
-    const match = e.msg.match(/^#?购买鱼饵\s*(\S+)\s*(\d*)$/);
-    const baitName = match[1].trim();
-    const count = parseInt(match[2]) || 1;
-
-    const fishingManager = new FishingManager(e.group_id);
-    const economyManager = new EconomyManager(e);
-
-    const bait = fishingManager.getAllBaits().find((b) => b.name === baitName);
-    if (!bait) {
-      await e.reply(`店里没有叫【${baitName}】的鱼饵呢...`, 10);
-      return true;
-    }
-
-    const totalPrice = bait.price * count;
-
-    const coins = economyManager.getCoins(e);
-    if (coins < totalPrice) {
-      await e.reply(
-        `钱不够啦... 买 ${count} 个【${bait.name}】需 ${totalPrice} 樱花币，您只有 ${coins}。`,
-        10
-      );
-      return true;
-    }
-
-    economyManager.reduceCoins(e, totalPrice);
-    fishingManager.buyBait(e.user_id, bait.id, count);
-
-    const newCount = fishingManager.getBaitCount(e.user_id, bait.id);
-
-    await e.reply(`成功购买了 ${count} 个【${bait.name}】！`);
     return true;
   });
 
