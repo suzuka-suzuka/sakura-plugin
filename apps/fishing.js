@@ -159,7 +159,7 @@ export default class Fishing extends plugin {
       state.phase = "biting";
       state.biteTime = Date.now();
 
-      await e.reply(`🌊 浮漂沉下去了！快收杆"！`, false, true);
+      await e.reply(`🌊 浮漂沉下去了！快收杆！`, false, true);
 
       this.setContext("pullRod", `${groupId}:${userId}`, 60);
 
