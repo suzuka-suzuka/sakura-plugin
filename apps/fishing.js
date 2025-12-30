@@ -71,7 +71,8 @@ export default class Fishing extends plugin {
 
     fishingManager.consumeBait(userId);
 
-    const memberMap = await e.group.getMemberList(true);
+    const memberList = await e.group.getMemberList(true);
+    const memberMap = Array.isArray(memberList) ? new Map(memberList.map(m => [m.user_id, m])) : memberList;
     if (!memberMap || memberMap.size === 0) {
       logger.error(`[钓鱼] 获取群成员列表失败`);
       await e.reply("鱼塘信息获取失败，稍后再试~", 10);
@@ -556,7 +557,8 @@ export default class Fishing extends plugin {
 
     let memberMap = null;
     try {
-      memberMap = await e.group.getMemberList(true);
+      const memberList = await e.group.getMemberList(true);
+      memberMap = Array.isArray(memberList) ? new Map(memberList.map(m => [m.user_id, m])) : memberList;
     } catch (err) {}
 
     for (const item of history) {
@@ -587,49 +589,6 @@ export default class Fishing extends plugin {
       await e.reply(segment.image(image));
     } catch (err) {
       logger.error(`生成钓鱼记录图片失败: ${err}`);
-      await e.reply("画师偷懒了，图片生成失败... 稍后再试~", 10);
-    }
-
-    return true;
-  });
-
-  fishingRank = Command(/^#?钓鱼排行(榜)?$/, async (e) => {
-    const economyManager = new EconomyManager(e);
-    const fishingManager = new FishingManager(e.group_id);
-    const ranking = economyManager.getRanking("coins", 10);
-
-    if (ranking.length === 0) {
-      await e.reply("榜单统计中，暂无数据~", 10);
-      return true;
-    }
-
-    const rankData = [];
-    for (const user of ranking) {
-      let nickname = user.userId;
-      try {
-        const info = await e.getInfo(user.userId);
-        if (info) {
-          nickname = info.card || info.nickname || user.userId;
-        }
-      } catch (err) {}
-
-      const fishingData = fishingManager.getUserData(user.userId);
-      const catchCount = fishingData.totalCatch || 0;
-
-      rankData.push({
-        userId: user.userId,
-        nickname: nickname,
-        coins: user.coins,
-        catchCount: catchCount,
-      });
-    }
-
-    try {
-      const generator = new FishingImageGenerator();
-      const image = await generator.generateFishingRank(rankData);
-      await e.reply(segment.image(image));
-    } catch (err) {
-      logger.error(`生成钓鱼排行图片失败: ${err}`);
       await e.reply("画师偷懒了，图片生成失败... 稍后再试~", 10);
     }
 
