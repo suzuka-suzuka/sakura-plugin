@@ -105,6 +105,9 @@ export default class Economy extends plugin {
       });
       await redis.set(counterKey, counterData, "EX", 300);
 
+      const transferLockKey = `sakura:economy:transfer:lock:${e.group_id}:${e.user_id}`;
+      await redis.set(transferLockKey, String(Date.now()), "EX", 300);
+
       await e.reply(
         `🌸 抢夺成功！\n${attackerName} 从 ${targetName} 那里抢走了 ${robAmount} 樱花币！`
       );
@@ -348,6 +351,19 @@ export default class Economy extends plugin {
 
     if (targetId == e.user_id) {
       return false;
+    }
+
+    const transferLockKey = `sakura:economy:transfer:lock:${e.group_id}:${e.user_id}`;
+    const lockTime = await redis.get(transferLockKey);
+    if (lockTime) {
+      const remainingTime = Math.ceil(
+        (300 - (Date.now() / 1000 - Number(lockTime) / 1000)) / 60
+      );
+      await e.reply(
+        `你刚打劫完，赃款还烫手呢！${remainingTime} 分钟后才能转账~`,
+        10
+      );
+      return true;
     }
 
     const economyManager = new EconomyManager(e);
