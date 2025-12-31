@@ -324,32 +324,26 @@ export default class Fishing extends plugin {
     fishingManager.recordCatch(userId, price, fish.user_id);
 
     const rarity = getRarityByLevel(fishLevel);
+    const displayWeight = Math.max(1, fishWeight);
+    const freshnessPercent = (freshness * 100).toFixed(2) + "%";
     
-    try {
-        const generator = new FishingImageGenerator();
-        const image = await generator.generateCatchResult({
-            fishAvatarUrl: `https://q1.qlogo.cn/g?b=qq&nk=${fish.user_id}&s=640`,
-            fishName: fishName,
-            fishNameBonus: fishNameBonus,
-            roleBonus: roleBonus,
-            rarity: rarity,
-            price: price,
-            freshness: freshness,
-            weight: fishWeight,
-            role: fish.role
-        });
-        await e.reply(segment.image(image));
-    } catch (err) {
-        logger.error(`生成钓鱼结果图片失败: ${err}`);
-        const resultMsg = [
-          `🎉 钓鱼成功！\n`,
-          `🐟 钓到了${fishNameBonus}${roleBonus}【${fishName}】！\n`,
-          segment.image(`https://q1.qlogo.cn/g?b=qq&nk=${fish.user_id}&s=640`),
-          `\n📊 稀有度：${rarity.color}${rarity.name}\n`,
-          `💰 获得：${price} 樱花币${priceNote}\n`,
-        ];
-        await e.reply(resultMsg);
+    const resultMsg = [
+      `🎉 钓鱼成功！\n`,
+      `🐟 钓到了${fishNameBonus}【${fishName}】！\n`,
+      segment.image(`https://q1.qlogo.cn/g?b=qq&nk=${fish.user_id}&s=640`),
+    ];
+    
+    if (fish.role === "owner" || fish.role === "admin") {
+      const roleName = fish.role === "owner" ? "群主" : "管理员";
+      resultMsg.push(`\n👑 身份：${roleName}\n`);
     }
+    
+    resultMsg.push(`📊 稀有度：${rarity.color}${rarity.name}\n`);
+    resultMsg.push(`⚖️ 重量：${displayWeight}\n`);
+    resultMsg.push(`🧊 新鲜度：${freshnessPercent}\n`);
+    resultMsg.push(`💰 获得：${price} 樱花币\n`);
+    
+    await e.reply(resultMsg);
 
     return true;
   }
