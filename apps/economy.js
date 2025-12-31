@@ -194,8 +194,9 @@ export default class Economy extends plugin {
   });
 
   shopList = Command(/^#?(商店|商城|樱神社商店|神社商店)$/, async (e) => {
-    const forwardMsg = ShopManager.generateShopMessage(e);
-    const items = ShopManager.getAllItems();
+    const shopManager = new ShopManager();
+    const forwardMsg = shopManager.generateShopMessage(e);
+    const items = shopManager.getAllItems();
 
     await e.sendForwardMsg(forwardMsg, {
       prompt: "查看樱神社商店",
@@ -239,10 +240,11 @@ export default class Economy extends plugin {
   });
 
   buyItem = Command(/^#?(购买|兑换)\s*(\S+)\s*(\d*)$/, async (e) => {
+    const shopManager = new ShopManager();
     const itemName = e.match[2].trim();
     const count = parseInt(e.match[3]) || 1;
-    const result = await ShopManager.buyItem(e, itemName, count);
-    if (!result.success && !ShopManager.findItemByName(itemName)) {
+    const result = await shopManager.buyItem(e, itemName, count);
+    if (!result.success && !shopManager.findItemByName(itemName)) {
       return false;
     }
     await e.reply(result.msg);
