@@ -247,9 +247,9 @@ export default class Fishing extends plugin {
         `😱 糟糕！遇到可怕的生物！\n`,
         `${creature.emoji} 【${creature.name}】出现了！\n`,
         `📝 ${creature.description}\n`,
-        `\n💥 你的【${rodName}】被它一口吞掉了！\n`,
+        `💥 你的【${rodName}】被它一口吞掉了！\n`,
         `💰 获得：0 樱花币\n`,
-        `\n⚠️ 鱼竿已丢失，请去商店重新购买！`,
+        `⚠️ 鱼竿已丢失，请去商店重新购买！`,
       ];
       fishingManager.recordCatch(userId, 0, null);
       await e.reply(resultMsg);
