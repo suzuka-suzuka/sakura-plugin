@@ -6,20 +6,12 @@ import _ from "lodash";
 const fishingState = {};
 
 function getRarityByLevel(level) {
-  if (level >= 80) return { name: "传说", color: "🟠" };
-  if (level >= 60) return { name: "史诗", color: "🟣" };
-  if (level >= 40) return { name: "稀有", color: "🔵" };
-  if (level >= 20) return { name: "精良", color: "🟢" };
+  if (level > 80) return { name: "传说", color: "🟠" };
+  if (level > 60) return { name: "史诗", color: "🟣" };
+  if (level > 40) return { name: "稀有", color: "🔵" };
+  if (level > 20) return { name: "精良", color: "🟢" };
   if (level > 0) return { name: "普通", color: "⚪" };
   return { name: "垃圾", color: "⚫" };
-}
-
-function getQualityLevel(level) {
-  if (level >= 80) return 5;
-  if (level >= 60) return 4;
-  if (level >= 40) return 3;
-  if (level >= 20) return 2;
-  return 1;
 }
 
 export default class Fishing extends plugin {
@@ -101,11 +93,16 @@ export default class Fishing extends plugin {
       const daysSinceLastMessage =
         (currentTime - lastSentTime) / (24 * 60 * 60);
 
-      // 鱼饵品质决定能钓到的鱼的品质
-      const memberQuality = getQualityLevel(memberLevel);
+      // 鱼饵品质决定能钓到的鱼的等级范围
+      // 1级鱼饵：全部等级都能钓
+      // 2级鱼饵：只能钓20级以上的（不包括20级）
+      // 3级鱼饵：只能钓40级以上的（不包括40级）
+      // 4级鱼饵：只能钓60级以上的（不包括60级）
+      // 5级鱼饵：只能钓80级以上的（不包括80级）
       const baitQuality = baitConfig.quality || 1;
+      const minLevel = (baitQuality - 1) * 20;
 
-      if (memberQuality > baitQuality) {
+      if (memberLevel <= minLevel && baitQuality > 1) {
         return;
       }
 
@@ -262,7 +259,7 @@ export default class Fishing extends plugin {
 
     const equippedRodId = fishingManager.getEquippedRod(userId);
     const rodConfig = fishingManager.getRodConfig(equippedRodId);
-    const rodCapacity = rodConfig?.capacity || 20;
+    const rodCapacity = rodConfig?.capacity || 40;
 
     const eco = new EconomyManager(e);
     if (!eco.data[fish.user_id]) {
@@ -271,16 +268,29 @@ export default class Fishing extends plugin {
     const fishWeight = eco.data[fish.user_id]?.coins || 0;
 
     let successRate = 100;
-    if (fishWeight > rodCapacity) {
+    
+    // 幸运鱼竿特殊逻辑：无论鱼多重都有固定概率上钩
+    if (rodConfig?.lucky) {
+        successRate = rodConfig.luckyRate || 66;
+    } else if (fishWeight > rodCapacity) {
         successRate = Math.max(0, 100 - (fishWeight - rodCapacity));
     }
 
     if (_.random(1, 100) > successRate) {
-        await e.reply([
-            `🎣 哎呀！鱼太重了（${fishWeight}）！\n`,
-            `😓 你的【${rodConfig?.name}】弯到了极限，难以控制这条巨物！\n`,
-            `💨 鱼儿猛地一挣，逃之夭夭...`
-        ]);
+        // 幸运鱼竿失败时的特殊提示
+        if (rodConfig?.lucky) {
+            await e.reply([
+                `🍀 幸运女神今天没有眷顾你...\n`,
+                `😅 你的【${rodConfig?.name}】闪烁了一下，但鱼还是跑了！\n`,
+                `💨 下次一定会有好运的！`
+            ]);
+        } else {
+            await e.reply([
+                `🎣 哎呀！鱼太重了（${fishWeight}）！\n`,
+                `😓 你的【${rodConfig?.name}】弯到了极限，难以控制这条巨物！\n`,
+                `💨 鱼儿猛地一挣，逃之夭夭...`
+            ]);
+        }
         return true;
     }
 
