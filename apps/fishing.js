@@ -13,6 +13,14 @@ function getRarityByLevel(level) {
   return { name: "普通", color: "⚪" };
 }
 
+function getQualityLevel(level) {
+  if (level >= 80) return 5;
+  if (level >= 60) return 4;
+  if (level >= 40) return 3;
+  if (level >= 20) return 2;
+  return 1;
+}
+
 export default class Fishing extends plugin {
   constructor() {
     super({
@@ -92,7 +100,11 @@ export default class Fishing extends plugin {
       const daysSinceLastMessage =
         (currentTime - lastSentTime) / (24 * 60 * 60);
 
-      if (memberLevel < rodConfig.minLevel) {
+      // 鱼饵品质决定能钓到的鱼的品质
+      const memberQuality = getQualityLevel(memberLevel);
+      const baitQuality = baitConfig.quality || 1;
+
+      if (memberQuality > baitQuality) {
         return;
       }
 
@@ -247,20 +259,46 @@ export default class Fishing extends plugin {
       return true;
     }
 
+    const equippedRodId = fishingManager.getEquippedRod(userId);
+    const rodConfig = fishingManager.getRodConfig(equippedRodId);
+    const rodCapacity = rodConfig?.capacity || 20;
+
+    const eco = new EconomyManager(e);
+    if (!eco.data[fish.user_id]) {
+        eco.data[fish.user_id] = { coins: 0, experience: 0, level: 1 };
+    }
+    const fishWeight = eco.data[fish.user_id]?.coins || 0;
+
+    let successRate = 100;
+    if (fishWeight > rodCapacity) {
+        successRate = Math.max(0, 100 - (fishWeight - rodCapacity));
+    }
+
+    if (_.random(1, 100) > successRate) {
+        await e.reply([
+            `🎣 哎呀！鱼太重了（${fishWeight}）！\n`,
+            `😓 你的【${rodConfig?.name}】弯到了极限，难以控制这条巨物！\n`,
+            `💨 鱼儿猛地一挣，逃之夭夭...`
+        ]);
+        return true;
+    }
+
     let fishLevel = Number(fish.level) || 1;
-    let price = fishLevel;
+    let price = Math.floor(fishLevel * (1 + fishWeight / 100));
 
     const currentTime = Math.floor(Date.now() / 1000);
     const lastSentTime = fish.last_sent_time || currentTime;
-    const daysSinceLastMessage = (currentTime - lastSentTime) / (24 * 60 * 60);
+    
+    // 60天 = 60 * 24 * 3600 秒
+    const maxDuration = 60 * 24 * 3600;
+    const timeDiff = Math.max(0, currentTime - lastSentTime);
 
-    let priceNote = "";
-    if (daysSinceLastMessage >= 60) {
-      price = 0;
-      priceNote = "（潜水太久，变僵尸鱼了，不值钱！）";
-    } else if (daysSinceLastMessage >= 30) {
-      price = Math.floor(price / 2);
-      priceNote = "（潜水一月，肉质变差，价格减半！）";
+    let freshness = Math.max(0, 1 - timeDiff / maxDuration);
+    price = Math.floor(price * freshness);
+
+    let priceNote = `（新鲜度 ${(freshness * 100).toFixed(2)}%）`;
+    if (freshness <= 0) {
+      priceNote = "（新鲜度 0% - 死鱼）";
     }
 
     let roleBonus = "";
@@ -286,15 +324,33 @@ export default class Fishing extends plugin {
     fishingManager.recordCatch(userId, price, fish.user_id);
 
     const rarity = getRarityByLevel(fishLevel);
-    const resultMsg = [
-      `🎉 钓鱼成功！\n`,
-      `🐟 钓到了${fishNameBonus}${roleBonus}【${fishName}】！\n`,
-      segment.image(`https://q1.qlogo.cn/g?b=qq&nk=${fish.user_id}&s=640`),
-      `\n📊 稀有度：${rarity.color}${rarity.name}\n`,
-      `💰 获得：${price} 樱花币${priceNote}\n`,
-    ];
+    
+    try {
+        const generator = new FishingImageGenerator();
+        const image = await generator.generateCatchResult({
+            fishAvatarUrl: `https://q1.qlogo.cn/g?b=qq&nk=${fish.user_id}&s=640`,
+            fishName: fishName,
+            fishNameBonus: fishNameBonus,
+            roleBonus: roleBonus,
+            rarity: rarity,
+            price: price,
+            freshness: freshness,
+            weight: fishWeight,
+            role: fish.role
+        });
+        await e.reply(segment.image(image));
+    } catch (err) {
+        logger.error(`生成钓鱼结果图片失败: ${err}`);
+        const resultMsg = [
+          `🎉 钓鱼成功！\n`,
+          `🐟 钓到了${fishNameBonus}${roleBonus}【${fishName}】！\n`,
+          segment.image(`https://q1.qlogo.cn/g?b=qq&nk=${fish.user_id}&s=640`),
+          `\n📊 稀有度：${rarity.color}${rarity.name}\n`,
+          `💰 获得：${price} 樱花币${priceNote}\n`,
+        ];
+        await e.reply(resultMsg);
+    }
 
-    await e.reply(resultMsg);
     return true;
   }
 
@@ -340,7 +396,7 @@ export default class Fishing extends plugin {
       nickname: "钓鱼商店老板",
       user_id: e.self_id,
       content:
-        "💡 贴士：\n🛍️ 购买：#购买 商品名 [数量]\n🎒 装备：#装备鱼竿 名称 / #装备鱼饵 名称\n📦 查看：#我的渔具",
+        "💡 贴士：\n🛍️ 购买：#购买 商品名 [数量]\n🎒 装备：#装备鱼竿 名称 / #装备鱼饵 名称\n📦 查看：#背包",
     });
 
     await e.sendForwardMsg(forwardMsg, {
@@ -437,94 +493,6 @@ export default class Fishing extends plugin {
     await e.reply(
       `🐟 命名成功！\n【${targetName}】现在是【${fishName}】了！\n💰 花费：10 樱花币`
     );
-    return true;
-  });
-
-  myEquipment = Command(/^#?(我的渔具|渔具背包|钓鱼装备)$/, async (e) => {
-    const fishingManager = new FishingManager(e.group_id);
-    const userData = fishingManager.getUserData(e.user_id);
-
-    const equippedRodId = userData.rod;
-    const equippedBaitId = userData.bait;
-    const equippedRod = equippedRodId
-      ? fishingManager.getRodConfig(equippedRodId)
-      : null;
-    const equippedBait = equippedBaitId
-      ? fishingManager.getBaitConfig(equippedBaitId)
-      : null;
-
-    const forwardMsg = [];
-    const nickname = e.sender.card || e.sender.nickname || e.user_id;
-
-    let equipMsg = "🎒 您的行囊：\n";
-    equipMsg += `🎣 手持：${equippedRod ? equippedRod.name : "空手"}\n`;
-    equipMsg += `🪱 诱饵：${
-      equippedBait
-        ? `${equippedBait.name} (剩余 ${fishingManager.getBaitCount(
-            e.user_id,
-            equippedBaitId
-          )} 个)`
-        : "无"
-    }`;
-
-    forwardMsg.push({
-      nickname: nickname,
-      user_id: e.user_id,
-      content: equipMsg,
-    });
-
-    const userRods = userData.rods || [];
-    if (userRods.length > 0) {
-      let rodMsg = "📦 鱼竿收藏：\n";
-      for (const rodId of userRods) {
-        const rod = fishingManager.getRodConfig(rodId);
-        if (rod) {
-          const equipped = rodId === equippedRodId ? " [已装备]" : "";
-          rodMsg += `📦 ${rod.name}${equipped}\n`;
-        }
-      }
-      forwardMsg.push({
-        nickname: nickname,
-        user_id: e.user_id,
-        content: rodMsg.trim(),
-      });
-    }
-
-    const userBaits = userData.baits || {};
-    const baitEntries = Object.entries(userBaits).filter(
-      ([_, count]) => count > 0
-    );
-    if (baitEntries.length > 0) {
-      let baitMsg = "🥡 鱼饵储备：\n";
-      for (const [baitId, count] of baitEntries) {
-        const bait = fishingManager.getBaitConfig(baitId);
-        if (bait) {
-          const equipped = baitId === equippedBaitId ? " [已装备]" : "";
-          baitMsg += `📦 ${bait.name} x${count}${equipped}\n`;
-        }
-      }
-      forwardMsg.push({
-        nickname: nickname,
-        user_id: e.user_id,
-        content: baitMsg.trim(),
-      });
-    }
-
-    let statMsg = "📈 战绩统计：\n";
-    statMsg += `🎣 挥杆次数：${userData.totalCatch || 0} 次\n`;
-    statMsg += `💰 累计获利：${userData.totalEarnings || 0} 樱花币`;
-
-    forwardMsg.push({
-      nickname: nickname,
-      user_id: e.user_id,
-      content: statMsg,
-    });
-
-    await e.sendForwardMsg(forwardMsg, {
-      prompt: "查看我的渔具",
-      news: [{ text: `当前装备：${equippedRod ? equippedRod.name : "无"}` }],
-      source: "钓鱼系统",
-    });
     return true;
   });
 

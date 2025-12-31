@@ -13,10 +13,17 @@ categories:
     items:
       - id: gift_flower
         name: 鲜花
-        price: 100
+        price: 50
         type: consumable
         favorability: 10
         description: 一朵美丽的鲜花，送给喜欢的人吧。
+
+      - id: gift_taiyaki
+        name: 鲷鱼烧
+        price: 100
+        type: consumable
+        favorability: 20
+        description: 热腾腾的鲷鱼烧，咬一口满满的红豆馅。
 
       - id: gift_chocolate
         name: 巧克力
@@ -40,38 +47,38 @@ categories:
     items:
       - id: rod_basic
         name: 竹竿
-        price: 50
+        price: 100
         type: equipment
-        minLevel: 0
-        description: 随处可见的普通竹竿，虽然简陋，但也许能创造奇迹？
+        capacity: 20
+        description: 随处可见的普通竹竿，适合新手练习。
 
       - id: rod_carbon
         name: 碳素鱼竿
-        price: 200
+        price: 500
         type: equipment
-        minLevel: 20
-        description: 轻盈强韧的碳素纤维打造，能敏锐感知鱼讯，过滤掉那些不起眼的小鱼。
+        capacity: 40
+        description: 轻盈强韧的碳素纤维打造，能应对稍大的鱼。
 
       - id: rod_titanium
         name: 钛合金鱼竿
-        price: 500
+        price: 2000
         type: equipment
-        minLevel: 40
-        description: 泛着冷光的钛合金鱼竿，坚不可摧，只有真正的强者才配得上它。
+        capacity: 60
+        description: 泛着冷光的钛合金鱼竿，坚不可摧。
 
       - id: rod_golden
         name: 黄金鱼竿
-        price: 1200
+        price: 5000
         type: equipment
-        minLevel: 60
-        description: 纯金打造的奢华鱼竿，光芒耀眼，据说能吸引珍稀鱼类的目光。
+        capacity: 80
+        description: 纯金打造的奢华鱼竿，尊贵与实力的象征。
 
       - id: rod_legendary
         name: 传说之竿
-        price: 3000
+        price: 10000
         type: equipment
-        minLevel: 80
-        description: 散发着神秘气息的传说之竿，据说连海怪都能征服的神器！
+        capacity: 100
+        description: 散发着神秘气息的传说之竿，据说能钓起最沉重的猎物！
 
   # 鱼饵分类 - 消耗品
   baits:
@@ -81,24 +88,38 @@ categories:
     items:
       - id: bait_basic
         name: 蚯蚓
-        price: 10
+        price: 5
         type: consumable
-        maxInactiveDays: 0
-        description: 刚挖出来的鲜活蚯蚓，最基础的诱饵，来者不拒。
+        quality: 1
+        description: 刚挖出来的鲜活蚯蚓，最基础的诱饵。
 
       - id: bait_shrimp
         name: 鲜虾饵
-        price: 30
+        price: 15
         type: consumable
-        maxInactiveDays: 60
-        description: 鲜嫩多汁的虾肉，对那些还有活力的鱼儿有着致命的诱惑。
+        quality: 2
+        description: 鲜嫩多汁的虾肉，对活跃的鱼儿有不错的诱惑。
 
       - id: bait_premium
         name: 秘制鱼饵
-        price: 80
+        price: 40
         type: consumable
-        maxInactiveDays: 30
-        description: 巫女亲手调制的秘制团子，香气扑鼻，只有最活跃的鱼儿才能闻到！
+        quality: 3
+        description: 秘方调制的鱼饵，散发着独特的香气，能吸引挑剔的鱼。
+
+      - id: bait_magic
+        name: 魔法鱼饵
+        price: 100
+        type: consumable
+        quality: 4
+        description: 注入了魔法的鱼饵，在水中闪烁微光，据说能引来罕见的生物。
+
+      - id: bait_godly
+        name: 神之诱饵
+        price: 300
+        type: consumable
+        quality: 5
+        description: 传说中的神之诱饵，散发着无法抗拒的魔力，没有任何鱼能拒绝它！
 
   # 增益道具分类 - 临时效果（暂未上架）
   # buffs:

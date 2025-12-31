@@ -2,6 +2,7 @@ import EconomyManager from "../lib/economy/EconomyManager.js";
 import EconomyImageGenerator from "../lib/economy/ImageGenerator.js";
 import ShopManager from "../lib/economy/ShopManager.js";
 import GiftManager from "../lib/favorability/GiftManager.js";
+import InventoryManager from "../lib/economy/InventoryManager.js";
 import _ from "lodash";
 
 export default class Economy extends plugin {
@@ -249,23 +250,38 @@ export default class Economy extends plugin {
   });
 
   myBag = Command(/^#?(我的礼物|我的背包|背包)$/, async (e) => {
-    const inventory = ShopManager.getInventory(e.group_id, e.user_id);
-    const buffs = ShopManager.getActiveBuffs(e.group_id, e.user_id);
+    const inventoryManager = new InventoryManager(e);
+    const inventory = inventoryManager.getInventory();
+    const economyManager = new EconomyManager(e);
+    const capacity = economyManager.getBagCapacity(e);
+    const currentSize = inventoryManager.getCurrentSize();
+    const level = economyManager.getBagLevel(e);
+    
+    const shopManager = new ShopManager();
+    const buffs = shopManager.getActiveBuffs(e.group_id, e.user_id);
 
     const nickname = e.sender.card || e.sender.nickname || e.user_id;
     const forwardMsg = [];
 
+    let bagMsg = `🎒 背包 (Lv.${level}) - 容量: ${currentSize}/${capacity}\n━━━━━━━━━━━━━━━━\n`;
     if (Object.keys(inventory).length > 0) {
-      let bagMsg = "🎒 背包物品\n━━━━━━━━━━━━━━━━\n";
-      for (const [name, count] of Object.entries(inventory)) {
+      for (const [itemId, count] of Object.entries(inventory)) {
+        let name = itemId;
+        const item = shopManager.findItemById(itemId) || shopManager.findItemByName(itemId);
+        if (item) {
+            name = item.name;
+        }
         bagMsg += `📦 ${name} x ${count}\n`;
       }
-      forwardMsg.push({
+    } else {
+        bagMsg += "空空如也~\n";
+    }
+    
+    forwardMsg.push({
         nickname: nickname,
         user_id: e.user_id,
         content: bagMsg.trim(),
-      });
-    }
+    });
 
     if (Object.keys(buffs).length > 0) {
       let buffMsg = "✨ 活跃增益\n━━━━━━━━━━━━━━━━\n";
@@ -281,16 +297,18 @@ export default class Economy extends plugin {
       });
     }
 
-    if (forwardMsg.length === 0) {
-      await e.reply("你的背包空空如也~", 10);
-      return true;
-    }
-
     await e.sendForwardMsg(forwardMsg, {
       prompt: "查看我的背包",
       news: [{ text: `共 ${Object.keys(inventory).length} 种物品` }],
       source: "樱神社",
     });
+    return true;
+  });
+
+  upgradeBag = Command(/^#?升级背包$/, async (e) => {
+    const economyManager = new EconomyManager(e);
+    const result = economyManager.upgradeBag(e);
+    await e.reply(result.msg);
     return true;
   });
 
@@ -367,9 +385,9 @@ export default class Economy extends plugin {
     }
 
     const economyManager = new EconomyManager(e);
-    const success = economyManager.transfer(e, targetId, amount);
+    const result = economyManager.transfer(e, targetId, amount);
 
-    if (!success) {
+    if (!result.success) {
       await e.reply("你的樱花币不足，无法投喂哦~", 10);
       return true;
     }
@@ -401,6 +419,7 @@ export default class Economy extends plugin {
         coins: receiverCoins,
       },
       amount,
+      fee: result.fee
     };
 
     try {
@@ -410,7 +429,7 @@ export default class Economy extends plugin {
     } catch (err) {
       logger.error(`生成转账图片失败: ${err}`);
       await e.reply(
-        `投喂成功！你失去了 ${amount} 樱花币，对方获得了 ${amount} 樱花币。`
+        `投喂成功！你失去了 ${amount} 樱花币，对方获得了 ${result.actualAmount} 樱花币（手续费 ${result.fee}）。`
       );
     }
     return true;

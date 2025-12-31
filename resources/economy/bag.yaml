@@ -1,0 +1,37 @@
+levels:
+  1:
+    capacity: 5
+    cost: 0
+  2:
+    capacity: 10
+    cost: 100
+  3:
+    capacity: 15
+    cost: 500
+  4:
+    capacity: 20
+    cost: 1000
+  5:
+    capacity: 30
+    cost: 2000
+  6:
+    capacity: 40
+    cost: 5000
+  7:
+    capacity: 50
+    cost: 10000
+  8:
+    capacity: 60
+    cost: 20000
+  9:
+    capacity: 70
+    cost: 30000
+  10:
+    capacity: 80
+    cost: 40000
+  11:
+    capacity: 90
+    cost: 50000
+  12:
+    capacity: 100
+    cost: 100000
