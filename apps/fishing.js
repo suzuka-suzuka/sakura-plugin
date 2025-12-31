@@ -46,11 +46,16 @@ export default class Fishing extends plugin {
     const cooldownKey = `sakura:fishing:cooldown:${groupId}:${userId}`;
     const lastFishTime = await redis.get(cooldownKey);
     if (lastFishTime) {
+      const newLastFishTime = Number(lastFishTime) + 180;
+      const ttl = await redis.ttl(cooldownKey);
+      if (ttl > 0) {
+        await redis.set(cooldownKey, String(newLastFishTime), "EX", ttl + 180);
+      }
       const remainingTime = Math.ceil(
-        (900 - (Date.now() / 1000 - Number(lastFishTime))) / 60
+        (900 - (Date.now() / 1000 - newLastFishTime)) / 60
       );
       await e.reply(
-        `🎣 鱼儿被吓跑了！\n请等待 ${remainingTime} 分钟，等它们放松警惕再来！`,
+        `🎣 你的动静太大了，鱼儿游得更远了...\n请等待 ${remainingTime} 分钟，等它们放松警惕再来！`,
         10
       );
       return true;

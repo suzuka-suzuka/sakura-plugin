@@ -27,11 +27,16 @@ export default class Economy extends plugin {
     const cooldownKey = `sakura:economy:rob:cooldown:${e.group_id}:${e.user_id}`;
     const lastRobTime = await redis.get(cooldownKey);
     if (lastRobTime) {
+      const newLastRobTime = Number(lastRobTime) + 300;
+      const ttl = await redis.ttl(cooldownKey);
+      if (ttl > 0) {
+        await redis.set(cooldownKey, String(newLastRobTime), "EX", ttl + 300);
+      }
       const remainingTime = Math.ceil(
-        (1800 - (Date.now() / 1000 - Number(lastRobTime))) / 60
+        (1800 - (Date.now() / 1000 - newLastRobTime)) / 60
       );
       await e.reply(
-        `精英巫女正在注视着你，请等待 ${remainingTime} 分钟后再行动！`,
+        `精英巫女察觉到了你的躁动，加强了戒备...\n请等待 ${remainingTime} 分钟后再行动！`,
         10
       );
       return true;
@@ -104,10 +109,10 @@ export default class Economy extends plugin {
         amount: robAmount,
         time: Date.now(),
       });
-      await redis.set(counterKey, counterData, "EX", 180);
+      await redis.set(counterKey, counterData, "EX", 120);
 
       const transferLockKey = `sakura:economy:transfer:lock:${e.group_id}:${e.user_id}`;
-      await redis.set(transferLockKey, String(Date.now()), "EX", 180);
+      await redis.set(transferLockKey, String(Date.now()), "EX", 120);
 
       await e.reply(
         `🌸 抢夺成功！\n${attackerName} 从 ${targetName} 那里抢走了 ${robAmount} 樱花币！`
@@ -166,7 +171,7 @@ export default class Economy extends plugin {
     const elapsedTime = (Date.now() - counterData.time) / 1000;
     const successRate = Math.max(
       0,
-      Math.floor(100 - (elapsedTime / 180) * 100)
+      Math.floor(100 - (elapsedTime / 120) * 100)
     );
 
     const roll = _.random(1, 100);
@@ -378,7 +383,7 @@ export default class Economy extends plugin {
     const lockTime = await redis.get(transferLockKey);
     if (lockTime) {
       const remainingTime = Math.ceil(
-        (180 - (Date.now() / 1000 - Number(lockTime) / 1000)) / 60
+        (120 - (Date.now() / 1000 - Number(lockTime) / 1000)) / 60
       );
       await e.reply(
         `你刚打劫完，赃款还烫手呢！${remainingTime} 分钟后才能转账~`,
