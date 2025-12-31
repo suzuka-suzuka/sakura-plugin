@@ -28,7 +28,7 @@ export default class Economy extends plugin {
     const lastRobTime = await redis.get(cooldownKey);
     if (lastRobTime) {
       const remainingTime = Math.ceil(
-        (3600 - (Date.now() / 1000 - Number(lastRobTime))) / 60
+        (1800 - (Date.now() / 1000 - Number(lastRobTime))) / 60
       );
       await e.reply(
         `精英巫女正在注视着你，请等待 ${remainingTime} 分钟后再行动！`,
@@ -70,7 +70,7 @@ export default class Economy extends plugin {
       cooldownKey,
       String(Math.floor(Date.now() / 1000)),
       "EX",
-      3600
+      1800
     );
 
     const roll = _.random(1, 100);
@@ -116,6 +116,7 @@ export default class Economy extends plugin {
       const attackerCoins = economyManager.getCoins(e);
       const penalty = Math.min(50, attackerCoins);
       economyManager.reduceCoins(e, penalty);
+      economyManager.addCoins({ user_id: e.self_id, group_id: e.group_id }, penalty);
 
       await e.reply(
         `🚨 抢夺失败！\n${attackerName} 被神使当场抓获！\n受到神罚，失去 ${penalty} 樱花币！`

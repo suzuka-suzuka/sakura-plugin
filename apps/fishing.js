@@ -47,7 +47,7 @@ export default class Fishing extends plugin {
     const lastFishTime = await redis.get(cooldownKey);
     if (lastFishTime) {
       const remainingTime = Math.ceil(
-        (1800 - (Date.now() / 1000 - Number(lastFishTime))) / 60
+        (900 - (Date.now() / 1000 - Number(lastFishTime))) / 60
       );
       await e.reply(
         `🎣 鱼儿被吓跑了！\n请等待 ${remainingTime} 分钟，等它们放松警惕再来！`,
@@ -93,12 +93,6 @@ export default class Fishing extends plugin {
       const daysSinceLastMessage =
         (currentTime - lastSentTime) / (24 * 60 * 60);
 
-      // 鱼饵品质决定能钓到的鱼的等级范围
-      // 1级鱼饵：全部等级都能钓
-      // 2级鱼饵：只能钓20级以上的（不包括20级）
-      // 3级鱼饵：只能钓40级以上的（不包括40级）
-      // 4级鱼饵：只能钓60级以上的（不包括60级）
-      // 5级鱼饵：只能钓80级以上的（不包括80级）
       const baitQuality = baitConfig.quality || 1;
       const minLevel = (baitQuality - 1) * 20;
 
@@ -221,7 +215,7 @@ export default class Fishing extends plugin {
       cooldownKey,
       String(Math.floor(Date.now() / 1000)),
       "EX",
-      1800
+      900
     );
 
     if (catchType === "trash") {
@@ -269,7 +263,6 @@ export default class Fishing extends plugin {
 
     let successRate = 100;
     
-    // 幸运鱼竿特殊逻辑：无论鱼多重都有固定概率上钩
     if (rodConfig?.lucky) {
         successRate = rodConfig.luckyRate || 66;
     } else if (fishWeight > rodCapacity) {
@@ -277,7 +270,6 @@ export default class Fishing extends plugin {
     }
 
     if (_.random(1, 100) > successRate) {
-        // 幸运鱼竿失败时的特殊提示
         if (rodConfig?.lucky) {
             await e.reply([
                 `🍀 幸运女神今天没有眷顾你...\n`,
@@ -300,7 +292,6 @@ export default class Fishing extends plugin {
     const currentTime = Math.floor(Date.now() / 1000);
     const lastSentTime = fish.last_sent_time || currentTime;
     
-    // 60天 = 60 * 24 * 3600 秒
     const maxDuration = 60 * 24 * 3600;
     const timeDiff = Math.max(0, currentTime - lastSentTime);
 
