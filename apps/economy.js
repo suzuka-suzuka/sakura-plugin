@@ -251,7 +251,7 @@ export default class Economy extends plugin {
     return true;
   });
 
-  myBag = Command(/^#?(我的礼物|我的背包|背包)$/, async (e) => {
+  myBag = Command(/^#?我的背包$/, async (e) => {
     const inventoryManager = new InventoryManager(e);
     const inventory = inventoryManager.getInventory();
     const economyManager = new EconomyManager(e);
