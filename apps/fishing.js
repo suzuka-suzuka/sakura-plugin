@@ -298,18 +298,8 @@ export default class Fishing extends plugin {
     let freshness = Math.max(0, 1 - timeDiff / maxDuration);
     price = Math.floor(price * freshness);
 
-    let priceNote = `（新鲜度 ${(freshness * 100).toFixed(2)}%）`;
-    if (freshness <= 0) {
-      priceNote = "（新鲜度 0% - 死鱼）";
-    }
-
-    let roleBonus = "";
     if (fish.role === "owner" || fish.role === "admin") {
       price *= 2;
-      roleBonus = fish.role === "owner" ? "【群主】" : "【管理员】";
-      if (price > 0) {
-        priceNote += "（身份尊贵，价格翻倍！）";
-      }
     }
 
     let fishNameBonus = "";
@@ -317,7 +307,6 @@ export default class Fishing extends plugin {
     if (fishNameData) {
       fishNameBonus = `【${fishNameData.name}】`;
       price += 10;
-      priceNote += "（命名鱼 +10）";
     }
 
     const economyManager = new EconomyManager(e);
@@ -334,6 +323,10 @@ export default class Fishing extends plugin {
       `🐟 钓到了${fishNameBonus}【${fishName}】！\n`,
       segment.image(`https://q1.qlogo.cn/g?b=qq&nk=${fish.user_id}&s=640`),
     ];
+
+    if (fishNameBonus) {
+      resultMsg.push(`\n🐠 鱼种：${fishNameBonus}\n`);
+    }
     
     if (fish.role === "owner" || fish.role === "admin") {
       const roleName = fish.role === "owner" ? "群主" : "管理员";
@@ -343,7 +336,7 @@ export default class Fishing extends plugin {
     resultMsg.push(`📊 稀有度：${rarity.color}${rarity.name}\n`);
     resultMsg.push(`⚖️ 重量：${displayWeight}\n`);
     resultMsg.push(`🧊 新鲜度：${freshnessDisplay}\n`);
-    resultMsg.push(`💰 获得：${price} 樱花币\n`);
+    resultMsg.push(`💰 获得：${price} 樱花币`);
     
     await e.reply(resultMsg);
 
