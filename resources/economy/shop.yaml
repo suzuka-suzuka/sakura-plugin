@@ -97,35 +97,35 @@ categories:
     items:
       - id: bait_basic
         name: 蚯蚓
-        price: 30
+        price: 20
         type: consumable
         quality: 1
         description: 刚挖出来的鲜活蚯蚓，最基础的诱饵，什么鱼都可能咬钩。
 
       - id: bait_shrimp
         name: 鲜虾饵
-        price: 80
+        price: 50
         type: consumable
         quality: 2
         description: 鲜嫩多汁的虾肉，似乎能吸引到更挑剔的鱼儿。
 
       - id: bait_premium
         name: 秘制鱼饵
-        price: 150
+        price: 100
         type: consumable
         quality: 3
         description: 秘方调制的鱼饵，散发着独特的香气，普通的鱼对它不感兴趣。
 
       - id: bait_magic
         name: 魔法鱼饵
-        price: 220
+        price: 150
         type: consumable
         quality: 4
         description: 注入了魔法的鱼饵，在水中闪烁微光，据说能引来罕见的生物。
 
       - id: bait_godly
         name: 神之诱饵
-        price: 300
+        price: 200
         type: consumable
         quality: 5
         description: 传说中的神之诱饵，散发着无法抗拒的魔力，只有真正的王者才配享用！
