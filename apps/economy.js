@@ -36,7 +36,7 @@ export default class Economy extends plugin {
         (1800 - (Date.now() / 1000 - newLastRobTime)) / 60
       );
       await e.reply(
-        `精英巫女察觉到了你的躁动，加强了戒备...\n请等待 ${remainingTime} 分钟后再行动！`,
+        `精英巫女察觉到了你的躁动，加强了戒备...请等待 ${remainingTime} 分钟后再行动！`,
         10
       );
       return true;
