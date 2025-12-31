@@ -47,28 +47,28 @@ categories:
     items:
       - id: rod_basic
         name: 竹竿
-        price: 100
+        price: 50
         type: equipment
         capacity: 40
         description: 随处可见的普通竹竿，适合新手练习。
 
       - id: rod_carbon
         name: 碳素鱼竿
-        price: 500
+        price: 300
         type: equipment
         capacity: 80
         description: 轻盈强韧的碳素纤维打造，能应对稍大的鱼。
 
       - id: rod_titanium
         name: 钛合金鱼竿
-        price: 1500
+        price: 1000
         type: equipment
         capacity: 120
         description: 泛着冷光的钛合金鱼竿，坚不可摧。
 
       - id: rod_golden
         name: 黄金鱼竿
-        price: 3000
+        price: 2500
         type: equipment
         capacity: 160
         description: 纯金打造的奢华鱼竿，尊贵与实力的象征。
@@ -97,35 +97,35 @@ categories:
     items:
       - id: bait_basic
         name: 蚯蚓
-        price: 50
+        price: 30
         type: consumable
         quality: 1
         description: 刚挖出来的鲜活蚯蚓，最基础的诱饵，什么鱼都可能咬钩。
 
       - id: bait_shrimp
         name: 鲜虾饵
-        price: 100
+        price: 80
         type: consumable
         quality: 2
         description: 鲜嫩多汁的虾肉，似乎能吸引到更挑剔的鱼儿。
 
       - id: bait_premium
         name: 秘制鱼饵
-        price: 200
+        price: 150
         type: consumable
         quality: 3
         description: 秘方调制的鱼饵，散发着独特的香气，普通的鱼对它不感兴趣。
 
       - id: bait_magic
         name: 魔法鱼饵
-        price: 350
+        price: 220
         type: consumable
         quality: 4
         description: 注入了魔法的鱼饵，在水中闪烁微光，据说能引来罕见的生物。
 
       - id: bait_godly
         name: 神之诱饵
-        price: 500
+        price: 300
         type: consumable
         quality: 5
         description: 传说中的神之诱饵，散发着无法抗拒的魔力，只有真正的王者才配享用！
