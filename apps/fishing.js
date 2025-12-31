@@ -55,7 +55,7 @@ export default class Fishing extends plugin {
         (900 - (Date.now() / 1000 - newLastFishTime)) / 60
       );
       await e.reply(
-        `🎣 你的动静太大了，鱼儿游得更远了...请等待 ${remainingTime} 分钟，等它们放松警惕再来！`,
+        `🎣 你的动静太大了，鱼儿游得更远了...\n请等待 ${remainingTime} 分钟，等它们放松警惕再来！`,
         10
       );
       return true;
