@@ -10,7 +10,8 @@ function getRarityByLevel(level) {
   if (level >= 60) return { name: "史诗", color: "🟣" };
   if (level >= 40) return { name: "稀有", color: "🔵" };
   if (level >= 20) return { name: "精良", color: "🟢" };
-  return { name: "普通", color: "⚪" };
+  if (level > 0) return { name: "普通", color: "⚪" };
+  return { name: "垃圾", color: "⚫" };
 }
 
 function getQualityLevel(level) {
@@ -325,7 +326,7 @@ export default class Fishing extends plugin {
 
     const rarity = getRarityByLevel(fishLevel);
     const displayWeight = Math.max(1, fishWeight);
-    const freshnessPercent = (freshness * 100).toFixed(2) + "%";
+    const freshnessDisplay = freshness <= 0 ? "死鱼" : (freshness * 100).toFixed(2) + "%";
     
     const resultMsg = [
       `🎉 钓鱼成功！\n`,
@@ -340,7 +341,7 @@ export default class Fishing extends plugin {
     
     resultMsg.push(`📊 稀有度：${rarity.color}${rarity.name}\n`);
     resultMsg.push(`⚖️ 重量：${displayWeight}\n`);
-    resultMsg.push(`🧊 新鲜度：${freshnessPercent}\n`);
+    resultMsg.push(`🧊 新鲜度：${freshnessDisplay}\n`);
     resultMsg.push(`💰 获得：${price} 樱花币\n`);
     
     await e.reply(resultMsg);

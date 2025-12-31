@@ -420,7 +420,8 @@ export default class Economy extends plugin {
         avatarUrl: `https://q1.qlogo.cn/g?b=qq&nk=${targetId}&s=640`,
         coins: receiverCoins,
       },
-      amount,
+      amount: result.actualAmount,
+      totalAmount: amount,
       fee: result.fee
     };
 
