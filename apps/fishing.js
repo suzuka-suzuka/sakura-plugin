@@ -78,14 +78,14 @@ export default class Fishing extends plugin {
     fishingManager.consumeBait(userId);
 
     const memberList = await e.group.getMemberList(true);
-    const memberMap = Array.isArray(memberList) ? new Map(memberList.map(m => [m.user_id, m])) : memberList;
+    const memberMap = Array.isArray(memberList)
+      ? new Map(memberList.map((m) => [m.user_id, m]))
+      : memberList;
     if (!memberMap || memberMap.size === 0) {
       logger.error(`[钓鱼] 获取群成员列表失败`);
       await e.reply("鱼塘信息获取失败，稍后再试~", 10);
       return true;
     }
-
-    const currentTime = Math.floor(Date.now() / 1000);
 
     const members = [];
     memberMap.forEach((member) => {
@@ -185,13 +185,65 @@ export default class Fishing extends plugin {
     const userId = e.user_id;
     const msg = e.msg?.trim();
 
-    if (!/^(收|拉)(杆|竿)$/.test(msg)) {
+    const state = fishingState[`${groupId}:${userId}`];
+    if (!state) {
       return;
     }
 
-    const state = fishingState[`${groupId}:${userId}`];
-    if (!state || state.phase !== "biting") {
+    if (state.phase === "confirming") {
+      if (/^(放弃|算了|不要|跑|放生)$/.test(msg)) {
+        if (state.timeoutTimer) {
+          clearTimeout(state.timeoutTimer);
+        }
+        this.finish("pullRod", `${groupId}:${userId}`);
+        delete fishingState[`${groupId}:${userId}`];
+        await e.reply(`🐟 你轻轻松开了鱼线，让这条大鱼游走了...\n💡 明智的选择，保护好你的鱼竿！`);
+        return true;
+      }
+      if (!/^(收|拉)(杆|竿)$/.test(msg)) {
+        return;
+      }
+    } else if (state.phase === "biting") {
+      if (!/^(收|拉)(杆|竿)$/.test(msg)) {
+        return;
+      }
+    } else {
       return;
+    }
+
+    const { fish, fishName, catchType, catchData } = state;
+    const fishingManager = new FishingManager(groupId);
+
+    if (catchType === "member" && state.phase === "biting") {
+      const equippedRodId = fishingManager.getEquippedRod(userId);
+      const rodConfig = fishingManager.getRodConfig(equippedRodId);
+      const rodCapacity = fishingManager.getCurrentRodCapacity(userId);
+
+      const eco = new EconomyManager(e);
+      if (!eco.data[fish.user_id]) {
+        eco.data[fish.user_id] = { coins: 0, experience: 0, level: 1 };
+      }
+      const fishCoins = eco.data[fish.user_id]?.coins || 0;
+      const baseWeight =
+        fishCoins > 200
+          ? 200 + Math.log(fishCoins - 200) / Math.log(5)
+          : fishCoins;
+      const randomMultiplier = 0.95 + Math.random() * 0.1;
+      const fishWeight = Math.floor(baseWeight * randomMultiplier);
+
+      let successRate = 100;
+      if (!rodConfig?.lucky && fishWeight > rodCapacity) {
+        successRate = Math.max(0, 100 - (fishWeight - rodCapacity));
+      }
+
+      if (successRate < 100 && !rodConfig?.lucky) {
+        state.phase = "confirming";
+        state.calculatedWeight = fishWeight;
+        state.calculatedSuccessRate = successRate;
+
+        await e.reply(`⚠️ 这条鱼有点重，有可能会损耗鱼竿...\n🎯 发送「收竿」强行拉起，「放弃」放生鱼儿`);
+        return true;
+      }
     }
 
     if (state.timeoutTimer) {
@@ -200,9 +252,6 @@ export default class Fishing extends plugin {
 
     this.finish("pullRod", `${groupId}:${userId}`);
     delete fishingState[`${groupId}:${userId}`];
-
-    const { fish, fishName, catchType, catchData } = state;
-    const fishingManager = new FishingManager(groupId);
 
     const cooldownKey = `sakura:fishing:cooldown:${groupId}:${userId}`;
     await redis.set(
@@ -218,7 +267,7 @@ export default class Fishing extends plugin {
         `😔 可惜...不是鱼！\n`,
         `${trash.emoji} 钓到了【${trash.name}】！\n`,
         `📝 ${trash.description}\n`,
-        `💰 获得：0 樱花币（这破烂玩意儿不值钱）\n`,
+        `💰 获得：0 樱花币\n`,
         `💡 运气不好，下次再接再厠！`,
       ];
       fishingManager.recordCatch(userId, 0, null);
@@ -228,17 +277,57 @@ export default class Fishing extends plugin {
 
     if (catchType === "dangerous") {
       const creature = catchData;
-      const removedRodId = fishingManager.removeEquippedRod(userId);
-      const rodConfig = fishingManager.getRodConfig(removedRodId);
+      const equippedRodId = fishingManager.getEquippedRod(userId);
+      const rodConfig = fishingManager.getRodConfig(equippedRodId);
       const rodName = rodConfig?.name || "鱼竿";
+      const currentCapacity = fishingManager.getCurrentRodCapacity(userId);
 
+      if (rodConfig?.lucky) {
+        fishingManager.removeEquippedRod(userId);
+        const economyManager = new EconomyManager(e);
+        economyManager.addCoins(e, 1000);
+
+        const resultMsg = [
+          `😱 糟糕！遇到可怕的生物！\n`,
+          `${creature.emoji} 【${creature.name}】出现了！\n`,
+          `📝 ${creature.description}\n`,
+          `🍀 你的【${rodName}】闪烁着幸运的光芒...\n`,
+          `💥 但还是被一口吞掉了！\n`,
+          `✨ 幸运女神的眷顾：获得 1000 樱花币作为补偿！\n`,
+          `⚠️ 鱼竿已丢失，请去商店重新购买！`,
+        ];
+        fishingManager.recordCatch(userId, 1000, null);
+        await e.reply(resultMsg);
+        return true;
+      }
+
+      if (currentCapacity <= 30) {
+        fishingManager.removeEquippedRod(userId);
+        const resultMsg = [
+          `😱 糟糕！遇到可怕的生物！\n`,
+          `${creature.emoji} 【${creature.name}】出现了！\n`,
+          `📝 ${creature.description}\n`,
+          `💥 你的【${rodName}】已经破旧不堪，被它一口吞掉了！\n`,
+          `💰 获得：0 樱花币\n`,
+          `⚠️ 鱼竿已丢失，请去商店重新购买！`,
+        ];
+        fishingManager.recordCatch(userId, 0, null);
+        await e.reply(resultMsg);
+        return true;
+      }
+
+      const reduceResult = fishingManager.reduceRodCapacity(userId, 10);
+      const remainingHits = Math.floor(
+        (reduceResult.currentCapacity - 30) / 10
+      );
       const resultMsg = [
         `😱 糟糕！遇到可怕的生物！\n`,
         `${creature.emoji} 【${creature.name}】出现了！\n`,
         `📝 ${creature.description}\n`,
-        `💥 你的【${rodName}】被它一口吞掉了！\n`,
+        `💢 你的【${rodName}】受到了损伤！\n`,
+        `🛡️ 还能抵御 ${remainingHits} 次损伤\n`,
         `💰 获得：0 樱花币\n`,
-        `⚠️ 鱼竿已丢失，请去商店重新购买！`,
+        `💡 鱼竿损伤过多可能会被吞掉哦...`,
       ];
       fishingManager.recordCatch(userId, 0, null);
       await e.reply(resultMsg);
@@ -247,37 +336,71 @@ export default class Fishing extends plugin {
 
     const equippedRodId = fishingManager.getEquippedRod(userId);
     const rodConfig = fishingManager.getRodConfig(equippedRodId);
-    const rodCapacity = rodConfig?.capacity || 40;
+    const rodCapacity = fishingManager.getCurrentRodCapacity(userId);
 
-    const eco = new EconomyManager(e);
-    if (!eco.data[fish.user_id]) {
+    let fishWeight, successRate;
+    if (state.calculatedWeight !== undefined) {
+      fishWeight = state.calculatedWeight;
+      successRate = state.calculatedSuccessRate;
+    } else {
+      const eco = new EconomyManager(e);
+      if (!eco.data[fish.user_id]) {
         eco.data[fish.user_id] = { coins: 0, experience: 0, level: 1 };
-    }
-    const fishWeight = eco.data[fish.user_id]?.coins || 0;
+      }
+      const fishCoins = eco.data[fish.user_id]?.coins || 0;
+      const baseWeight =
+        fishCoins > 200
+          ? 200 + Math.log(fishCoins - 200) / Math.log(5)
+          : fishCoins;
+      const randomMultiplier = 0.95 + Math.random() * 0.1;
+      fishWeight = Math.floor(baseWeight * randomMultiplier);
 
-    let successRate = 100;
-    
-    if (rodConfig?.lucky) {
+      successRate = 100;
+      if (rodConfig?.lucky) {
         successRate = rodConfig.luckyRate || 66;
-    } else if (fishWeight > rodCapacity) {
+      } else if (fishWeight > rodCapacity) {
         successRate = Math.max(0, 100 - (fishWeight - rodCapacity));
+      }
     }
 
     if (_.random(1, 100) > successRate) {
-        if (rodConfig?.lucky) {
+      if (rodConfig?.lucky) {
+        await e.reply([
+          `🍀 幸运女神今天没有眷顾你...\n`,
+          `😅 你的【${rodConfig?.name}】闪烁了一下，但鱼还是跑了！\n`,
+          `💨 下次一定会有好运的！`,
+        ]);
+      } else {
+        if (successRate <= 0) {
+          const currentCapacity = fishingManager.getCurrentRodCapacity(userId);
+          
+          if (currentCapacity <= 30) {
+            fishingManager.removeEquippedRod(userId);
             await e.reply([
-                `🍀 幸运女神今天没有眷顾你...\n`,
-                `😅 你的【${rodConfig?.name}】闪烁了一下，但鱼还是跑了！\n`,
-                `💨 下次一定会有好运的！`
+              `🎣 哎呀！鱼太重了（${fishWeight}）！\n`,
+              `😓 你的【${rodConfig?.name}】弯到了极限...\n`,
+              `💥 咔嚓！鱼竿断了！\n`,
+              `⚠️ 鱼竿已丢失，请去商店重新购买！`,
             ]);
+          } else {
+            const reduceResult = fishingManager.reduceRodCapacity(userId, 10);
+            const remainingHits = Math.floor((reduceResult.currentCapacity - 30) / 10);
+            await e.reply([
+              `🎣 哎呀！鱼太重了（${fishWeight}）！\n`,
+              `😓 你的【${rodConfig?.name}】弯到了极限，难以控制这条巨物！\n`,
+              `💢 鱼竿受到了损伤！还能抵御 ${remainingHits} 次损伤\n`,
+              `💨 鱼儿猛地一挣，逃之夭夭...`,
+            ]);
+          }
         } else {
-            await e.reply([
-                `🎣 哎呀！鱼太重了（${fishWeight}）！\n`,
-                `😓 你的【${rodConfig?.name}】弯到了极限，难以控制这条巨物！\n`,
-                `💨 鱼儿猛地一挣，逃之夭夭...`
-            ]);
+          await e.reply([
+            `🎣 哎呀！鱼太重了（${fishWeight}）！\n`,
+            `😓 你的【${rodConfig?.name}】弯到了极限，难以控制这条巨物！\n`,
+            `💨 鱼儿猛地一挣，逃之夭夭...`,
+          ]);
         }
-        return true;
+      }
+      return true;
     }
 
     let fishLevel = Number(fish.level) || 1;
@@ -285,7 +408,7 @@ export default class Fishing extends plugin {
 
     const currentTime = Math.floor(Date.now() / 1000);
     const lastSentTime = fish.last_sent_time || currentTime;
-    
+
     const maxDuration = 60 * 24 * 3600;
     const timeDiff = Math.max(0, currentTime - lastSentTime);
 
@@ -310,8 +433,9 @@ export default class Fishing extends plugin {
 
     const rarity = getRarityByLevel(fishLevel);
     const displayWeight = Math.max(1, fishWeight);
-    const freshnessDisplay = freshness <= 0 ? "死鱼" : (freshness * 100).toFixed(2) + "%";
-    
+    const freshnessDisplay =
+      freshness <= 0 ? "死鱼" : (freshness * 100).toFixed(2) + "%";
+
     const resultMsg = [
       `🎉 钓鱼成功！\n`,
       `🐟 钓到了【${fishName}】！\n`,
@@ -321,17 +445,17 @@ export default class Fishing extends plugin {
     if (fishNameBonus) {
       resultMsg.push(`\n🐠 鱼种：${fishNameBonus}\n`);
     }
-    
+
     if (fish.role === "owner" || fish.role === "admin") {
       const roleName = fish.role === "owner" ? "群主" : "管理员";
       resultMsg.push(`\n👑 身份：${roleName}\n`);
     }
-    
+
     resultMsg.push(`📊 稀有度：${rarity.color}${rarity.name}\n`);
     resultMsg.push(`⚖️ 重量：${displayWeight}\n`);
     resultMsg.push(`🧊 新鲜度：${freshnessDisplay}\n`);
     resultMsg.push(`💰 获得：${price} 樱花币`);
-    
+
     await e.reply(resultMsg);
 
     return true;
@@ -509,7 +633,9 @@ export default class Fishing extends plugin {
     let memberMap = null;
     try {
       const memberList = await e.group.getMemberList(true);
-      memberMap = Array.isArray(memberList) ? new Map(memberList.map(m => [m.user_id, m])) : memberList;
+      memberMap = Array.isArray(memberList)
+        ? new Map(memberList.map((m) => [m.user_id, m]))
+        : memberList;
     } catch (err) {}
 
     for (const item of history) {

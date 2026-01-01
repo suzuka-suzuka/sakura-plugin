@@ -3,7 +3,6 @@ import EconomyImageGenerator from "../lib/economy/ImageGenerator.js";
 import ShopManager from "../lib/economy/ShopManager.js";
 import GiftManager from "../lib/favorability/GiftManager.js";
 import InventoryManager from "../lib/economy/InventoryManager.js";
-import Setting from "../lib/setting.js";
 import _ from "lodash";
 
 export default class Economy extends plugin {
@@ -62,19 +61,14 @@ export default class Economy extends plugin {
       );
 
       const roll = _.random(1, 100);
-      const config = Setting.getConfig("economy");
-      const robBotConfig = config.rob_bot || {};
+      const attackerName = e.sender.card || e.sender.nickname || e.user_id;
 
       if (roll <= successRate) {
         const robPercent = _.random(0, 20);
         const robAmount = Math.floor((targetCoins * robPercent) / 100);
 
         if (robAmount <= 0) {
-          const msgs = robBotConfig.success_no_money || [
-            "呜...别翻了，小叶兜里真的没有钱了...",
-          ];
-          const msg = _.sample(msgs);
-          await e.reply(msg, false, true);
+          await e.reply(`🌸 抢夺成功！但是小叶口袋里只有空气...`);
           return true;
         }
 
@@ -84,12 +78,9 @@ export default class Economy extends plugin {
         );
         economyManager.addCoins(e, robAmount);
 
-        const msgs = robBotConfig.success || [
-          "呜哇！坏蛋！抢走了小叶的 {amount} 樱花币...这可是人家的零花钱...",
-        ];
-        let msg = _.sample(msgs);
-        msg = msg.replace(/{amount}/g, robAmount);
-        await e.reply(msg, false, true);
+        await e.reply(
+          `🌸 抢夺成功！\n${attackerName} 从小叶那里抢走了 ${robAmount} 樱花币！`
+        );
       } else {
         const penalty = Math.min(50, attackerCoins);
         economyManager.reduceCoins(e, penalty);
@@ -98,12 +89,9 @@ export default class Economy extends plugin {
           penalty
         );
 
-        const msgs = robBotConfig.fail || [
-          "哼！想抢小叶的钱？没门！\n反被小叶没收了 {amount} 樱花币当精神损失费！",
-        ];
-        let msg = _.sample(msgs);
-        msg = msg.replace(/{amount}/g, penalty);
-        await e.reply(msg, false, true);
+        await e.reply(
+          `🚨 抢夺失败！\n${attackerName} 被小叶当场抓获！\n受到神罚，失去 ${penalty} 樱花币！`
+        );
       }
       return true;
     }
