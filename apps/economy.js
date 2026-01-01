@@ -4,8 +4,6 @@ import ShopManager from "../lib/economy/ShopManager.js";
 import GiftManager from "../lib/favorability/GiftManager.js";
 import InventoryManager from "../lib/economy/InventoryManager.js";
 import _ from "lodash";
-import Setting from "../lib/setting.js";
-import { getAI } from "../lib/AIUtils/getAI.js";
 
 export default class Economy extends plugin {
   constructor() {
@@ -14,30 +12,6 @@ export default class Economy extends plugin {
       event: "message.group",
       priority: 1135,
     });
-  }
-
-  async getAIReply(e, promptText, systemInstruction) {
-    const queryParts = [{ text: promptText }];
-    const Channel = Setting.getConfig("AI").appschannel;
-    try {
-      const result = await getAI(
-        Channel,
-        e,
-        queryParts,
-        systemInstruction,
-        false,
-        false,
-        []
-      );
-      if (!result.text || result.text.trim() === "") {
-        logger.warn("[经济系统] AI 返回空回复");
-        return null;
-      }
-      return result.text;
-    } catch (error) {
-      logger.error(`[经济系统] AI 调用失败: ${error}`);
-      return null;
-    }
   }
 
   rob = Command(/^#?(打劫|抢[劫夺钱])\s*.*$/, async (e) => {
@@ -81,19 +55,19 @@ export default class Economy extends plugin {
 
     if (targetId == e.self_id) {
       const attackerCoins = economyManager.getCoins(e);
-      const successRate = Math.max(0, Math.min(100, 50 + (targetCoins - attackerCoins) / 1000));
+      const successRate = Math.max(
+        0,
+        Math.min(100, 50 + (targetCoins - attackerCoins) / 1000)
+      );
 
       const roll = _.random(1, 100);
-      const attackerName = e.sender.card || e.sender.nickname || e.user_id;
-
-      const baseSystemInstruction = `你是小叶，樱神社的可爱巫女，性格温柔但也有调皮的一面。你平时负责守护神社和帮助大家。请用第一人称(我)的视角回应，要自然、生动、有趣，就像一个真实的少女在说话。回复要简短精炼，控制在50字以内。不要使用引号，不要提及任何关于机器人、AI、程序的词汇，完全以真实的巫女身份回应。`;
 
       if (roll <= successRate) {
         const robPercent = _.random(0, 20);
         const robAmount = Math.floor((targetCoins * robPercent) / 100);
 
         if (robAmount <= 0) {
-          await e.reply(`抢夺成功！但是小叶口袋里只有空气...`);
+          await e.reply(`呜...别翻了，小叶兜里真的没有钱了...`, false, true);
           return true;
         }
 
@@ -103,33 +77,24 @@ export default class Economy extends plugin {
         );
         economyManager.addCoins(e, robAmount);
 
-        const systemInstruction = `${baseSystemInstruction}\n\n情境：${attackerName}刚才趁你不注意，成功从你这里抢走了${robAmount}樱花币。你可以表现出委屈、生气、不满或者无奈的情绪。作为神社的巫女，你会如何反应呢？`;
-        const promptText = `${attackerName}从我这里抢走了${robAmount}樱花币！`;
-        
-        const aiReply = await this.getAIReply(e, promptText, systemInstruction);
-        if (aiReply) {
-          await e.reply(`🌸 ${aiReply}`);
-        } else {
-          await e.reply(
-            `🌸 抢夺成功！\n${attackerName} 竟然从小叶那里抢走了 ${robAmount} 樱花币！\n呜呜...小叶哭着跑开了...`
-          );
-        }
+        await e.reply(
+          `呜哇！坏蛋！抢走了小叶的 ${robAmount} 樱花币...这可是人家的零花钱...`,
+          false,
+          true
+        );
       } else {
         const penalty = Math.min(50, attackerCoins);
         economyManager.reduceCoins(e, penalty);
-        economyManager.addCoins({ user_id: e.self_id, group_id: e.group_id }, penalty);
+        economyManager.addCoins(
+          { user_id: e.self_id, group_id: e.group_id },
+          penalty
+        );
 
-        const systemInstruction = `${baseSystemInstruction}\n\n情境：${attackerName}想要抢劫你，但被你发现了！他失败了并且被惩罚损失了${penalty}樱花币。你可以表现出得意、调皮、略带嘲讽或者傲娇的语气。作为神社的巫女，你成功保护了自己的樱花币！`;
-        const promptText = `${attackerName}想抢劫我但失败了，被罚${penalty}樱花币！`;
-        
-        const aiReply = await this.getAIReply(e, promptText, systemInstruction);
-        if (aiReply) {
-          await e.reply(`🚨 ${aiReply}`);
-        } else {
-          await e.reply(
-            `🚨 抢夺失败！\n${attackerName} 想要抢劫小叶，结果被小叶用御币狠狠地敲了一下头！\n失去 ${penalty} 樱花币作为精神损失费！`
-          );
-        }
+        await e.reply(
+          `哼！想抢小叶的钱？没门！\n反被小叶没收了 ${penalty} 樱花币当精神损失费！`,
+          false,
+          true
+        );
       }
       return true;
     }
@@ -151,7 +116,13 @@ export default class Economy extends plugin {
 
     const levelDiff = attackerLevel - targetLevel;
     const attackerCoins = economyManager.getCoins(e);
-    const successRate = Math.max(20, Math.min(80, 50 + levelDiff + Math.max(0, targetCoins - attackerCoins) / 1000));
+    const successRate = Math.max(
+      20,
+      Math.min(
+        80,
+        50 + levelDiff + Math.max(0, targetCoins - attackerCoins) / 1000
+      )
+    );
 
     await redis.set(
       cooldownKey,
@@ -196,23 +167,17 @@ export default class Economy extends plugin {
       const transferLockKey = `sakura:economy:transfer:lock:${e.group_id}:${e.user_id}`;
       await redis.set(transferLockKey, String(Date.now()), "EX", 120);
 
-      const baseSystemInstruction = `你是小叶，樱神社的可爱巫女，性格温柔但也有调皮的一面。你平时负责守护神社和帮助大家。请用第一人称(我)的视角回应，要自然、生动、有趣，就像一个真实的少女在说话。回复要简短精炼，控制在50字以内。不要使用引号，不要提及任何关于机器人、AI、程序的词汇，完全以真实的巫女身份回应。`;
-      const systemInstruction = `${baseSystemInstruction}\n\n情境：你目睹了${attackerName}刚才成功从${targetName}那里抢走了${robAmount}樱花币的场景。作为神社的巫女，你可以评论这个事件，可以调侃、感叹、担心，或者以幽默的方式回应。`;
-      const promptText = `${attackerName}从${targetName}那里抢走了${robAmount}樱花币！`;
-      
-      const aiReply = await this.getAIReply(e, promptText, systemInstruction);
-      if (aiReply) {
-        await e.reply(`🌸 ${aiReply}`);
-      } else {
-        await e.reply(
-          `🌸 抢夺成功！\n${attackerName} 从 ${targetName} 那里抢走了 ${robAmount} 樱花币！`
-        );
-      }
+      await e.reply(
+        `🌸 抢夺成功！\n${attackerName} 从 ${targetName} 那里抢走了 ${robAmount} 樱花币！`
+      );
     } else {
       const attackerCoins = economyManager.getCoins(e);
       const penalty = Math.min(50, attackerCoins);
       economyManager.reduceCoins(e, penalty);
-      economyManager.addCoins({ user_id: e.self_id, group_id: e.group_id }, penalty);
+      economyManager.addCoins(
+        { user_id: e.self_id, group_id: e.group_id },
+        penalty
+      );
 
       await e.reply(
         `🚨 抢夺失败！\n${attackerName} 被神使当场抓获！\n受到神罚，失去 ${penalty} 樱花币！`
@@ -355,7 +320,7 @@ export default class Economy extends plugin {
     const capacity = economyManager.getBagCapacity(e);
     const currentSize = inventoryManager.getCurrentSize();
     const level = economyManager.getBagLevel(e);
-    
+
     const shopManager = new ShopManager();
     const buffs = shopManager.getActiveBuffs(e.group_id, e.user_id);
 
@@ -366,20 +331,22 @@ export default class Economy extends plugin {
     if (Object.keys(inventory).length > 0) {
       for (const [itemId, count] of Object.entries(inventory)) {
         let name = itemId;
-        const item = shopManager.findItemById(itemId) || shopManager.findItemByName(itemId);
+        const item =
+          shopManager.findItemById(itemId) ||
+          shopManager.findItemByName(itemId);
         if (item) {
-            name = item.name;
+          name = item.name;
         }
         bagMsg += `📦 ${name} x ${count}\n`;
       }
     } else {
-        bagMsg += "空空如也~\n";
+      bagMsg += "空空如也~\n";
     }
-    
+
     forwardMsg.push({
-        nickname: nickname,
-        user_id: e.user_id,
-        content: bagMsg.trim(),
+      nickname: nickname,
+      user_id: e.user_id,
+      content: bagMsg.trim(),
     });
 
     if (Object.keys(buffs).length > 0) {
@@ -519,7 +486,7 @@ export default class Economy extends plugin {
       },
       amount: result.actualAmount,
       totalAmount: amount,
-      fee: result.fee
+      fee: result.fee,
     };
 
     try {
