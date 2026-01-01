@@ -263,7 +263,7 @@ export default class Fishing extends plugin {
         state.calculatedWeight = fishWeight;
         state.calculatedSuccessRate = successRate;
 
-        await e.reply(`⚠️ 这条鱼有点重，有可能会损耗鱼竿...\n🎯 发送「收竿」强行拉起，「放弃」放生鱼儿`);
+        await e.reply(`⚠️ 这条鱼有点重，有可能会损耗鱼竿...\n💪 不过拼一把说不定能钓起来！\n🎯 发送「收竿」强行拉起，「放弃」放生鱼儿`);
         return true;
       }
     }
