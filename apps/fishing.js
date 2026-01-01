@@ -299,7 +299,7 @@ export default class Fishing extends plugin {
     let fishNameBonus = "";
     const fishNameData = fishingManager.getFishName(fish.user_id);
     if (fishNameData) {
-      fishNameBonus = `【${fishNameData.name}】`;
+      fishNameBonus = `${fishNameData.name}`;
       price += 10;
     }
 
@@ -314,7 +314,7 @@ export default class Fishing extends plugin {
     
     const resultMsg = [
       `🎉 钓鱼成功！\n`,
-      `🐟 钓到了${fishNameBonus}【${fishName}】！\n`,
+      `🐟 钓到了【${fishName}】！\n`,
       segment.image(`https://q1.qlogo.cn/g?b=qq&nk=${fish.user_id}&s=640`),
     ];
 
