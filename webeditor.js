@@ -307,13 +307,19 @@ class WebEditor {
   }
 
   getLocalIP() {
-    const nets = os.networkInterfaces()
-    for (const name of Object.keys(nets)) {
-      for (const net of nets[name]) {
-        if (net.family === "IPv4" && !net.internal) {
-          return net.address
+    try {
+      const nets = os.networkInterfaces()
+      for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+          if (net.family === "IPv4" && !net.internal) {
+            return net.address
+          }
         }
       }
+    } catch (error) {
+      // 在某些受限环境（如 Termux）中可能没有权限访问网络接口
+      const log = global.logger || console
+      log.warn(`[sakura-plugin] 无法获取本地IP地址: ${error.message}`)
     }
     return "localhost"
   }
