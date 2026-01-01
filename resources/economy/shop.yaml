@@ -8,7 +8,7 @@ categories:
   # 鱼竿分类 - 永久装备
   rods:
     name: "🎣 鱼竿"
-    description: "钓鱼必备工具，永久拥有"
+    description: "钓鱼必备工具，选择合适的鱼竿提升钓鱼效率"
     handler: fishing_rod
     items:
       - id: rod_basic

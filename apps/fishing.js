@@ -536,7 +536,7 @@ export default class Fishing extends plugin {
     const economyManager = new EconomyManager(e);
     economyManager.addCoins(e, sellPrice);
 
-    await e.reply(`💰 成功出售【${rod.name}】！\n🎣 承重：${capacityInfo.currentCapacity}/${capacityInfo.baseCapacity}（${capacityPercent}%）\n💵 原价 ${rod.price} × ${capacityPercent}% × 80% = ${sellPrice} 樱花币`);
+    await e.reply(`💰 成功出售【${rod.name}】！\n🎣 耐久：${capacityPercent}%\n💵 原价 ${rod.price} × ${capacityPercent}% × 80% = ${sellPrice} 樱花币`);
     return true;
   });
 
