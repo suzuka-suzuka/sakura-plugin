@@ -69,7 +69,8 @@ export default class Economy extends plugin {
     }
 
     const levelDiff = attackerLevel - targetLevel;
-    const successRate = Math.max(20, Math.min(80, 50 + levelDiff));
+    const attackerCoins = economyManager.getCoins(e);
+    const successRate = Math.max(20, Math.min(80, 50 + levelDiff + (targetCoins - attackerCoins) / 1000));
 
     await redis.set(
       cooldownKey,

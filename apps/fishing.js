@@ -94,21 +94,10 @@ export default class Fishing extends plugin {
       }
 
       const memberLevel = Number(member.level) || 0;
-      const lastSentTime = member.last_sent_time || currentTime;
-      const daysSinceLastMessage =
-        (currentTime - lastSentTime) / (24 * 60 * 60);
-
       const baitQuality = baitConfig.quality || 1;
       const minLevel = (baitQuality - 1) * 20;
 
       if (memberLevel <= minLevel && baitQuality > 1) {
-        return;
-      }
-
-      if (
-        baitConfig.maxInactiveDays > 0 &&
-        daysSinceLastMessage > baitConfig.maxInactiveDays
-      ) {
         return;
       }
 

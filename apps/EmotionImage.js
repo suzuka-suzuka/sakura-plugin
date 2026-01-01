@@ -1,6 +1,8 @@
 import { Segment } from "../../../src/api/client.js";
 import { imageEmbeddingManager } from "../lib/AIUtils/ImageEmbedding.js";
-import { getImg } from "../lib/utils.js";
+import { getImg, urlToBase64 } from "../lib/utils.js";
+import { getAI } from "../lib/AIUtils/getAI.js";
+import Setting from "../lib/setting.js";
 import fs from "fs";
 
 export class EmotionImage extends plugin {
@@ -10,6 +12,37 @@ export class EmotionImage extends plugin {
       event: "message",
       priority: 500,
     });
+  }
+
+  /**
+   * 识别图片内容
+   */
+  async describeImage(imageUrl, e) {
+    const result = await urlToBase64(imageUrl);
+    if (!result) {
+      throw new Error("获取图片失败");
+    }
+
+    const queryParts = [
+      { text: "请用一段连贯的中文描述这张表情包/图片的内容、情感和氛围。不要使用Markdown格式，不要分段，不要包含标题（如“情感：”等），直接输出纯文本描述。不要开场白。" },
+      {
+        inlineData: {
+          mimeType: result.mimeType,
+          data: result.base64,
+        },
+      },
+    ];
+
+    const Channel = Setting.getConfig("AI").toolschannel;
+    const aiResult = await getAI(Channel, e, queryParts, "", false, false);
+
+    // getAI 成功时返回对象，失败时返回错误字符串
+    if (typeof aiResult === "object" && aiResult.text) {
+      return aiResult.text;
+    }
+    
+    // 返回字符串就是错误信息
+    throw new Error(typeof aiResult === "string" ? aiResult : "识图返回为空");
   }
 
   /**
@@ -24,10 +57,39 @@ export class EmotionImage extends plugin {
       return true;
     }
 
-    await e.reply("正在分析表情...");
+    await e.reply("正在检查图片...");
 
     try {
-      const result = await imageEmbeddingManager.addImage(imgUrls[0], {
+      // 1. 检查图片是否已存在
+      const checkResult = await imageEmbeddingManager.checkImage(imgUrls[0]);
+      
+      if (checkResult.exists) {
+        await e.reply(`这张表情已经存过啦！\n📝 描述: ${checkResult.item.description}`, true);
+        return true;
+      }
+
+      // 2. 识图获取描述
+      await e.reply("图片检测通过，正在分析内容...");
+      let description;
+      try {
+        description = await this.describeImage(imgUrls[0], e);
+      } catch (err) {
+        // 识图失败，清理已下载的图片
+        if (checkResult.fileInfo?.filepath && fs.existsSync(checkResult.fileInfo.filepath)) {
+          fs.unlinkSync(checkResult.fileInfo.filepath);
+        }
+        throw err;
+      }
+
+      if (!description) {
+         if (checkResult.fileInfo?.filepath && fs.existsSync(checkResult.fileInfo.filepath)) {
+          fs.unlinkSync(checkResult.fileInfo.filepath);
+        }
+        throw new Error("识图失败");
+      }
+
+      // 3. 保存到向量库
+      const result = await imageEmbeddingManager.addPreparedImage(checkResult.fileInfo, description, {
         groupId: e.group_id,
         userId: e.user_id,
       });
