@@ -2,43 +2,9 @@
 # category: 商品分类
 # type: 商品类型 (consumable=消耗品, equipment=装备, buff=增益效果)
 # stackable: 是否可叠加 (consumable默认true, equipment默认false)
-# handler: 特殊处理器 (fishing=钓鱼系统, gift=礼物系统, buff=增益系统)
+# handler: 特殊处理器 (fishing=钓鱼系统, buff=增益系统)
 
 categories:
-  # 礼物分类 - 可赠送给他人增加好感度
-  gifts:
-    name: "🎁 礼物"
-    description: "送给心仪的人，增加好感度"
-    handler: gift
-    items:
-      - id: gift_flower
-        name: 鲜花
-        price: 50
-        type: consumable
-        favorability: 10
-        description: 一朵美丽的鲜花，送给喜欢的人吧。
-
-      - id: gift_taiyaki
-        name: 鲷鱼烧
-        price: 100
-        type: consumable
-        favorability: 20
-        description: 热腾腾的鲷鱼烧，咬一口满满的红豆馅。
-
-      - id: gift_chocolate
-        name: 巧克力
-        price: 500
-        type: consumable
-        favorability: 55
-        description: 甜甜的巧克力，象征着甜蜜的爱情。
-
-      - id: gift_ring
-        name: 钻戒
-        price: 10000
-        type: consumable
-        favorability: 1200
-        description: 闪耀的钻戒，承诺一生的誓言。
-
   # 鱼竿分类 - 永久装备
   rods:
     name: "🎣 鱼竿"

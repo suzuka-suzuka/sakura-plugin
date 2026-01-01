@@ -30,14 +30,14 @@ export default class Fishing extends plugin {
     const fishingManager = new FishingManager(groupId);
 
     if (!fishingManager.hasAnyRod(userId)) {
-      await e.reply("🎣 手里空空如也！\n快去「钓鱼商店」挑根鱼竿吧~", 10);
+      await e.reply("🎣 手里空空如也！\n快去「商店」挑根鱼竿吧~", 10);
       return true;
     }
 
     const equippedBait = fishingManager.getEquippedBait(userId);
     if (!equippedBait) {
       await e.reply(
-        "🪱 鱼饵用光啦！\n没饵可钓不到鱼，去「钓鱼商店」看看吧~",
+        "🪱 鱼饵用光啦！\n没饵可钓不到鱼，去「商店」看看吧~",
         10
       );
       return true;
@@ -461,59 +461,6 @@ export default class Fishing extends plugin {
     return true;
   }
 
-  fishingShop = Command(/^#?(钓鱼商店|渔具店)$/, async (e) => {
-    const fishingManager = new FishingManager(e.group_id);
-    const rods = fishingManager.getAllRods();
-    const baits = fishingManager.getAllBaits();
-
-    const forwardMsg = [];
-
-    forwardMsg.push({
-      nickname: "钓鱼商店老板",
-      user_id: e.self_id,
-      content:
-        "🏪 欢迎光临「Sakura 渔具屋」！\n这里有适合您的装备哦~\n\n💡 现在可以使用 #商店 查看所有商品\n或使用 #购买 商品名 [数量] 直接购买",
-    });
-
-    if (rods.length > 0) {
-      let rodMsg = "🎣 【鱼竿】（永久道具）\n━━━━━━━━━━━━━━━━\n";
-      for (const rod of rods) {
-        rodMsg += `📦 ${rod.name}\n💰 价格：${rod.price} 樱花币\n📝 说明：${rod.description}\n\n`;
-      }
-      forwardMsg.push({
-        nickname: "钓鱼商店老板",
-        user_id: e.self_id,
-        content: rodMsg.trim(),
-      });
-    }
-
-    if (baits.length > 0) {
-      let baitMsg = "🪱 【鱼饵】（消耗品）\n━━━━━━━━━━━━━━━━\n";
-      for (const bait of baits) {
-        baitMsg += `📦 ${bait.name}\n💰 价格：${bait.price} 樱花币\n📝 说明：${bait.description}\n\n`;
-      }
-      forwardMsg.push({
-        nickname: "钓鱼商店老板",
-        user_id: e.self_id,
-        content: baitMsg.trim(),
-      });
-    }
-
-    forwardMsg.push({
-      nickname: "钓鱼商店老板",
-      user_id: e.self_id,
-      content:
-        "💡 贴士：\n🛍️ 购买：#购买 商品名 [数量]\n🎒 装备：#装备鱼竿 名称 / #装备鱼饵 名称\n📦 查看：#背包",
-    });
-
-    await e.sendForwardMsg(forwardMsg, {
-      prompt: "查看钓鱼商店",
-      news: [{ text: `共 ${rods.length + baits.length} 件商品` }],
-      source: "钓鱼商店",
-    });
-    return true;
-  });
-
   equipRod = Command(/^#?装备鱼竿\s*(.+)$/, async (e) => {
     const rodName = e.msg.match(/^#?装备鱼竿\s*(.+)$/)[1].trim();
     const fishingManager = new FishingManager(e.group_id);
@@ -531,6 +478,48 @@ export default class Fishing extends plugin {
 
     fishingManager.equipRod(e.user_id, rod.id);
     await e.reply(`🎣 装备更替！当前使用【${rod.name}】，祝满载而归！`);
+    return true;
+  });
+
+  sellRod = Command(/^#?(出售|卖掉?)鱼竿\s*(.+)$/, async (e) => {
+    const rodName = e.msg.match(/^#?(出售|卖掉?)鱼竿\s*(.+)$/)[2].trim();
+    const fishingManager = new FishingManager(e.group_id);
+
+    const rod = fishingManager.getAllRods().find((r) => r.name === rodName);
+    if (!rod) {
+      await e.reply(`找不到【${rodName}】，请检查名称~`, 10);
+      return true;
+    }
+
+    if (!fishingManager.hasRod(e.user_id, rod.id)) {
+      await e.reply(`您还没有【${rod.name}】，无法出售~`, 10);
+      return true;
+    }
+
+    const inventoryManager = new (await import("../lib/economy/InventoryManager.js")).default(e.group_id, e.user_id);
+    const removeResult = inventoryManager.removeItem(rod.id, 1);
+    if (!removeResult) {
+      await e.reply(`出售失败，请稍后再试~`, 10);
+      return true;
+    }
+
+    const equippedRodId = fishingManager.getEquippedRod(e.user_id);
+    if (equippedRodId === rod.id && !fishingManager.hasRod(e.user_id, rod.id)) {
+      fishingManager.clearEquippedRod(e.user_id);
+    }
+
+    // 根据承重百分比计算出售价格，再打8折
+    const capacityInfo = fishingManager.getRodCapacityInfo(e.user_id, rod.id);
+    const sellPrice = Math.floor(rod.price * capacityInfo.percentage * 0.8);
+    const capacityPercent = Math.floor(capacityInfo.percentage * 100);
+
+    // 清除该鱼竿的承重损耗记录，重新购买后承重会刷新
+    fishingManager.clearRodCapacityLoss(e.user_id, rod.id);
+
+    const economyManager = new EconomyManager(e);
+    economyManager.addCoins(e, sellPrice);
+
+    await e.reply(`💰 成功出售【${rod.name}】！\n🎣 承重：${capacityInfo.currentCapacity}/${capacityInfo.baseCapacity}（${capacityPercent}%）\n💵 原价 ${rod.price} × ${capacityPercent}% × 80% = ${sellPrice} 樱花币`);
     return true;
   });
 

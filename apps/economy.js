@@ -1,8 +1,8 @@
 import EconomyManager from "../lib/economy/EconomyManager.js";
 import EconomyImageGenerator from "../lib/economy/ImageGenerator.js";
 import ShopManager from "../lib/economy/ShopManager.js";
-import GiftManager from "../lib/favorability/GiftManager.js";
 import InventoryManager from "../lib/economy/InventoryManager.js";
+import FishingManager from "../lib/economy/FishingManager.js";
 import _ from "lodash";
 
 export default class Economy extends plugin {
@@ -262,39 +262,6 @@ export default class Economy extends plugin {
     return true;
   });
 
-  giftShop = Command(/^#?(礼物商店|礼物商城|礼物列表)$/, async (e) => {
-    const gifts = GiftManager.getAllGifts();
-    if (gifts.length === 0) {
-      await e.reply("礼物商店暂时缺货哦~", 10);
-      return true;
-    }
-
-    const forwardMsg = [];
-    forwardMsg.push({
-      nickname: "礼物商店",
-      user_id: e.self_id,
-      content:
-        "🎁 欢迎光临「礼物商店」！\n送礼物可以增加对方的好感度哦~\n\n💡 购买：#购买 礼物名\n💝 赠送：#赠送 礼物名 @某人",
-    });
-
-    let giftMsg = "🎁 【礼物】\n━━━━━━━━━━━━━━━━\n";
-    for (const gift of gifts) {
-      giftMsg += `\n📦 ${gift.name}\n💰 价格：${gift.price} 樱花币\n❤️ 好感度：+${gift.favorability}\n📝 ${gift.description}\n`;
-    }
-    forwardMsg.push({
-      nickname: "礼物商店",
-      user_id: e.self_id,
-      content: giftMsg.trim(),
-    });
-
-    await e.sendForwardMsg(forwardMsg, {
-      prompt: "查看礼物商店",
-      news: [{ text: `共 ${gifts.length} 种礼物` }],
-      source: "礼物商店",
-    });
-    return true;
-  });
-
   buyItem = Command(/^#?(购买|兑换)\s*(\S+)\s*(\d*)$/, async (e) => {
     const shopManager = new ShopManager();
     const itemName = e.match[2].trim();
@@ -317,6 +284,7 @@ export default class Economy extends plugin {
 
     const shopManager = new ShopManager();
     const buffs = shopManager.getActiveBuffs(e.group_id, e.user_id);
+    const fishingManager = new FishingManager(e.group_id);
 
     const nickname = e.sender.card || e.sender.nickname || e.user_id;
     const forwardMsg = [];
@@ -331,7 +299,17 @@ export default class Economy extends plugin {
         if (item) {
           name = item.name;
         }
-        bagMsg += `📦 ${name} x ${count}\n`;
+        
+        let rodInfo = "";
+        if (itemId.startsWith("rod_")) {
+          const capacityInfo = fishingManager.getRodCapacityInfo(e.user_id, itemId);
+          if (capacityInfo.loss > 0) {
+            const remainingHits = Math.floor((capacityInfo.currentCapacity - 30) / 10);
+            rodInfo = ` ⚠️${remainingHits}次`;
+          }
+        }
+        
+        bagMsg += `📦 ${name} x ${count}${rodInfo}\n`;
       }
     } else {
       bagMsg += "空空如也~\n";
@@ -369,23 +347,6 @@ export default class Economy extends plugin {
     const economyManager = new EconomyManager(e);
     const result = economyManager.upgradeBag(e);
     await e.reply(result.msg);
-    return true;
-  });
-
-  sendGift = Command(/^#?(赠送|送礼)\s*(.+)$/, async (e) => {
-    const giftName = e.match[2].trim();
-    const targetId = e.at;
-
-    if (!targetId) {
-      return false;
-    }
-
-    if (targetId == e.user_id) {
-      return false;
-    }
-
-    const result = await GiftManager.sendGift(e, giftName, targetId);
-    await e.reply(result.msg, 10);
     return true;
   });
 
