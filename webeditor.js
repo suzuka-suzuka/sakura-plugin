@@ -285,13 +285,18 @@ class WebEditor {
   }
 
   getLocalIP() {
-    const nets = os.networkInterfaces()
-    for (const name of Object.keys(nets)) {
-      for (const net of nets[name]) {
-        if (net.family === "IPv4" && !net.internal) {
-          return net.address
+    try {
+      const nets = os.networkInterfaces()
+      for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+          if (net.family === "IPv4" && !net.internal) {
+            return net.address
+          }
         }
       }
+    } catch (err) {
+      const log = global.logger || console
+      log.warn(`[sakura-plugin] 无法获取本地IP地址: ${err.message}，将使用localhost`)
     }
     return "localhost"
   }
