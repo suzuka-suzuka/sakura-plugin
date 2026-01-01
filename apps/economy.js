@@ -60,17 +60,19 @@ export default class Economy extends plugin {
         Math.min(100, 50 + (targetCoins - attackerCoins) / 1000)
       );
 
+      await redis.set(
+        cooldownKey,
+        String(Math.floor(Date.now() / 1000)),
+        "EX",
+        1800
+      );
+
       const roll = _.random(1, 100);
       const attackerName = e.sender.card || e.sender.nickname || e.user_id;
 
       if (roll <= successRate) {
-        const robPercent = _.random(0, 20);
+        const robPercent = _.random(1, 20);
         const robAmount = Math.floor((targetCoins * robPercent) / 100);
-
-        if (robAmount <= 0) {
-          await e.reply(`🌸 抢夺成功！但是小叶口袋里只有空气...`);
-          return true;
-        }
 
         economyManager.reduceCoins(
           { user_id: targetId, group_id: e.group_id },
@@ -139,13 +141,8 @@ export default class Economy extends plugin {
     } catch (err) {}
 
     if (roll <= successRate) {
-      const robPercent = _.random(0, 20);
+      const robPercent = _.random(1, 20);
       const robAmount = Math.floor((targetCoins * robPercent) / 100);
-
-      if (robAmount <= 0) {
-        await e.reply(`抢夺成功！但是对方口袋里只有空气...`);
-        return true;
-      }
 
       economyManager.reduceCoins(
         { user_id: targetId, group_id: e.group_id },
