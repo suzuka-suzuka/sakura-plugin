@@ -140,33 +140,55 @@ export default class Fishing extends plugin {
       `🎣 挥动【${rodConfig.name}】，挂上【${baitConfig.name}】，抛入水中...\n水面泛起涟漪，耐心等待吧...`
     );
 
-    fishingState[`${groupId}:${userId}`] = {
+    const stateKey = `${groupId}:${userId}`;
+    
+    const cleanupState = (key) => {
+      const state = fishingState[key];
+      if (state) {
+        if (state.waitingTimer) clearTimeout(state.waitingTimer);
+        if (state.bitingTimer) clearTimeout(state.bitingTimer);
+        if (state.totalTimer) clearTimeout(state.totalTimer);
+        delete fishingState[key];
+      }
+    };
+
+    fishingState[stateKey] = {
       fish: fish,
       fishName: fishName,
       catchType: catchType,
       catchData: catchData,
       startTime: Date.now(),
       phase: "waiting",
+      cleanup: () => cleanupState(stateKey),
     };
 
-    setTimeout(async () => {
-      const state = fishingState[`${groupId}:${userId}`];
-      if (!state || state.phase !== "waiting") {
+    const state = fishingState[stateKey];
+
+    state.totalTimer = setTimeout(() => {
+      if (fishingState[stateKey]) {
+        cleanupState(stateKey);
+        this.finish("pullRod", stateKey);
+      }
+    }, 5 * 60 * 1000);
+
+    state.waitingTimer = setTimeout(async () => {
+      const currentState = fishingState[stateKey];
+      if (!currentState || currentState.phase !== "waiting") {
         return;
       }
 
-      state.phase = "biting";
-      state.biteTime = Date.now();
+      currentState.phase = "biting";
+      currentState.biteTime = Date.now();
 
       await e.reply(`🌊 浮漂沉下去了！快收竿！`, false, true);
 
-      this.setContext("pullRod", `${groupId}:${userId}`, 60);
+      this.setContext("pullRod", stateKey, 60);
 
-      state.timeoutTimer = setTimeout(() => {
-        const currentState = fishingState[`${groupId}:${userId}`];
-        if (currentState && currentState.phase === "biting") {
-          currentState.phase = "timeout";
-          delete fishingState[`${groupId}:${userId}`];
+      currentState.bitingTimer = setTimeout(() => {
+        const s = fishingState[stateKey];
+        if (s && s.phase === "biting") {
+          this.finish("pullRod", stateKey);
+          cleanupState(stateKey);
           e.reply(
             `🍃 鱼线松了... 那条鱼挣脱鱼钩跑了...\n下次手脚麻利点！`,
             false,
@@ -190,13 +212,13 @@ export default class Fishing extends plugin {
       return;
     }
 
+    const stateKey = `${groupId}:${userId}`;
+
     if (state.phase === "confirming") {
       if (/^(放弃|算了|不要|跑|放生)$/.test(msg)) {
-        if (state.timeoutTimer) {
-          clearTimeout(state.timeoutTimer);
-        }
-        this.finish("pullRod", `${groupId}:${userId}`);
-        delete fishingState[`${groupId}:${userId}`];
+        this.finish("pullRod", stateKey);
+        if (state.cleanup) state.cleanup();
+        else delete fishingState[stateKey];
         await e.reply(`🐟 你轻轻松开了鱼线，让这条大鱼游走了...\n💡 明智的选择，保护好你的鱼竿！`);
         return true;
       }
@@ -246,12 +268,9 @@ export default class Fishing extends plugin {
       }
     }
 
-    if (state.timeoutTimer) {
-      clearTimeout(state.timeoutTimer);
-    }
-
-    this.finish("pullRod", `${groupId}:${userId}`);
-    delete fishingState[`${groupId}:${userId}`];
+    this.finish("pullRod", stateKey);
+    if (state.cleanup) state.cleanup();
+    else delete fishingState[stateKey];
 
     const cooldownKey = `sakura:fishing:cooldown:${groupId}:${userId}`;
     await redis.set(
@@ -508,12 +527,10 @@ export default class Fishing extends plugin {
       fishingManager.clearEquippedRod(e.user_id);
     }
 
-    // 根据承重百分比计算出售价格，再打8折
     const capacityInfo = fishingManager.getRodCapacityInfo(e.user_id, rod.id);
     const sellPrice = Math.floor(rod.price * capacityInfo.percentage * 0.8);
     const capacityPercent = Math.floor(capacityInfo.percentage * 100);
 
-    // 清除该鱼竿的承重损耗记录，重新购买后承重会刷新
     fishingManager.clearRodCapacityLoss(e.user_id, rod.id);
 
     const economyManager = new EconomyManager(e);
