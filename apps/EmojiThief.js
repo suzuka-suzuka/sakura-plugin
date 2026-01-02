@@ -5,6 +5,7 @@ import path from "path";
 import axios from "axios";
 import _ from "lodash";
 import crypto from "crypto";
+import { imageEmbeddingManager, describeImage } from "../lib/AIUtils/ImageEmbedding.js";
 export class TextMsg extends plugin {
   constructor() {
     super({
@@ -26,6 +27,45 @@ export class TextMsg extends plugin {
     return setting.getConfig("EmojiThief");
   }
 
+  async saveToVectorDb(buffer, hash, groupId) {
+    try {
+      const existing = imageEmbeddingManager.getAll().find((item) => item.hash === hash);
+      if (existing) {
+        return false;
+      }
+
+      let description;
+      try {
+        description = await describeImage({ buffer, mimeType: "image/gif" });
+      } catch (err) {
+        logger.warn(`[表情包小偷] 无法获取表情描述，跳过向量库存储: ${hash}`);
+        return false;
+      }
+
+      const EMOJI_IMAGES_DIR = path.join(plugindata, "emoji_embeddings", "images");
+      await fsp.mkdir(EMOJI_IMAGES_DIR, { recursive: true });
+      
+      const filename = `${hash}.gif`;
+      const filepath = path.join(EMOJI_IMAGES_DIR, filename);
+      await fsp.writeFile(filepath, buffer);
+
+      await imageEmbeddingManager.addPreparedImage(
+        { filepath, filename, hash },
+        description,
+        {
+          groupId: groupId,
+          source: "EmojiThief",
+        }
+      );
+
+      logger.info(`[表情包小偷] 表情已存入向量库: ${description.substring(0, 30)}...`);
+      return true;
+    } catch (error) {
+      logger.error(`[表情包小偷] 存入向量库失败: ${error.message}`);
+      return false;
+    }
+  }
+
   async readMd5Db() {
     try {
       await fsp.access(this.jsonDbPath);
@@ -45,6 +85,7 @@ export class TextMsg extends plugin {
     const EmojiThiefConfig = this.appconfig;
     let rate = EmojiThiefConfig.rate;
     let groups = EmojiThiefConfig.Groups;
+    let vectorRate = EmojiThiefConfig.vectorRate ?? 0;
 
     if (!groups || groups.length === 0 || !groups.includes(e.group_id)) {
       return false;
@@ -80,6 +121,12 @@ export class TextMsg extends plugin {
 
           md5Db.add(hash);
           hasNewEmoji = true;
+
+          if (vectorRate > 0 && _.random(true) < vectorRate) {
+            this.saveToVectorDb(buffer, hash, e.group_id).catch((err) => {
+              logger.error(`[表情包小偷] 向量库存储异常: ${err.message}`);
+            });
+          }
         } catch (error) {
           logger.error(`处理表情包失败: ${error}`);
         }

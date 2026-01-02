@@ -11,7 +11,8 @@
     "marked": "^17.0.1",
     "openai": "^6.9.1",
     "puppeteer-real-browser": "^1.4.4",
-    "sharp": "^0.34.5"
+    "sharp": "^0.34.5",
+    "vectra": "^0.11.1"
   },
   "pnpm": {}
 }

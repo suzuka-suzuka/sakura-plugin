@@ -135,6 +135,14 @@ const configSchema = {
       max: 1,
       step: 0.01,
     },
+    "EmojiThief.vectorRate": {
+      label: "向量库存储概率",
+      type: "number",
+      help: "存入向量库的概率，存入后可通过「发表情xx」搜索",
+      min: 0,
+      max: 1,
+      step: 0.01,
+    },
     rate: { label: "概率", type: "number", help: "0-1之间的小数", min: 0, max: 1, step: 0.01 },
 
     "summary.Summaries": { label: "外显文本列表", type: "array", itemType: "text" },

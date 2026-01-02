@@ -59,11 +59,11 @@ export class GroupNotice extends plugin {
         const msg = parseAtMessage(aiResponse.text);
         await e.reply(msg);
       } else {
-        await e.reply([Segment.at(e.user_id), " 欢迎新人！"]);
+        await e.reply([segment.at(e.user_id), " 欢迎新人！"]);
       }
     } catch (error) {
       logger.error(`欢迎新人时出错: ${error}`);
-      await e.reply([Segment.at(e.user_id), " 欢迎新人！"]);
+      await e.reply([segment.at(e.user_id), " 欢迎新人！"]);
     }
   });
 
@@ -79,7 +79,7 @@ export class GroupNotice extends plugin {
       .getStrangerInfo(e.user_id, true)
       .catch(() => null);
     const name = strangerInfo?.nickname || e.nickname || "未知用户";
-    const avatar = Segment.image(
+    const avatar = segment.image(
       `https://q1.qlogo.cn/g?b=qq&s=0&nk=${e.user_id}`
     );
 
