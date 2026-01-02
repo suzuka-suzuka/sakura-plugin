@@ -227,12 +227,12 @@ export class EmotionImage extends plugin {
       const result = await imageEmbeddingManager.searchImage(query);
 
       if (!result) {
-        await e.reply(`没有找到"${query}"相关的表情`, true);
+        await e.reply(`没有找到"${query}"相关的表情`, 10);
         return true;
       }
 
       if (!result.localPath || !fs.existsSync(result.localPath)) {
-        await e.reply("表情文件丢失", true);
+        await e.reply("表情文件丢失", 10);
         return true;
       }
 
@@ -266,7 +266,7 @@ export class EmotionImage extends plugin {
       });
     } catch (error) {
       logger.error(`[发表情] 失败: ${error.message}`);
-      await e.reply(`搜索失败: ${error.message}`, true);
+      await e.reply(`搜索失败: ${error.message}`, 10);
     }
 
     return true;
@@ -322,11 +322,11 @@ export class EmotionImage extends plugin {
             }
           );
         } else {
-          await e.reply("删除失败，请稍后重试", true);
+          await e.reply("删除失败，请稍后重试", 10);
         }
       } catch (error) {
         logger.error(`[删表情] 失败: ${error.message}`);
-        await e.reply(`删除失败: ${error.message}`, true);
+        await e.reply(`删除失败: ${error.message}`, 10);
       }
       return true;
     }
@@ -375,11 +375,11 @@ export class EmotionImage extends plugin {
           }
         );
       } else {
-        await e.reply("删除失败，请稍后重试", true);
+        await e.reply("删除失败，请稍后重试", 10);
       }
     } catch (error) {
       logger.error(`[删表情] 失败: ${error.message}`);
-      await e.reply(`删除失败: ${error.message}`, true);
+      await e.reply(`删除失败: ${error.message}`, 10);
     }
 
     return true;
