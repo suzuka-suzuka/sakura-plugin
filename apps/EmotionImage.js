@@ -6,8 +6,7 @@ import { getImg } from "../lib/utils.js";
 import EconomyManager from "../lib/economy/EconomyManager.js";
 import fs from "fs";
 
-const emojiRewardCooldown = new Map();
-const REWARD_COOLDOWN_MS = 5 * 60 * 1000;
+const REWARD_COOLDOWN_SECONDS = 5 * 60;
 const CUTE_SIMILARITY_THRESHOLD = 0.6;
 const MIN_REWARD_COINS = 20;
 const MAX_REWARD_COINS = 100;
@@ -35,6 +34,21 @@ export class EmotionImage extends plugin {
 
     if (!imgUrls || imgUrls.length === 0) {
       return false;
+    }
+
+    const userId = e.user_id;
+
+    if (e.group_id) {
+      const cooldownKey = `sakura:emoji:cooldown:${userId}`;
+      const ttl = await redis.ttl(cooldownKey);
+
+      if (ttl > 0) {
+        const minutes = Math.floor(ttl / 60);
+        const seconds = ttl % 60;
+        const timeStr = minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
+        await e.reply(`⏰ 存表情冷却中，请${timeStr}后再试~`, 10);
+        return true;
+      }
     }
 
     try {
@@ -92,6 +106,28 @@ export class EmotionImage extends plugin {
         throw new Error("识图失败");
       }
 
+      let cuteSimilarity = null;
+      if (e.group_id) {
+        cuteSimilarity = await imageEmbeddingManager.calculateSimilarity(
+          description,
+          "可爱"
+        );
+
+        if (cuteSimilarity < CUTE_SIMILARITY_THRESHOLD) {
+          if (
+            checkResult.fileInfo?.filepath &&
+            fs.existsSync(checkResult.fileInfo.filepath)
+          ) {
+            fs.unlinkSync(checkResult.fileInfo.filepath);
+          }
+          await e.reply(
+            `😅 这个表情不够可爱哦~\n💕 可爱度: ${(cuteSimilarity * 100).toFixed(1)}%\n📌 需要至少 ${(CUTE_SIMILARITY_THRESHOLD * 100).toFixed(0)}% 的可爱度才能存入`,
+            true
+          );
+          return true;
+        }
+      }
+
       const result = await imageEmbeddingManager.addPreparedImage(
         checkResult.fileInfo,
         description,
@@ -102,30 +138,18 @@ export class EmotionImage extends plugin {
       );
 
       let rewardMsg = null;
-      const userId = e.user_id;
-      const now = Date.now();
-      const lastRewardTime = emojiRewardCooldown.get(userId) || 0;
-      const canGetReward = now - lastRewardTime >= REWARD_COOLDOWN_MS;
-
-      if (canGetReward && e.group_id) {
+      if (e.group_id) {
+        const cooldownKey = `sakura:emoji:cooldown:${userId}`;
+        await redis.set(cooldownKey, "1", "EX", REWARD_COOLDOWN_SECONDS);
         try {
-          const cuteSimilarity =
-            await imageEmbeddingManager.calculateSimilarity(
-              description,
-              "可爱"
-            );
-
-          if (cuteSimilarity >= CUTE_SIMILARITY_THRESHOLD) {
-            const rewardCoins = calculateRewardCoins(cuteSimilarity);
-            const economyManager = new EconomyManager(e);
-            economyManager.addCoins(e, rewardCoins);
-            emojiRewardCooldown.set(userId, now);
-            rewardMsg = `🎉 可爱表情奖励！+${rewardCoins}樱花币\n💕 可爱度: ${(
-              cuteSimilarity * 100
-            ).toFixed(1)}%`;
-          }
+          const rewardCoins = calculateRewardCoins(cuteSimilarity);
+          const economyManager = new EconomyManager(e);
+          economyManager.addCoins(e, rewardCoins);
+          rewardMsg = `🎉 可爱表情奖励！+${rewardCoins}樱花币\n💕 可爱度: ${(
+            cuteSimilarity * 100
+          ).toFixed(1)}%`;
         } catch (rewardErr) {
-          logger.warn(`[存表情奖励] 检查奖励失败: ${rewardErr.message}`);
+          logger.warn(`[存表情奖励] 发放奖励失败: ${rewardErr.message}`);
         }
       }
 
