@@ -203,7 +203,7 @@ export class EmotionImage extends plugin {
       });
     } catch (error) {
       logger.error(`[存表情] 失败: ${error.message}`);
-      await e.reply(`保存失败: ${error.message}`, true);
+      await e.reply(`保存失败: ${error.message}`, 10);
     }
 
     return true;
