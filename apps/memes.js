@@ -422,7 +422,7 @@ export class memesPlugin extends plugin {
     if (!e.isMaster && !economyManager.pay(e, 5)) {
       return false;
     }
-
+    await e.react(124);
     let [text, args = ""] = text1.split("#");
     const info = infos[targetCode];
 
