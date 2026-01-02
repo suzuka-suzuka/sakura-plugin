@@ -25,7 +25,7 @@ export class summary extends plugin {
       raw = segment.image
     }
 
-    segment.image = (file, name) => {
+    segment.image = (file, sub_type) => {
       const config = this.appconfig
       if (config && config.enable && Array.isArray(config.Summaries) && config.Summaries.length > 0) {
         
@@ -34,11 +34,12 @@ export class summary extends plugin {
           type: "image",
           data: {
             file: typeof file === "string" ? file : `base64://${file.toString("base64")}`,
+            sub_type,
             summary: summaryText
           }
         }
       } else {
-          return raw(file, name)
+          return raw(file, sub_type)
       }
     }
     
