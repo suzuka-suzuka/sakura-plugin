@@ -45,12 +45,13 @@ export class EmotionImage extends plugin {
       if (ttl > 0) {
         const minutes = Math.floor(ttl / 60);
         const seconds = ttl % 60;
-        const timeStr = minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
+        const timeStr =
+          minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
         await e.reply(`⏰ 存表情冷却中，请${timeStr}后再试~`, 10);
         return true;
       }
     }
-
+    await e.react(124);
     try {
       const checkResult = await imageEmbeddingManager.checkImage(imgUrls[0]);
 
@@ -77,7 +78,7 @@ export class EmotionImage extends plugin {
           {
             prompt: "表情已存在",
             news: [{ text: "这张表情已经存过啦" }],
-            source: "表情向量库",
+            source: "小叶的表情库",
           }
         );
         return true;
@@ -121,7 +122,11 @@ export class EmotionImage extends plugin {
             fs.unlinkSync(checkResult.fileInfo.filepath);
           }
           await e.reply(
-            `😅 这个表情不够可爱哦~\n💕 可爱度: ${(cuteSimilarity * 100).toFixed(1)}%\n📌 需要至少 ${(CUTE_SIMILARITY_THRESHOLD * 100).toFixed(0)}% 的可爱度才能存入`,
+            `😅 这个表情不够可爱哦~\n💕 可爱度: ${(
+              cuteSimilarity * 100
+            ).toFixed(1)}%\n📌 需要至少 ${(
+              CUTE_SIMILARITY_THRESHOLD * 100
+            ).toFixed(0)}% 的可爱度才能存入`,
             true
           );
           return true;
@@ -183,7 +188,7 @@ export class EmotionImage extends plugin {
       await e.sendForwardMsg(forwardMsgContent, {
         prompt: "表情已保存",
         news: [{ text: "✅ 表情保存成功" }],
-        source: "表情向量库",
+        source: "小叶的表情库",
       });
     } catch (error) {
       logger.error(`[存表情] 失败: ${error.message}`);
@@ -199,7 +204,7 @@ export class EmotionImage extends plugin {
 
     const query = match[1].trim();
     if (!query) {
-      return false
+      return false;
     }
 
     if (imageEmbeddingManager.getCount() === 0) {
@@ -246,7 +251,7 @@ export class EmotionImage extends plugin {
       await e.sendForwardMsg(forwardMsg, {
         prompt: "表情详情",
         news: [{ text: `搜索: ${query}` }],
-        source: "表情向量库",
+        source: "小叶的表情库",
       });
     } catch (error) {
       logger.error(`[发表情] 失败: ${error.message}`);
@@ -302,7 +307,7 @@ export class EmotionImage extends plugin {
             {
               prompt: "表情已删除",
               news: [{ text: "🗑️ 表情删除成功" }],
-              source: "表情向量库",
+              source: "小叶的表情库",
             }
           );
         } else {
@@ -355,7 +360,7 @@ export class EmotionImage extends plugin {
           {
             prompt: "表情已删除",
             news: [{ text: "🗑️ 表情删除成功" }],
-            source: "表情向量库",
+            source: "小叶的表情库",
           }
         );
       } else {
