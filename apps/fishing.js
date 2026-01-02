@@ -10,8 +10,7 @@ function getRarityByLevel(level) {
   if (level > 60) return { name: "史诗", color: "🟣" };
   if (level > 40) return { name: "稀有", color: "🔵" };
   if (level > 20) return { name: "精良", color: "🟢" };
-  if (level > 0) return { name: "普通", color: "⚪" };
-  return { name: "垃圾", color: "⚫" };
+  return { name: "普通", color: "⚪" };
 }
 
 export default class Fishing extends plugin {
@@ -445,6 +444,12 @@ export default class Fishing extends plugin {
       price += 10;
     }
 
+    let isDoubled = false;
+    if (rodConfig?.doubleChance && _.random(1, 100) <= rodConfig.doubleChance) {
+      price *= 2;
+      isDoubled = true;
+    }
+
     const economyManager = new EconomyManager(e);
     economyManager.addCoins(e, price);
 
@@ -473,6 +478,9 @@ export default class Fishing extends plugin {
     resultMsg.push(`📊 稀有度：${rarity.color}${rarity.name}\n`);
     resultMsg.push(`⚖️ 重量：${displayWeight}\n`);
     resultMsg.push(`🧊 新鲜度：${freshnessDisplay}\n`);
+    if (isDoubled) {
+      resultMsg.push(`✨💰 招财加持！金币翻倍！\n`);
+    }
     resultMsg.push(`💰 获得：${price} 樱花币`);
 
     await e.reply(resultMsg);

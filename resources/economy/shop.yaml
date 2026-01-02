@@ -55,6 +55,14 @@ categories:
         luckyRate: 66
         description: 被幸运女神眷顾的神奇鱼竿，无论鱼多重都有概率上钩！
 
+      - id: rod_fortune
+        name: 招财竿
+        price: 1888
+        type: equipment
+        capacity: 80
+        doubleChance: 20
+        description: 镶嵌着金色鳞片的神奇鱼竿，有一定概率让金币收益翻倍！
+
   # 鱼饵分类 - 消耗品
   baits:
     name: "🪱 鱼饵"
