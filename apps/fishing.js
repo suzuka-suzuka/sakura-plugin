@@ -286,7 +286,7 @@ export default class Fishing extends plugin {
         `${trash.emoji} 钓到了【${trash.name}】！\n`,
         `📝 ${trash.description}\n`,
         `💰 获得：0 樱花币\n`,
-        `💡 运气不好，下次再接再厠！`,
+        `💡 运气不好，下次再接再厉！`,
       ];
       fishingManager.recordCatch(userId, 0, null);
       await e.reply(resultMsg);
