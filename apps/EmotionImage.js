@@ -30,6 +30,17 @@ export class EmotionImage extends plugin {
   }
 
   saveEmoji = Command(/^#?存表情$/, async (e) => {
+    let imageMsg = e.message?.find((item) => item.type === "image");
+    
+    if (!imageMsg && e.reply_id) {
+      const sourceMsg = await e.getReplyMsg();
+      imageMsg = sourceMsg?.message?.find((item) => item.type === "image");
+    }
+    
+    if (!imageMsg || (imageMsg.data?.sub_type !== 1 && !imageMsg.data?.emoji_id)) {
+      return false;
+    }
+
     const imgUrls = await getImg(e);
 
     if (!imgUrls || imgUrls.length === 0) {
