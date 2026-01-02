@@ -137,7 +137,7 @@ export class EmotionImage extends plugin {
               cuteSimilarity * 100
             ).toFixed(1)}%\n📌 需要至少 ${(
               CUTE_SIMILARITY_THRESHOLD * 100
-            ).toFixed(0)}% 的可爱度才能存入`,
+            ).toFixed(0)}% 的可爱度才能存入`,10,
             true
           );
           return true;
