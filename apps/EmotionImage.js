@@ -7,7 +7,7 @@ import EconomyManager from "../lib/economy/EconomyManager.js";
 import fs from "fs";
 
 const REWARD_COOLDOWN_SECONDS = 5 * 60;
-const CUTE_SIMILARITY_THRESHOLD = 0.83;
+const CUTE_SIMILARITY_THRESHOLD = 0.8;
 const MIN_REWARD_COINS = 50;
 const MAX_REWARD_COINS = 100;
 
