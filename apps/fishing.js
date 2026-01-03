@@ -251,7 +251,7 @@ export default class Fishing extends plugin {
           ? 200 + Math.log(fishCoins - 200) / Math.log(2) * 10
           : fishCoins;
       const randomMultiplier = 0.9 + Math.random() * 0.2;
-      const fishWeight = Math.floor(baseWeight * randomMultiplier);
+      const fishWeight = Math.round(baseWeight * randomMultiplier);
 
       let successRate = 100;
       if (rodConfig?.lucky) {
@@ -376,7 +376,7 @@ export default class Fishing extends plugin {
           ? 200 + Math.log(fishCoins - 200) / Math.log(5)
           : fishCoins;
       const randomMultiplier = 0.95 + Math.random() * 0.1;
-      fishWeight = Math.floor(baseWeight * randomMultiplier);
+      fishWeight = Math.round(baseWeight * randomMultiplier);
 
       successRate = 100;
       if (rodConfig?.lucky) {
@@ -429,12 +429,12 @@ export default class Fishing extends plugin {
     }
 
     let fishLevel = Number(fish.level) || 1;
-    let price = Math.floor(fishLevel * (1 + fishWeight / 100));
+    let price = Math.round(fishLevel * (1 + fishWeight / 100));
 
 
     const proficiency = fishingManager.getProficiency(userId, fish.user_id);
     const proficiencyBonus = 1 + proficiency / 100;
-    price = Math.floor(price * proficiencyBonus);
+    price = Math.round(price * proficiencyBonus);
 
     const currentTime = Math.floor(Date.now() / 1000);
     const lastSentTime = fish.last_sent_time || currentTime;
@@ -443,7 +443,7 @@ export default class Fishing extends plugin {
     const timeDiff = Math.max(0, currentTime - lastSentTime);
 
     let freshness = Math.max(0, 1 - timeDiff / maxDuration);
-    price = Math.floor(price * freshness);
+    price = Math.round(price * freshness);
 
     if (fish.role === "owner" || fish.role === "admin") {
       price *= 2;
@@ -551,8 +551,8 @@ export default class Fishing extends plugin {
     }
 
     const capacityInfo = fishingManager.getRodCapacityInfo(e.user_id, rod.id);
-    const sellPrice = Math.floor(rod.price * capacityInfo.percentage * 0.8);
-    const capacityPercent = Math.floor(capacityInfo.percentage * 100);
+    const sellPrice = Math.round(rod.price * capacityInfo.percentage * 0.8);
+    const capacityPercent = Math.round(capacityInfo.percentage * 100);
 
     fishingManager.clearRodCapacityLoss(e.user_id, rod.id);
 

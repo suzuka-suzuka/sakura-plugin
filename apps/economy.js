@@ -72,7 +72,7 @@ export default class Economy extends plugin {
 
       if (roll <= successRate) {
         const robPercent = _.random(1, 20);
-        const robAmount = Math.floor((targetCoins * robPercent) / 100);
+        const robAmount = Math.round((targetCoins * robPercent) / 100);
 
         economyManager.reduceCoins(
           { user_id: targetId, group_id: e.group_id },
@@ -142,7 +142,7 @@ export default class Economy extends plugin {
 
     if (roll <= successRate) {
       const robPercent = _.random(1, 20);
-      const robAmount = Math.floor((targetCoins * robPercent) / 100);
+      const robAmount = Math.round((targetCoins * robPercent) / 100);
 
       economyManager.reduceCoins(
         { user_id: targetId, group_id: e.group_id },
@@ -221,12 +221,12 @@ export default class Economy extends plugin {
     const elapsedTime = (Date.now() - counterData.time) / 1000;
     const successRate = Math.max(
       0,
-      Math.floor(100 - (elapsedTime / 120) * 100)
+      Math.round(100 - (elapsedTime / 120) * 100)
     );
 
     const roll = _.random(1, 100);
     if (roll <= successRate) {
-      const counterAmount = Math.floor(counterData.amount * 1.5);
+      const counterAmount = Math.round(counterData.amount * 1.5);
       const targetCoins = economyManager.getCoins({
         user_id: targetId,
         group_id: e.group_id,
