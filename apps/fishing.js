@@ -253,13 +253,10 @@ export default class Fishing extends plugin {
       const fishWeight = Math.floor(baseWeight * randomMultiplier);
 
       let successRate = 100;
-      const luckyBaseCapacity = 80; // 幸运鱼竿基础承重
       if (rodConfig?.lucky) {
-        // 幸运鱼竿：只有超过基础承重才触发概率机制
-        if (fishWeight > luckyBaseCapacity) {
+        if (fishWeight > (rodConfig.capacity || 80)) {
           successRate = rodConfig.luckyRate || 66;
         }
-        // 否则保持100%成功率
       } else if (fishWeight > rodCapacity) {
         successRate = Math.max(0, 100 - (fishWeight - rodCapacity));
       }
@@ -381,13 +378,10 @@ export default class Fishing extends plugin {
       fishWeight = Math.floor(baseWeight * randomMultiplier);
 
       successRate = 100;
-      const luckyBaseCapacity = 80; // 幸运鱼竿基础承重
       if (rodConfig?.lucky) {
-        // 幸运鱼竿：只有超过基础承重才触发概率机制
-        if (fishWeight > luckyBaseCapacity) {
+        if (fishWeight > (rodConfig.capacity || 80)) {
           successRate = rodConfig.luckyRate || 66;
         }
-        // 否则保持100%成功率
       } else if (fishWeight > rodCapacity) {
         successRate = Math.max(0, 100 - (fishWeight - rodCapacity));
       }
