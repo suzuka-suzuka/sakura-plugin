@@ -59,7 +59,7 @@ categories:
         name: 招财竿
         price: 1888
         type: equipment
-        capacity: 80
+        capacity: 120
         doubleChance: 20
         description: 镶嵌着金色鳞片的神奇鱼竿，有一定概率让金币收益翻倍！
 
