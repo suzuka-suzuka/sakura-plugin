@@ -3,22 +3,7 @@ import {
   describeImage,
 } from "../lib/AIUtils/ImageEmbedding.js";
 import { getImg } from "../lib/utils.js";
-import EconomyManager from "../lib/economy/EconomyManager.js";
 import fs from "fs";
-
-const REWARD_COOLDOWN_SECONDS = 5 * 60;
-const CUTE_SIMILARITY_THRESHOLD = 0.8;
-const MIN_REWARD_COINS = 50;
-const MAX_REWARD_COINS = 100;
-
-function calculateRewardCoins(cuteSimilarity) {
-  const ratio =
-    (cuteSimilarity - CUTE_SIMILARITY_THRESHOLD) /
-    (1 - CUTE_SIMILARITY_THRESHOLD);
-  const coins =
-    MIN_REWARD_COINS + ratio * (MAX_REWARD_COINS - MIN_REWARD_COINS);
-  return Math.floor(coins);
-}
 
 export class EmotionImage extends plugin {
   constructor() {
@@ -29,15 +14,18 @@ export class EmotionImage extends plugin {
     });
   }
 
-  saveEmoji = Command(/^#?存表情$/, async (e) => {
+  saveEmoji = Command(/^#?存表情$/, "white", async (e) => {
     let imageMsg = e.message?.find((item) => item.type === "image");
-    
+
     if (!imageMsg && e.reply_id) {
       const sourceMsg = await e.getReplyMsg();
       imageMsg = sourceMsg?.message?.find((item) => item.type === "image");
     }
-    
-    if (!imageMsg || (imageMsg.data?.sub_type !== 1 && !imageMsg.data?.emoji_id)) {
+
+    if (
+      !imageMsg ||
+      (imageMsg.data?.sub_type !== 1 && !imageMsg.data?.emoji_id)
+    ) {
       return false;
     }
 
@@ -47,21 +35,6 @@ export class EmotionImage extends plugin {
       return false;
     }
 
-    const userId = e.user_id;
-
-    if (e.group_id) {
-      const cooldownKey = `sakura:emoji:cooldown:${userId}`;
-      const ttl = await redis.ttl(cooldownKey);
-
-      if (ttl > 0) {
-        const minutes = Math.floor(ttl / 60);
-        const seconds = ttl % 60;
-        const timeStr =
-          minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
-        await e.reply(`⏰ 存表情冷却中，请${timeStr}后再试~`, 10);
-        return true;
-      }
-    }
     await e.react(124);
     try {
       const checkResult = await imageEmbeddingManager.checkImage(imgUrls[0]);
@@ -118,32 +91,6 @@ export class EmotionImage extends plugin {
         throw new Error("识图失败");
       }
 
-      let cuteSimilarity = null;
-      if (e.group_id) {
-        cuteSimilarity = await imageEmbeddingManager.calculateSimilarity(
-          description,
-          "可爱"
-        );
-
-        if (cuteSimilarity < CUTE_SIMILARITY_THRESHOLD) {
-          if (
-            checkResult.fileInfo?.filepath &&
-            fs.existsSync(checkResult.fileInfo.filepath)
-          ) {
-            fs.unlinkSync(checkResult.fileInfo.filepath);
-          }
-          await e.reply(
-            `😅 这个表情不够可爱哦~\n💕 可爱度: ${(
-              cuteSimilarity * 100
-            ).toFixed(1)}%\n📌 需要至少 ${(
-              CUTE_SIMILARITY_THRESHOLD * 100
-            ).toFixed(0)}% 的可爱度才能存入`,10,
-            true
-          );
-          return true;
-        }
-      }
-
       const result = await imageEmbeddingManager.addPreparedImage(
         checkResult.fileInfo,
         description,
@@ -153,54 +100,31 @@ export class EmotionImage extends plugin {
         }
       );
 
-      let rewardMsg = null;
-      if (e.group_id) {
-        const cooldownKey = `sakura:emoji:cooldown:${userId}`;
-        await redis.set(cooldownKey, "1", "EX", REWARD_COOLDOWN_SECONDS);
-        try {
-          const rewardCoins = calculateRewardCoins(cuteSimilarity);
-          const economyManager = new EconomyManager(e);
-          economyManager.addCoins(e, rewardCoins);
-          rewardMsg = `🎉 可爱表情奖励！+${rewardCoins}樱花币\n💕 可爱度: ${(
-            cuteSimilarity * 100
-          ).toFixed(1)}%`;
-        } catch (rewardErr) {
-          logger.warn(`[存表情奖励] 发放奖励失败: ${rewardErr.message}`);
-        }
-      }
-
       const nickname = e.sender.card || e.sender.nickname || "表情库";
-      const forwardMsgContent = [
+      await e.sendForwardMsg(
+        [
+          {
+            nickname: nickname,
+            user_id: e.user_id,
+            content: "✅ 表情已保存",
+          },
+          {
+            nickname: nickname,
+            user_id: e.user_id,
+            content: `📝 描述: ${result.description}`,
+          },
+          {
+            nickname: nickname,
+            user_id: e.user_id,
+            content: `🆔 ID: ${result.id}`,
+          },
+        ],
         {
-          nickname: nickname,
-          user_id: e.user_id,
-          content: "✅ 表情已保存",
-        },
-        {
-          nickname: nickname,
-          user_id: e.user_id,
-          content: `📝 描述: ${result.description}`,
-        },
-        {
-          nickname: nickname,
-          user_id: e.user_id,
-          content: `🆔 ID: ${result.id}`,
-        },
-      ];
-
-      if (rewardMsg) {
-        forwardMsgContent.push({
-          nickname: nickname,
-          user_id: e.user_id,
-          content: rewardMsg,
-        });
-      }
-
-      await e.sendForwardMsg(forwardMsgContent, {
-        prompt: "表情已保存",
-        news: [{ text: "✅ 表情保存成功" }],
-        source: "小叶的表情库",
-      });
+          prompt: "表情已保存",
+          news: [{ text: "✅ 表情保存成功" }],
+          source: "小叶的表情库",
+        }
+      );
     } catch (error) {
       logger.error(`[存表情] 失败: ${error.message}`);
       await e.reply(`保存失败: ${error.message}`, 10);
@@ -209,7 +133,7 @@ export class EmotionImage extends plugin {
     return true;
   });
 
-  sendEmoji = Command(/^#?发表情(.+)$/, async (e) => {
+  sendEmoji = Command(/^#?发表情(.+)$/, "white", async (e) => {
     const match = e.msg.match(/^#?发表情(.+)$/);
     if (!match) return false;
 
@@ -224,12 +148,15 @@ export class EmotionImage extends plugin {
     }
 
     try {
-      const result = await imageEmbeddingManager.searchImage(query);
+      const results = await imageEmbeddingManager.searchImage(query, 10);
 
-      if (!result) {
+      if (!results || (Array.isArray(results) && results.length === 0)) {
         await e.reply(`没有找到"${query}"相关的表情`, 10);
         return true;
       }
+
+      const candidates = Array.isArray(results) ? results : [results];
+      const result = candidates[Math.floor(Math.random() * candidates.length)];
 
       if (!result.localPath || !fs.existsSync(result.localPath)) {
         await e.reply("表情文件丢失", 10);
@@ -272,12 +199,7 @@ export class EmotionImage extends plugin {
     return true;
   });
 
-  deleteEmoji = Command(/^#?删表情(.*)$/, async (e) => {
-    if (!e.isMaster) {
-      await e.reply("只有主人才能删除表情哦~", true);
-      return true;
-    }
-
+  deleteEmoji = Command(/^#?删表情(.*)$/, "white", async (e) => {
     const imgUrls = await getImg(e);
 
     if (imgUrls && imgUrls.length > 0) {
