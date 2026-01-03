@@ -14,6 +14,40 @@ export class EmotionImage extends plugin {
     });
   }
 
+  autoCleanup = Cron("0 3 * * 0", async () => {
+    const keyword = "可爱";
+    const cleanupCount = 20;
+
+    try {
+      const count = imageEmbeddingManager.getCount();
+      if (count === 0) {
+        return;
+      }
+
+      if (count <= cleanupCount) {
+        return;
+      }
+
+      const leastSimilar = await imageEmbeddingManager.findLeastSimilar(
+        keyword,
+        cleanupCount
+      );
+
+      if (leastSimilar.length === 0) {
+        return;
+      }
+
+      const ids = leastSimilar.map((item) => item.id);
+      const result = await imageEmbeddingManager.deleteMultiple(ids);
+
+      logger.mark(
+        `[表情库清理] 清理完成: 成功 ${result.success} 个, 失败 ${result.failed} 个`
+      );
+    } catch (error) {
+      logger.error(`[表情库清理] 清理失败: ${error.message}`);
+    }
+  });
+
   saveEmoji = Command(/^#?存表情$/, "white", async (e) => {
     let imageMsg = e.message?.find((item) => item.type === "image");
 
