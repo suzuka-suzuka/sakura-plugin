@@ -10,7 +10,8 @@ function getRarityByLevel(level) {
   if (level > 60) return { name: "史诗", color: "🟣" };
   if (level > 40) return { name: "稀有", color: "🔵" };
   if (level > 20) return { name: "精良", color: "🟢" };
-  return { name: "普通", color: "⚪" };
+  if (level > 0) return { name: "普通", color: "⚪" };
+  return { name: "垃圾", color: "⚫" };
 }
 
 export default class Fishing extends plugin {
