@@ -57,7 +57,7 @@ export default class Economy extends plugin {
       const attackerCoins = economyManager.getCoins(e);
       const successRate = Math.max(
         0,
-        Math.min(100, 50 + (targetCoins - attackerCoins) / 1000)
+        Math.min(100, 50 + (targetCoins - attackerCoins) / 10)
       );
 
       await redis.set(
@@ -119,7 +119,7 @@ export default class Economy extends plugin {
       20,
       Math.min(
         80,
-        50 + levelDiff + Math.max(0, targetCoins - attackerCoins) / 1000
+        50 + levelDiff + Math.max(0, targetCoins - attackerCoins) / 10
       )
     );
 
