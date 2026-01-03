@@ -253,7 +253,14 @@ export default class Fishing extends plugin {
       const fishWeight = Math.floor(baseWeight * randomMultiplier);
 
       let successRate = 100;
-      if (!rodConfig?.lucky && fishWeight > rodCapacity) {
+      const luckyBaseCapacity = 80; // 幸运鱼竿基础承重
+      if (rodConfig?.lucky) {
+        // 幸运鱼竿：只有超过基础承重才触发概率机制
+        if (fishWeight > luckyBaseCapacity) {
+          successRate = rodConfig.luckyRate || 66;
+        }
+        // 否则保持100%成功率
+      } else if (fishWeight > rodCapacity) {
         successRate = Math.max(0, 100 - (fishWeight - rodCapacity));
       }
 
@@ -374,8 +381,13 @@ export default class Fishing extends plugin {
       fishWeight = Math.floor(baseWeight * randomMultiplier);
 
       successRate = 100;
+      const luckyBaseCapacity = 80; // 幸运鱼竿基础承重
       if (rodConfig?.lucky) {
-        successRate = rodConfig.luckyRate || 66;
+        // 幸运鱼竿：只有超过基础承重才触发概率机制
+        if (fishWeight > luckyBaseCapacity) {
+          successRate = rodConfig.luckyRate || 66;
+        }
+        // 否则保持100%成功率
       } else if (fishWeight > rodCapacity) {
         successRate = Math.max(0, 100 - (fishWeight - rodCapacity));
       }
@@ -423,6 +435,11 @@ export default class Fishing extends plugin {
 
     let fishLevel = Number(fish.level) || 1;
     let price = Math.floor(fishLevel * (1 + fishWeight / 100));
+
+    // 熟练度加成：每钓一次该群员熟练度+1，价格乘以(1+熟练度/100)
+    const proficiency = fishingManager.getProficiency(userId, fish.user_id);
+    const proficiencyBonus = 1 + proficiency / 100;
+    price = Math.floor(price * proficiencyBonus);
 
     const currentTime = Math.floor(Date.now() / 1000);
     const lastSentTime = fish.last_sent_time || currentTime;
@@ -476,6 +493,9 @@ export default class Fishing extends plugin {
     }
 
     resultMsg.push(`📊 稀有度：${rarity.color}${rarity.name}\n`);
+    if (proficiency > 0) {
+      resultMsg.push(`📈 熟练度：${proficiency} (+${((proficiencyBonus - 1) * 100).toFixed(0)}%加成)\n`);
+    }
     resultMsg.push(`⚖️ 重量：${displayWeight}\n`);
     resultMsg.push(`🧊 新鲜度：${freshnessDisplay}\n`);
     if (isDoubled) {
@@ -683,6 +703,52 @@ export default class Fishing extends plugin {
       await e.reply("画师偷懒了，图片生成失败... 稍后再试~", 10);
     }
 
+    return true;
+  });
+
+  fishingRanking = Command(/^#?钓鱼(排行|榜)$/, async (e) => {
+    const fishingManager = new FishingManager(e.group_id);
+    const rankingList = fishingManager.getFishingRanking(10);
+
+    if (rankingList.length === 0) {
+      await e.reply("暂时还没有人上榜哦~ 快去钓鱼吧！", 10);
+      return true;
+    }
+
+    const list = await Promise.all(
+      rankingList.map(async (item, index) => {
+        let nickname = item.userId;
+        try {
+          const info = await e.getInfo(item.userId);
+          if (info) {
+            nickname = info.card || info.nickname || item.userId;
+          }
+        } catch (err) {}
+
+        return {
+          rank: index + 1,
+          userId: item.userId,
+          nickname: String(nickname),
+          avatarUrl: `https://q1.qlogo.cn/g?b=qq&nk=${item.userId}&s=640`,
+          totalEarnings: item.totalEarnings,
+          totalCatch: item.totalCatch,
+        };
+      })
+    );
+
+    const data = {
+      title: "🎣 钓鱼排行榜",
+      list,
+    };
+
+    try {
+      const generator = new FishingImageGenerator();
+      const image = await generator.generateFishingRankingImage(data);
+      await e.reply(segment.image(image));
+    } catch (err) {
+      logger.error(`生成钓鱼排行榜图片失败: ${err}`);
+      await e.reply("Miko正在睡觉，无法生成图片，请稍后再试~", 10);
+    }
     return true;
   });
 }

@@ -182,7 +182,7 @@ export class EmotionImage extends plugin {
     }
 
     try {
-      const results = await imageEmbeddingManager.searchImage(query, 10);
+      const results = await imageEmbeddingManager.searchImage(query, 3);
 
       if (!results || (Array.isArray(results) && results.length === 0)) {
         await e.reply(`没有找到"${query}"相关的表情`, 10);
