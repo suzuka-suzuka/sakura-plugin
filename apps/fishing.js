@@ -48,7 +48,7 @@ export default class Fishing extends plugin {
     if (ttl > 0) {
       const remainingTime = Math.ceil(ttl / 60);
       await e.reply(
-        `🎣 鱼儿还没回来呢~\n请等待 ${remainingTime} 分钟后再来！`,
+        `🎣 歇会儿吧，鱼塘刚被你惊扰过~\n请等待 ${remainingTime} 分钟后再来！`,
         10
       );
       return true;
