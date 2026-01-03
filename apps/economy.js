@@ -274,7 +274,7 @@ export default class Economy extends plugin {
     return true;
   });
 
-  myBag = Command(/^#?我的背包$/, async (e) => {
+  myBag = Command(/^#?(我的)?背包$/, async (e) => {
     const inventoryManager = new InventoryManager(e);
     const inventory = inventoryManager.getInventory();
     const economyManager = new EconomyManager(e);
@@ -457,7 +457,7 @@ export default class Economy extends plugin {
     return true;
   });
 
-  coinRanking = Command(/^#?(金币|樱花币|富豪)(排行|榜)$/, async (e) => {
+  coinRanking = Command(/^#?(金币|樱花币|富豪|财富)(排行|榜)$/, async (e) => {
     return await this.generateRanking(e, "coins", "樱花币排行榜");
   });
 
