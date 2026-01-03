@@ -436,7 +436,7 @@ export default class Fishing extends plugin {
     let fishLevel = Number(fish.level) || 1;
     let price = Math.floor(fishLevel * (1 + fishWeight / 100));
 
-    // 熟练度加成：每钓一次该群员熟练度+1，价格乘以(1+熟练度/100)
+
     const proficiency = fishingManager.getProficiency(userId, fish.user_id);
     const proficiencyBonus = 1 + proficiency / 100;
     price = Math.floor(price * proficiencyBonus);
@@ -494,7 +494,7 @@ export default class Fishing extends plugin {
 
     resultMsg.push(`📊 稀有度：${rarity.color}${rarity.name}\n`);
     if (proficiency > 0) {
-      resultMsg.push(`📈 熟练度：${proficiency} (+${((proficiencyBonus - 1) * 100).toFixed(0)}%加成)\n`);
+      resultMsg.push(`📈 熟练度：${proficiency}\n`);
     }
     resultMsg.push(`⚖️ 重量：${displayWeight}\n`);
     resultMsg.push(`🧊 新鲜度：${freshnessDisplay}\n`);
