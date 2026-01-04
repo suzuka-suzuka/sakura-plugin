@@ -407,6 +407,7 @@ export default class Fishing extends plugin {
           `😅 你的【${rodConfig?.name}】闪烁了一下，但鱼还是跑了！\n`,
           `💨 下次一定会有好运的！`,
         ]);
+        fishingManager.recordCatch(userId, 0, null);
       } else {
         if (successRate <= 0) {
           const currentCapacity = fishingManager.getCurrentRodCapacity(userId);
@@ -419,6 +420,7 @@ export default class Fishing extends plugin {
               `💥 咔嚓！鱼竿断了！\n`,
               `⚠️ 鱼竿已丢失，请去商店重新购买！`,
             ]);
+            fishingManager.recordCatch(userId, 0, null);
           } else {
             const reduceResult = fishingManager.reduceRodCapacity(userId, 10);
             const remainingHits = Math.floor((reduceResult.currentCapacity - 30) / 10);
@@ -428,6 +430,7 @@ export default class Fishing extends plugin {
               `💢 鱼竿受到了损伤！还能抵御 ${remainingHits} 次损伤\n`,
               `💨 鱼儿猛地一挣，逃之夭夭...`,
             ]);
+            fishingManager.recordCatch(userId, 0, null);
           }
         } else {
           await e.reply([
@@ -435,6 +438,7 @@ export default class Fishing extends plugin {
             `😓 你的【${rodConfig?.name}】弯到了极限，难以控制这条巨物！\n`,
             `💨 鱼儿猛地一挣，逃之夭夭...`,
           ]);
+          fishingManager.recordCatch(userId, 0, null);
         }
       }
       return true;
