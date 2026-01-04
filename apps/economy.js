@@ -43,6 +43,7 @@ export default class Economy extends plugin {
     }
 
     const economyManager = new EconomyManager(e);
+    const shopManager = new ShopManager();
     const targetCoins = economyManager.getCoins({
       user_id: targetId,
       group_id: e.group_id,
@@ -50,6 +51,38 @@ export default class Economy extends plugin {
 
     if (targetCoins < 100) {
       await e.reply("那个人太穷了，连买鲷鱼烧的钱都没有~", 10);
+      return true;
+    }
+
+    const hasProtection = shopManager.hasBuff(e.group_id, targetId, 'sakuraProtection');
+    if (hasProtection) {
+      const attackerCoins = economyManager.getCoins(e);
+      const penalty = Math.min(50, attackerCoins);
+      economyManager.reduceCoins(e, penalty);
+      economyManager.addCoins(
+        { user_id: e.self_id, group_id: e.group_id },
+        penalty
+      );
+
+      await redis.set(
+        cooldownKey,
+        String(Math.floor(Date.now() / 1000)),
+        "EX",
+        1800
+      );
+
+      const attackerName = e.sender.card || e.sender.nickname || e.user_id;
+      let targetName = targetId;
+      try {
+        const info = await e.getInfo(targetId);
+        if (info) {
+          targetName = info.card || info.nickname || targetId;
+        }
+      } catch (err) {}
+
+      await e.reply(
+        `⚡️ 神罚降临！\n${attackerName} 试图打劫受小叶守护的 ${targetName}！\n小叶的神力显现，${attackerName} 受到神罚！\n💸 失去 ${penalty} 樱花币`
+      );
       return true;
     }
 
@@ -454,6 +487,47 @@ export default class Economy extends plugin {
         `投喂成功！你失去了 ${amount} 樱花币，对方获得了 ${result.actualAmount} 樱花币（手续费 ${result.fee}）。`
       );
     }
+    return true;
+  });
+
+  useItem = Command(/^#?使用道具\s*(\S+)$/, async (e) => {
+    const itemName = e.match[1].trim();
+    const shopManager = new ShopManager();
+    const inventoryManager = new InventoryManager(e);
+
+    const item = shopManager.findItemByName(itemName) || shopManager.findItemById(itemName);
+    if (!item) {
+      return false;
+    }
+
+    if (item.handler !== 'buff') {
+      await e.reply(`【${item.name}】不是可使用的道具哦~`, 10);
+      return true;
+    }
+
+    const itemId = item.id;
+    const ownedCount = inventoryManager.getItemCount(itemId);
+    if (ownedCount < 1) {
+      await e.reply(`你的背包里没有【${item.name}】~`, 10);
+      return true;
+    }
+
+    const existingBuff = shopManager.hasBuff(e.group_id, e.user_id, item.effect?.type);
+    let overrideMsg = "";
+    if (existingBuff) {
+      overrideMsg = `\n⚠️ 原有的【${existingBuff.name}】效果已被覆盖`;
+    }
+
+    const removeResult = await inventoryManager.removeItem(itemId, 1);
+    if (!removeResult.success) {
+      await e.reply(`使用失败：${removeResult.msg}`, 10);
+      return true;
+    }
+
+    shopManager.activateBuff(e.group_id, e.user_id, item);
+
+    const durationText = shopManager.formatDuration(item.duration || 3600);
+    await e.reply(`✨ 使用成功！\n【${item.name}】效果已激活！\n⏱️ 持续时间：${durationText}${overrideMsg}`);
     return true;
   });
 

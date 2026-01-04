@@ -106,36 +106,18 @@ categories:
         quality: 5
         description: 传说中的神之诱饵，散发着无法抗拒的魔力，只有真正的王者才配享用！
 
-  # 增益道具分类 - 临时效果（暂未上架）
-  # buffs:
-  #   name: "✨ 增益道具"
-  #   description: "获得临时增益效果"
-  #   handler: buff
-  #   items:
-  #     - id: buff_double_coin
-  #       name: 双倍金币卡
-  #       price: 200
-  #       type: buff
-  #       duration: 3600
-  #       effect:
-  #         type: coinMultiplier
-  #         value: 2
-  #       description: 使用后1小时内，所有金币收入翻倍！
-  #     - id: buff_rob_shield
-  #       name: 防盗护盾
-  #       price: 150
-  #       type: buff
-  #       duration: 7200
-  #       effect:
-  #         type: robShield
-  #         value: true
-  #       description: 使用后2小时内，免受打劫！
-  #     - id: buff_fishing_luck
-  #       name: 幸运鱼饵
-  #       price: 100
-  #       type: buff
-  #       duration: 1800
-  #       effect:
-  #         type: fishingLuck
-  #         value: 1.5
-  #       description: 使用后30分钟内，钓到稀有鱼的概率提升50%！
+  # 增益道具分类
+  buffs:
+    name: "✨ 增益道具"
+    description: "获得临时增益效果"
+    handler: buff
+    items:
+      - id: buff_sakura_protection
+        name: 小叶的守护
+        price: 500
+        type: buff
+        duration: 86400
+        effect:
+          type: sakuraProtection
+          value: true
+        description: 小叶会在24小时内守护你的安全。任何试图打劫你的人都会受到神罚！
