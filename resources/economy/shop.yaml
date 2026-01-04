@@ -37,14 +37,16 @@ categories:
         price: 2500
         type: equipment
         capacity: 160
-        description: 纯金打造的奢华鱼竿，尊贵与实力的象征。
+        goldenBonus: true
+        description: 纯金打造的奢华鱼竿，有概率获得额外樱花币。
 
       - id: rod_legendary
         name: 传说之竿
         price: 5000
         type: equipment
         capacity: 200
-        description: 散发着神秘气息的传说之竿，据说能钓起最沉重的猎物！
+        legendary: true
+        description: 神秘的传说之竿，有概率钓起危险生物。
 
       - id: rod_lucky
         name: 幸运鱼竿
@@ -61,7 +63,7 @@ categories:
         type: equipment
         capacity: 120
         doubleChance: 20
-        description: 镶嵌着金色鳞片的神奇鱼竿，有一定概率让金币收益翻倍！
+        description: 镶嵌着金色鳞片的神奇鱼竿，有一定概率让樱花币收益翻倍！
 
   # 鱼饵分类 - 消耗品
   baits:

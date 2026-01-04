@@ -1,6 +1,7 @@
 import EconomyManager from "../lib/economy/EconomyManager.js";
 import FishingManager from "../lib/economy/FishingManager.js";
 import FishingImageGenerator from "../lib/economy/FishingImageGenerator.js";
+import Setting from "../lib/setting.js";
 import _ from "lodash";
 
 const fishingState = {};
@@ -298,6 +299,24 @@ export default class Fishing extends plugin {
       const rodName = rodConfig?.name || "鱼竿";
       const currentCapacity = fishingManager.getCurrentRodCapacity(userId);
 
+      if (rodConfig?.legendary && _.random(1, 100) <= 50) {
+        const economyManager = new EconomyManager(e);
+        economyManager.addCoins(e, 1000);
+
+        const resultMsg = [
+          `😱 危险！强大的生物出现了！\n`,
+          `${creature.emoji} 【${creature.name}】袭来！\n`,
+          `📝 ${creature.description}\n`,
+          `⚔️ 你的【${rodName}】散发着传说的力量...\n`,
+          `🎉 成功钓起了这只危险生物！\n`,
+          `💰 获得：1000 樱花币\n`,
+          `🏆 击败危险生物是真正的勇者！`,
+        ];
+        fishingManager.recordDangerousCatch(userId, 1000, creature.name);
+        await e.reply(resultMsg);
+        return true;
+      }
+
       if (rodConfig?.lucky) {
         fishingManager.removeEquippedRod(userId);
         const economyManager = new EconomyManager(e);
@@ -455,6 +474,13 @@ export default class Fishing extends plugin {
       isDoubled = true;
     }
 
+    let isGoldenBonus = false;
+    if (rodConfig?.goldenBonus && _.random(1, 100) <= 50) {
+      const bonusAmount = Math.round(price * 0.2);
+      price += bonusAmount;
+      isGoldenBonus = true;
+    }
+
     const economyManager = new EconomyManager(e);
     economyManager.addCoins(e, price);
 
@@ -487,7 +513,10 @@ export default class Fishing extends plugin {
     resultMsg.push(`⚖️ 重量：${displayWeight}\n`);
     resultMsg.push(`🧊 新鲜度：${freshnessDisplay}\n`);
     if (isDoubled) {
-      resultMsg.push(`✨💰 招财加持！金币翻倍！\n`);
+      resultMsg.push(`✨ 招财加持！樱花币翻倍！\n`);
+    }
+    if (isGoldenBonus) {
+      resultMsg.push(`🌟黄金鱼竿加成！额外获得20%樱花币！\n`);
     }
     resultMsg.push(`💰 获得：${price} 樱花币`);
 
@@ -662,17 +691,30 @@ export default class Fishing extends plugin {
 
     for (const item of history) {
       let fishName = item.targetUserId;
-      if (memberMap) {
-        const member = memberMap.get(Number(item.targetUserId));
-        if (member) {
-          fishName = member.card || member.nickname || item.targetUserId;
+      
+      if (item.isDangerous) {
+        // 危险生物，直接使用名称
+        const config = Setting.getEconomy('fishing');
+        const creature = config?.dangerousCreatures?.find(c => c.name === item.targetUserId);
+        if (creature) {
+          fishName = `${creature.emoji} ${creature.name}`;
         }
+        item.name = fishName;
+        item.avatarUrl = null; // 暂时没有头像
+      } else {
+        // 普通鱼
+        if (memberMap) {
+          const member = memberMap.get(Number(item.targetUserId));
+          if (member) {
+            fishName = member.card || member.nickname || item.targetUserId;
+          }
+        }
+        const fishNameData = fishingManager.getFishName(item.targetUserId);
+        if (fishNameData) {
+          fishName = `【${fishNameData.name}】${fishName}`;
+        }
+        item.name = fishName;
       }
-      const fishNameData = fishingManager.getFishName(item.targetUserId);
-      if (fishNameData) {
-        fishName = `【${fishNameData.name}】${fishName}`;
-      }
-      item.name = fishName;
     }
 
     const userData = fishingManager.getUserData(targetId);
