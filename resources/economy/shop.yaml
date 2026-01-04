@@ -114,7 +114,7 @@ categories:
     items:
       - id: buff_sakura_protection
         name: 小叶的守护
-        price: 500
+        price: 200
         type: buff
         duration: 86400
         effect:
