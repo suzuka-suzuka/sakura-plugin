@@ -373,7 +373,7 @@ export default class Fishing extends plugin {
 
       successRate = 100;
       if (rodConfig?.lucky) {
-        if (fishWeight > (rodConfig.capacity || 80)) {
+        if (fishWeight > (rodConfig.capacity || 30)) {
           successRate = rodConfig.luckyRate || 66;
         }
       } else if (fishWeight > rodCapacity) {
