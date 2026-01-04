@@ -126,7 +126,7 @@ export class Mimic extends plugin {
       (hasKeyword || (config.enableAtReply && isAt))
     ) {
       const economyManager = new EconomyManager(e);
-      const cost = 1;
+      const cost = 10;
       if (!economyManager.pay(e, cost)) {
         return false;
       }
