@@ -472,7 +472,7 @@ export default class Fishing extends plugin {
     ];
 
     if (fishNameBonus) {
-      resultMsg.push(`\n🐠 鱼种：${fishNameBonus}\n`);
+      resultMsg.push(`\n🐠 鱼种：${fishNameBonus}`);
     }
 
     if (fish.role === "owner" || fish.role === "admin") {
