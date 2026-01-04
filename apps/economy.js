@@ -518,9 +518,9 @@ export default class Economy extends plugin {
       overrideMsg = `\n⚠️ 原有的【${existingBuff.name}】效果已被覆盖`;
     }
 
-    const removeResult = await inventoryManager.removeItem(itemId, 1);
-    if (!removeResult.success) {
-      await e.reply(`使用失败：${removeResult.msg}`, 10);
+    const removeResult = inventoryManager.removeItem(itemId, 1);
+    if (!removeResult) {
+      await e.reply(`使用失败：背包中没有该道具`, 10);
       return true;
     }
 
