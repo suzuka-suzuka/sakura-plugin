@@ -242,7 +242,7 @@ export default class Fishing extends plugin {
       const fishCoins = eco.data[fish.user_id]?.coins || 0;
       const baseWeight =
         fishCoins > 200
-          ? 200 + Math.log(fishCoins - 200) / Math.log(2) * 10
+          ? 200 + 30 * Math.log10(fishCoins - 200)
           : fishCoins;
       const randomMultiplier = 0.9 + Math.random() * 0.2;
       const fishWeight = Math.round(baseWeight * randomMultiplier);
@@ -385,9 +385,9 @@ export default class Fishing extends plugin {
       const fishCoins = eco.data[fish.user_id]?.coins || 0;
       const baseWeight =
         fishCoins > 200
-          ? 200 + Math.log(fishCoins - 200) / Math.log(5)
+          ? 200 + 30 * Math.log10(fishCoins - 200)
           : fishCoins;
-      const randomMultiplier = 0.95 + Math.random() * 0.1;
+      const randomMultiplier = 0.9 + Math.random() * 0.2;
       fishWeight = Math.round(baseWeight * randomMultiplier);
 
       successRate = 100;
