@@ -508,12 +508,12 @@ export default class Fishing extends plugin {
     ];
 
     if (fishNameBonus) {
-      resultMsg.push(`\n🐠 鱼种：${fishNameBonus}`);
+      resultMsg.push(`🐠 鱼种：${fishNameBonus}\n`);
     }
 
     if (fish.role === "owner" || fish.role === "admin") {
       const roleName = fish.role === "owner" ? "群主" : "管理员";
-      resultMsg.push(`\n👑 身份：${roleName}\n`);
+      resultMsg.push(`👑 身份：${roleName}\n`);
     }
 
     resultMsg.push(`📊 稀有度：${rarity.color}${rarity.name}\n`);
