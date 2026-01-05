@@ -116,8 +116,8 @@ categories:
         name: 小叶的守护
         price: 200
         type: buff
-        duration: 86400
+        duration: 43200
         effect:
           type: sakuraProtection
           value: true
-        description: 小叶会在24小时内守护你的安全。任何试图打劫你的人都会受到神罚！
+        description: 小叶会在12小时内守护你的安全。任何试图打劫你的人都会受到神罚！

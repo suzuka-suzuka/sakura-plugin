@@ -103,6 +103,7 @@ const configSchema = {
     "repeat.enable": { label: "复读", type: "boolean" },
     "recall.Groups": { label: "启用群", type: "groupSelect" },
     "economy.Groups": { label: "启用群", type: "groupSelect", help: "选择启用经济系统的群聊" },
+    "economy.fishing_double_groups": { label: "钓鱼双倍群", type: "groupSelect", help: "这些群的钓鱼收益翻倍" },
     "ActiveChat.Groups": { label: "启用群", type: "groupSelect" },
     "r18.Groups": { label: "启用群", type: "groupSelect", help: "影响所有图片功能" },
 

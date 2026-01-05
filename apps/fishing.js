@@ -485,6 +485,12 @@ export default class Fishing extends plugin {
       isGoldenBonus = true;
     }
 
+    const economyConfig = Setting.getConfig("economy");
+    const doubleGroups = economyConfig?.fishing_double_groups || [];
+    if (doubleGroups.includes(groupId)) {
+      price = Math.round(price * 2);
+    }
+
     const economyManager = new EconomyManager(e);
     economyManager.addCoins(e, price);
 
@@ -697,16 +703,14 @@ export default class Fishing extends plugin {
       let fishName = item.targetUserId;
       
       if (item.isDangerous) {
-        // 危险生物，直接使用名称
         const config = Setting.getEconomy('fishing');
         const creature = config?.dangerousCreatures?.find(c => c.name === item.targetUserId);
         if (creature) {
           fishName = `${creature.emoji} ${creature.name}`;
         }
         item.name = fishName;
-        item.avatarUrl = null; // 暂时没有头像
+        item.avatarUrl = null;
       } else {
-        // 普通鱼
         if (memberMap) {
           const member = memberMap.get(Number(item.targetUserId));
           if (member) {
