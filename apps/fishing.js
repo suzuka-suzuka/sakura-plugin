@@ -485,12 +485,6 @@ export default class Fishing extends plugin {
       isGoldenBonus = true;
     }
 
-    const economyConfig = Setting.getConfig("economy");
-    const doubleGroups = economyConfig?.fishing_double_groups || [];
-    if (doubleGroups.includes(groupId)) {
-      price = Math.round(price * 2);
-    }
-
     const economyManager = new EconomyManager(e);
     economyManager.addCoins(e, price);
 
