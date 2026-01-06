@@ -37,10 +37,7 @@ export default class Fishing extends plugin {
 
     const equippedBait = fishingManager.getEquippedBait(userId);
     if (!equippedBait) {
-      await e.reply(
-        "🪱 鱼饵用光啦！\n没饵可钓不到鱼，去「商店」看看吧~",
-        10
-      );
+      await e.reply("🪱 鱼饵用光啦！\n没饵可钓不到鱼，去「商店」看看吧~", 10);
       return true;
     }
 
@@ -135,7 +132,7 @@ export default class Fishing extends plugin {
     );
 
     const stateKey = `${groupId}:${userId}`;
-    
+
     const cleanupState = (key) => {
       const state = fishingState[key];
       if (state) {
@@ -213,7 +210,9 @@ export default class Fishing extends plugin {
         this.finish("pullRod", stateKey);
         if (state.cleanup) state.cleanup();
         else delete fishingState[stateKey];
-        await e.reply(`🐟 你轻轻松开了鱼线，让这条大鱼游走了...\n💡 明智的选择，保护好你的鱼竿！`);
+        await e.reply(
+          `🐟 你轻轻松开了鱼线，让这条大鱼游走了...\n💡 明智的选择，保护好你的鱼竿！`
+        );
         return true;
       }
       if (!/^(收|拉)(杆|竿)$/.test(msg)) {
@@ -261,7 +260,9 @@ export default class Fishing extends plugin {
         state.calculatedWeight = fishWeight;
         state.calculatedSuccessRate = successRate;
 
-        await e.reply(`⚠️ 这条鱼有点重，有可能会损耗鱼竿...\n💪 不过拼一把说不定能钓起来！\n🎯 发送「收竿」强行拉起，「放弃」放生鱼儿`);
+        await e.reply(
+          `⚠️ 这条鱼有点重，有可能会损耗鱼竿...\n💪 不过拼一把说不定能钓起来！\n🎯 发送「收竿」强行拉起，「放弃」放生鱼儿`
+        );
         return true;
       }
     }
@@ -300,6 +301,11 @@ export default class Fishing extends plugin {
       const currentCapacity = fishingManager.getCurrentRodCapacity(userId);
 
       if (rodConfig?.legendary && _.random(1, 100) <= 50) {
+        const reduceResult = fishingManager.reduceRodCapacity(userId, 10);
+        const remainingHits = Math.floor(
+          (reduceResult.currentCapacity - 30) / 10
+        );
+
         const economyManager = new EconomyManager(e);
         economyManager.addCoins(e, 1000);
 
@@ -309,6 +315,8 @@ export default class Fishing extends plugin {
           `📝 ${creature.description}\n`,
           `⚔️ 你的【${rodName}】散发着传说的力量...\n`,
           `🎉 成功钓起了这只危险生物！\n`,
+          `💢 但是你的【${rodName}】受到了损伤！\n`,
+          `🛡️ 还能抵御 ${remainingHits} 次损伤\n`,
           `💰 获得：1000 樱花币\n`,
           `🏆 击败危险生物是真正的勇者！`,
         ];
@@ -411,7 +419,7 @@ export default class Fishing extends plugin {
       } else {
         if (successRate <= 0) {
           const currentCapacity = fishingManager.getCurrentRodCapacity(userId);
-          
+
           if (currentCapacity <= 30) {
             fishingManager.removeEquippedRod(userId);
             await e.reply([
@@ -423,7 +431,9 @@ export default class Fishing extends plugin {
             fishingManager.recordCatch(userId, 0, null);
           } else {
             const reduceResult = fishingManager.reduceRodCapacity(userId, 10);
-            const remainingHits = Math.floor((reduceResult.currentCapacity - 30) / 10);
+            const remainingHits = Math.floor(
+              (reduceResult.currentCapacity - 30) / 10
+            );
             await e.reply([
               `🎣 哎呀！鱼太重了（${fishWeight}）！\n`,
               `😓 你的【${rodConfig?.name}】弯到了极限，难以控制这条巨物！\n`,
@@ -446,7 +456,6 @@ export default class Fishing extends plugin {
 
     let fishLevel = Number(fish.level) || 1;
     let price = Math.round(fishLevel * (1 + fishWeight / 100));
-
 
     const proficiency = fishingManager.getProficiency(userId, fish.user_id);
     const proficiencyBonus = 1 + proficiency / 100;
@@ -564,7 +573,9 @@ export default class Fishing extends plugin {
       return true;
     }
 
-    const inventoryManager = new (await import("../lib/economy/InventoryManager.js")).default(e.group_id, e.user_id);
+    const inventoryManager = new (
+      await import("../lib/economy/InventoryManager.js")
+    ).default(e.group_id, e.user_id);
     const removeResult = inventoryManager.removeItem(rod.id, 1);
     if (!removeResult) {
       await e.reply(`出售失败，请稍后再试~`, 10);
@@ -585,7 +596,9 @@ export default class Fishing extends plugin {
     const economyManager = new EconomyManager(e);
     economyManager.addCoins(e, sellPrice);
 
-    await e.reply(`💰 成功出售【${rod.name}】！\n🎣 耐久：${capacityPercent}%\n💵 原价 ${rod.price} × ${capacityPercent}% × 80% = ${sellPrice} 樱花币`);
+    await e.reply(
+      `💰 成功出售【${rod.name}】！\n🎣 耐久：${capacityPercent}%\n💵 原价 ${rod.price} × ${capacityPercent}% × 80% = ${sellPrice} 樱花币`
+    );
     return true;
   });
 
@@ -695,10 +708,12 @@ export default class Fishing extends plugin {
 
     for (const item of history) {
       let fishName = item.targetUserId;
-      
+
       if (item.isDangerous) {
-        const config = Setting.getEconomy('fishing');
-        const creature = config?.dangerousCreatures?.find(c => c.name === item.targetUserId);
+        const config = Setting.getEconomy("fishing");
+        const creature = config?.dangerousCreatures?.find(
+          (c) => c.name === item.targetUserId
+        );
         if (creature) {
           fishName = `${creature.emoji} ${creature.name}`;
         }
