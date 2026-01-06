@@ -654,7 +654,7 @@ export class poke extends plugin {
         }
         break;
       case 11:
-        const coinAmount = _.random(1, 5);
+        const coinAmount = _.random(20, 200);
         const economyManager = new EconomyManager(e);
         economyManager.addCoins(e, coinAmount);
         await e.reply(`✨ 哇！戳中了隐藏宝箱！`);
