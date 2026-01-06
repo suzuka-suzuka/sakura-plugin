@@ -244,7 +244,7 @@ export default class Fishing extends plugin {
         fishCoins > 100
           ? 100 + Math.pow(Math.log2(fishCoins - 100), 2)
           : fishCoins;
-      const randomMultiplier = 0.9 + Math.random() * 0.2;
+      const randomMultiplier = 0.8 + Math.random() * 0.4;
       const fishWeight = Math.round(baseWeight * randomMultiplier);
 
       let successRate = 100;
@@ -387,7 +387,7 @@ export default class Fishing extends plugin {
         fishCoins > 100
           ? 100 + Math.pow(Math.log2(fishCoins - 100), 2)
           : fishCoins;
-      const randomMultiplier = 0.9 + Math.random() * 0.2;
+      const randomMultiplier = 0.8 + Math.random() * 0.4;
       fishWeight = Math.round(baseWeight * randomMultiplier);
 
       successRate = 100;
