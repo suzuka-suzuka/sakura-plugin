@@ -46,7 +46,7 @@ categories:
         type: equipment
         capacity: 200
         legendary: true
-        description: 神秘的传说之竿，有概率钓起危险生物。
+        description: 神秘的传说之竿，说不定连海怪也能征服。
 
       - id: rod_lucky
         name: 幸运鱼竿
