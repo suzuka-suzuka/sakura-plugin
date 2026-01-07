@@ -470,10 +470,6 @@ export default class Fishing extends plugin {
     let freshness = Math.max(0, 1 - timeDiff / maxDuration);
     price = Math.round(price * freshness);
 
-    if (fish.role === "owner" || fish.role === "admin") {
-      price *= 2;
-    }
-
     let fishNameBonus = "";
     const fishNameData = fishingManager.getFishName(fish.user_id);
     if (fishNameData) {
@@ -512,11 +508,6 @@ export default class Fishing extends plugin {
 
     if (fishNameBonus) {
       resultMsg.push(`🐠 鱼种：${fishNameBonus}\n`);
-    }
-
-    if (fish.role === "owner" || fish.role === "admin") {
-      const roleName = fish.role === "owner" ? "群主" : "管理员";
-      resultMsg.push(`👑 身份：${roleName}\n`);
     }
 
     resultMsg.push(`📊 稀有度：${rarity.color}${rarity.name}\n`);
