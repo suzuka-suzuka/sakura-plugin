@@ -300,7 +300,7 @@ export default class Fishing extends plugin {
       const rodName = rodConfig?.name || "鱼竿";
       const currentCapacity = fishingManager.getCurrentRodCapacity(userId);
 
-      if (rodConfig?.legendary && _.random(1, 100) <= 50) {
+      if (rodConfig?.legendary) {
         const reduceResult = fishingManager.reduceRodCapacity(userId, 10);
         const remainingHits = Math.floor(
           (reduceResult.currentCapacity - 30) / 10
