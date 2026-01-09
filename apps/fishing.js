@@ -1,6 +1,7 @@
 import EconomyManager from "../lib/economy/EconomyManager.js";
 import FishingManager from "../lib/economy/FishingManager.js";
 import FishingImageGenerator from "../lib/economy/FishingImageGenerator.js";
+import InventoryManager from "../lib/economy/InventoryManager.js";
 import Setting from "../lib/setting.js";
 import _ from "lodash";
 
@@ -110,10 +111,26 @@ export default class Fishing extends plugin {
     const trashItems = fishingManager.getTrashItems();
     const dangerousCreatures = fishingManager.getDangerousCreatures();
 
-    if (randomChance <= 5 && trashItems.length > 0) {
+    // 检查鱼塘中是否有鱼雷（排除自己的）
+    const torpedoCheck = fishingManager.checkTorpedoCatch(userId);
+    const torpedoCount = torpedoCheck.hasTorpedo ? torpedoCheck.count : 0;
+    
+    // 计算总权重：垃圾5 + 危险生物5 + 成员90 + 鱼雷数量
+    const totalWeight = 100 + torpedoCount;
+    const torpedoThreshold = torpedoCount; // 鱼雷占 torpedoCount/totalWeight 的概率
+    const trashThreshold = torpedoThreshold + 5;
+    const dangerousThreshold = trashThreshold + 5;
+    
+    const randomRoll = _.random(1, totalWeight);
+
+    if (torpedoCount > 0 && randomRoll <= torpedoThreshold) {
+      // 钓到鱼雷
+      catchType = "torpedo";
+      catchData = fishingManager.getRandomTorpedo(userId);
+    } else if (randomRoll <= trashThreshold && trashItems.length > 0) {
       catchType = "trash";
       catchData = trashItems[_.random(0, trashItems.length - 1)];
-    } else if (randomChance <= 10 && dangerousCreatures.length > 0) {
+    } else if (randomRoll <= dangerousThreshold && dangerousCreatures.length > 0) {
       catchType = "dangerous";
       catchData =
         dangerousCreatures[_.random(0, dangerousCreatures.length - 1)];
@@ -377,6 +394,81 @@ export default class Fishing extends plugin {
       return true;
     }
 
+    // 处理鱼雷
+    if (catchType === "torpedo") {
+      const torpedo = catchData;
+      const equippedRodId = fishingManager.getEquippedRod(userId);
+      const rodConfig = fishingManager.getRodConfig(equippedRodId);
+      const rodName = rodConfig?.name || "鱼竿";
+      const currentCapacity = fishingManager.getCurrentRodCapacity(userId);
+
+      // 触发鱼雷，更新统计
+      fishingManager.triggerTorpedo(userId, torpedo.ownerId);
+
+      // 获取埋雷者信息
+      let torpedoOwnerName = torpedo.ownerId;
+      try {
+        const ownerInfo = await e.getInfo(torpedo.ownerId);
+        if (ownerInfo) {
+          torpedoOwnerName = ownerInfo.card || ownerInfo.nickname || torpedo.ownerId;
+        }
+      } catch (err) {}
+
+      // 幸运鱼竿钓到鱼雷直接消失，只给300补偿
+      if (rodConfig?.lucky) {
+        fishingManager.removeEquippedRod(userId);
+        const economyManager = new EconomyManager(e);
+        economyManager.addCoins(e, 300);
+
+        const resultMsg = [
+          `💣 糟糕！钓到了鱼雷！\n`,
+          segment.at(torpedo.ownerId),
+          ` 埋的鱼雷被钓到了！\n`,
+          `🍀 你的【${rodName}】闪烁着幸运的光芒...\n`,
+          `💥 但鱼雷爆炸了！鱼竿被炸毁了！\n`,
+          `✨ 幸运女神的眷顾：获得 300 樱花币作为补偿！\n`,
+          `⚠️ 鱼竿已丢失，请去商店重新购买！`,
+        ];
+        fishingManager.recordCatch(userId, 300, null);
+        await e.reply(resultMsg);
+        return true;
+      }
+
+      // 损耗 <= 30 直接消失
+      if (currentCapacity <= 30) {
+        fishingManager.removeEquippedRod(userId);
+        const resultMsg = [
+          `💣 糟糕！钓到了鱼雷！\n`,
+          segment.at(torpedo.ownerId),
+          ` 埋的鱼雷被钓到了！\n`,
+          `💥 你的【${rodName}】已经破旧不堪，被炸毁了！\n`,
+          `💰 获得：0 樱花币\n`,
+          `⚠️ 鱼竿已丢失，请去商店重新购买！`,
+        ];
+        fishingManager.recordCatch(userId, 0, null);
+        await e.reply(resultMsg);
+        return true;
+      }
+
+      // 正常情况下损耗鱼竿
+      const reduceResult = fishingManager.reduceRodCapacity(userId, 10);
+      const remainingHits = Math.floor(
+        (reduceResult.currentCapacity - 30) / 10
+      );
+      const resultMsg = [
+        `💣 糟糕！钓到了鱼雷！\n`,
+        segment.at(torpedo.ownerId),
+        ` 埋的鱼雷被钓到了！\n`,
+        `💢 你的【${rodName}】受到了损伤！\n`,
+        `🛡️ 还能抵御 ${remainingHits} 次损伤\n`,
+        `💰 获得：0 樱花币\n`,
+        `💡 鱼竿损伤过多可能会被炸毁哦...`,
+      ];
+      fishingManager.recordCatch(userId, 0, null);
+      await e.reply(resultMsg);
+      return true;
+    }
+
     const equippedRodId = fishingManager.getEquippedRod(userId);
     const rodConfig = fishingManager.getRodConfig(equippedRodId);
     const rodCapacity = fishingManager.getCurrentRodCapacity(userId);
@@ -573,9 +665,7 @@ export default class Fishing extends plugin {
       return true;
     }
 
-    const inventoryManager = new (
-      await import("../lib/economy/InventoryManager.js")
-    ).default(e.group_id, e.user_id);
+    const inventoryManager = new InventoryManager(e.group_id, e.user_id);
     const removeResult = inventoryManager.removeItem(rod.id, 1);
     if (!removeResult) {
       await e.reply(`出售失败，请稍后再试~`, 10);
@@ -796,6 +886,278 @@ export default class Fishing extends plugin {
       logger.error(`生成钓鱼排行榜图片失败: ${err}`);
       await e.reply("Miko正在睡觉，无法生成图片，请稍后再试~", 10);
     }
+    return true;
+  });
+
+  // 投放鱼雷
+  deployTorpedo = Command(/^#?投放鱼雷$/, async (e) => {
+    const groupId = e.group_id;
+    const userId = e.user_id;
+
+    const fishingManager = new FishingManager(groupId);
+    const inventoryManager = new InventoryManager(groupId, userId);
+
+    // 检查是否已有未引爆的鱼雷
+    if (fishingManager.hasDeployedTorpedo(userId)) {
+      const torpedo = fishingManager.getUserTorpedo(userId);
+      const canResult = fishingManager.canDetonateTorpedo(userId);
+      
+      if (canResult.canDetonate) {
+        await e.reply(
+          `💣 你已经在鱼塘里埋了一颗鱼雷！\n⏰ 已经可以引爆了`,
+          10
+        );
+      } else {
+        await e.reply(
+          `💣 你已经在鱼塘里埋了一颗鱼雷！\n⏰ 还需要等待 ${canResult.remainingHours} 小时 ${canResult.remainingMinutes} 分钟才能引爆`,
+          10
+        );
+      }
+      return true;
+    }
+
+    // 检查背包是否有鱼雷
+    const torpedoCount = inventoryManager.getItemCount("torpedo");
+    if (torpedoCount <= 0) {
+      await e.reply("💣 你没有鱼雷！\n快去「商店」买一个吧~", 10);
+      return true;
+    }
+
+    // 消耗鱼雷
+    inventoryManager.removeItem("torpedo", 1);
+
+    // 投放鱼雷
+    const result = fishingManager.deployTorpedo(userId);
+    if (result.success) {
+      await e.reply(
+        `💣 鱼雷投放成功！\n🌊 鱼雷悄悄沉入水底...\n⏰ 12小时后可以引爆`
+      );
+    } else {
+      // 投放失败，退还鱼雷
+      inventoryManager.addItem("torpedo", 1);
+      await e.reply("💣 投放失败，请稍后再试~", 10);
+    }
+    return true;
+  });
+
+  // 引爆鱼雷
+  detonateTorpedo = Command(/^#?引爆鱼雷$/, async (e) => {
+    const groupId = e.group_id;
+    const userId = e.user_id;
+
+    const fishingManager = new FishingManager(groupId);
+
+    // 检查是否有已投放的鱼雷
+    if (!fishingManager.hasDeployedTorpedo(userId)) {
+      await e.reply("💣 你没有在鱼塘里投放鱼雷！\n先去投放一颗吧~", 10);
+      return true;
+    }
+
+    // 检查是否可以引爆
+    const canResult = fishingManager.canDetonateTorpedo(userId);
+    if (!canResult.canDetonate) {
+      if (canResult.reason === "not_ready") {
+        await e.reply(
+          `⏳ 鱼雷引信尚未解除保险！\n⏰ 需等待 ${canResult.remainingHours} 小时 ${canResult.remainingMinutes} 分钟后方可手动引爆`,
+          10
+        );
+      } else {
+        await e.reply("💣 引爆失败，请稍后再试~", 10);
+      }
+      return true;
+    }
+
+    // 获取群成员列表
+    const memberList = await e.group.getMemberList(true);
+    const memberMap = Array.isArray(memberList)
+      ? new Map(memberList.map((m) => [m.user_id, m]))
+      : memberList;
+
+    if (!memberMap || memberMap.size === 0) {
+      await e.reply("鱼塘信息获取失败，稍后再试~", 10);
+      return true;
+    }
+
+    // 构建可炸的目标列表（和蚯蚓钓鱼同理）
+    const members = [];
+    memberMap.forEach((member) => {
+      if (member.user_id === e.self_id || member.user_id === userId) {
+        return;
+      }
+      members.push(member);
+    });
+
+    if (members.length === 0) {
+      await e.reply("🌊 水域里空空如也... 没什么可炸的~", 10);
+      return true;
+    }
+
+    // 引爆鱼雷
+    fishingManager.detonateTorpedo(userId);
+
+    // 随机决定炸到什么
+    const randomChance = _.random(1, 100);
+    let catchType = "member";
+    let catchData = null;
+
+    const trashItems = fishingManager.getTrashItems();
+    const dangerousCreatures = fishingManager.getDangerousCreatures();
+
+    if (randomChance <= 5 && trashItems.length > 0) {
+      catchType = "trash";
+      catchData = trashItems[_.random(0, trashItems.length - 1)];
+    } else if (randomChance <= 10 && dangerousCreatures.length > 0) {
+      catchType = "dangerous";
+      catchData = dangerousCreatures[_.random(0, dangerousCreatures.length - 1)];
+    } else {
+      catchType = "member";
+      catchData = members[_.random(0, members.length - 1)];
+    }
+
+    // 处理炸到的结果
+    if (catchType === "trash") {
+      const trash = catchData;
+      const resultMsg = [
+        `💥 轰！鱼雷引爆了！\n`,
+        `🌊 水花四溅...\n`,
+        `${trash.emoji} 炸出了【${trash.name}】！\n`,
+        `📝 ${trash.description}\n`,
+        `💰 获得：0 樱花币\n`,
+        `💡 运气不好，炸到垃圾了...`,
+      ];
+      fishingManager.recordCatch(userId, 0, null);
+      await e.reply(resultMsg);
+      return true;
+    }
+
+    if (catchType === "dangerous") {
+      const creature = catchData;
+      const economyManager = new EconomyManager(e);
+      economyManager.addCoins(e, 500);
+
+      const resultMsg = [
+        `💥 轰——！！水底传来一声闷响！\n`,
+        `🌊 剧烈的冲击波将水面炸开了花...\n`,
+        `📝 ${creature.description}\n`,
+        `${creature.emoji} 竟然炸翻了【${creature.name}】！\n`,
+        `⚔️ 这只危险生物虽然被消灭，但已经被炸得面目全非...\n`,
+        `💰 获得：500 樱花币\n`,
+        `💡 因尸体受损严重，收购价格减半...`,
+      ];
+      fishingManager.recordDangerousCatch(userId, 500, creature.name);
+      await e.reply(resultMsg);
+      return true;
+    }
+
+    // 炸到普通鱼（群成员）
+    const fish = catchData;
+    const fishName = fish.card || fish.nickname || fish.user_id;
+    let fishLevel = Number(fish.level) || 1;
+
+    const eco = new EconomyManager(e);
+    if (!eco.data[fish.user_id]) {
+      eco.data[fish.user_id] = { coins: 0, experience: 0, level: 1 };
+    }
+    const fishCoins = eco.data[fish.user_id]?.coins || 0;
+    const baseWeight =
+      fishCoins > 100
+        ? 100 + Math.pow(Math.log2(fishCoins - 100), 2)
+        : fishCoins;
+    const randomMultiplier = 0.8 + Math.random() * 0.4;
+    const fishWeight = Math.round(baseWeight * randomMultiplier);
+
+    // 计算价格（和蚯蚓钓鱼同理，但价格减半）
+    let price = Math.round(fishLevel * (1 + fishWeight / 100));
+
+    const proficiency = fishingManager.getProficiency(userId, fish.user_id);
+    const proficiencyBonus = 1 + proficiency / 100;
+    price = Math.round(price * proficiencyBonus);
+
+    const currentTime = Math.floor(Date.now() / 1000);
+    const lastSentTime = fish.last_sent_time || currentTime;
+    const maxDuration = 60 * 24 * 3600;
+    const timeDiff = Math.max(0, currentTime - lastSentTime);
+    let freshness = Math.max(0, 1 - timeDiff / maxDuration);
+    price = Math.round(price * freshness);
+
+    if (fish.role === "owner" || fish.role === "admin") {
+      price *= 2;
+    }
+
+    // 鱼雷炸鱼价格减半（鱼损伤了）
+    price = Math.round(price / 2);
+
+    const economyManager = new EconomyManager(e);
+    economyManager.addCoins(e, price);
+
+    fishingManager.recordCatch(userId, price, fish.user_id);
+
+    const rarity = getRarityByLevel(fishLevel);
+    const displayWeight = Math.max(1, fishWeight);
+    const freshnessDisplay =
+      freshness <= 0 ? "死鱼" : (freshness * 100).toFixed(2) + "%";
+
+    const resultMsg = [
+      `💥 轰！鱼雷引爆了！\n`,
+      `🌊 水花四溅...\n`,
+      `🐟 炸到了【${fishName}】！\n`,
+      segment.image(`https://q1.qlogo.cn/g?b=qq&nk=${fish.user_id}&s=640`),
+    ];
+
+    let fishNameBonus = "";
+    const fishNameData = fishingManager.getFishName(fish.user_id);
+    if (fishNameData) {
+      fishNameBonus = `${fishNameData.name}`;
+      resultMsg.push(`🐠 鱼种：${fishNameBonus}\n`);
+    }
+
+    if (fish.role === "owner" || fish.role === "admin") {
+      const roleName = fish.role === "owner" ? "群主" : "管理员";
+      resultMsg.push(`👑 身份：${roleName}\n`);
+    }
+
+    resultMsg.push(`📊 稀有度：${rarity.color}${rarity.name}\n`);
+    if (proficiency > 0) {
+      resultMsg.push(`📈 熟练度：${proficiency}\n`);
+    }
+    resultMsg.push(`⚖️ 重量：${displayWeight}\n`);
+    resultMsg.push(`🧊 新鲜度：${freshnessDisplay}\n`);
+    resultMsg.push(`💢 鱼被炸伤了，价格减半！\n`);
+    resultMsg.push(`💰 获得：${price} 樱花币`);
+
+    await e.reply(resultMsg);
+    return true;
+  });
+
+  // 查看鱼雷状态
+  torpedoStatus = Command(/^#?鱼雷状态$/, async (e) => {
+    const groupId = e.group_id;
+    const userId = e.user_id;
+
+    const fishingManager = new FishingManager(groupId);
+    const inventoryManager = new InventoryManager(groupId, userId);
+
+    const torpedoCount = inventoryManager.getItemCount("torpedo");
+    const torpedoStats = fishingManager.getTorpedoStats(userId);
+    const torpedo = fishingManager.getUserTorpedo(userId);
+    const poolCount = fishingManager.getTorpedoCount(userId);
+
+    let torpedoStatusText = "❌ 未投放";
+    if (torpedo) {
+      const canResult = fishingManager.canDetonateTorpedo(userId);
+      if (canResult.canDetonate) {
+        torpedoStatusText = "✅ 已可引爆";
+      } else {
+        torpedoStatusText = `⏰ 还需 ${canResult.remainingHours}时${canResult.remainingMinutes}分`;
+      }
+    }
+
+    const forwardMsg = [
+      `💣 鱼雷状态\n━━━━━━━━━━━━━━━\n📦 背包鱼雷：${torpedoCount} 个\n🌊 鱼塘鱼雷：${poolCount} 个（不含自己的）\n🎯 你的鱼雷：${torpedoStatusText}`,
+      `📊 鱼雷统计\n━━━━━━━━━━━━━━━\n💣 投放次数：${torpedoStats.deployed}\n💥 成功引爆：${torpedoStats.detonated}\n🎯 钓到别人的雷：${torpedoStats.hitOthers}\n😱 被别人钓到：${torpedoStats.hitByOthers}`,
+    ];
+
+    await e.sendForwardMsg(forwardMsg, { prompt: "💣 鱼雷状态" });
     return true;
   });
 }

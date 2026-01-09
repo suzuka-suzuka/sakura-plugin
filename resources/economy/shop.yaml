@@ -121,3 +121,15 @@ categories:
           type: sakuraProtection
           value: true
         description: 小叶会在12小时内守护你的安全。任何试图打劫你的人都会受到神罚！
+
+  # 特殊道具分类
+  special:
+    name: "💣 特殊道具"
+    description: "可以对鱼塘产生影响的特殊道具"
+    handler: fishing_special
+    items:
+      - id: torpedo
+        name: 鱼雷
+        price: 500
+        type: consumable
+        description: 可以投放到鱼塘中的危险物品。12小时后可引爆炸鱼，但也可能被其他钓鱼者钓到！
