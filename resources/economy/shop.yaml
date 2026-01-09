@@ -130,6 +130,6 @@ categories:
     items:
       - id: torpedo
         name: 鱼雷
-        price: 100
+        price: 200
         type: consumable
         description: 可以投放到鱼塘中的危险物品。12小时后可引爆炸鱼，但也可能被其他钓鱼者钓到！
