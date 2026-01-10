@@ -5,7 +5,7 @@ import {
 import { getImg } from "../lib/utils.js";
 import fs from "fs";
 
-const EMOJI_COOLDOWN_SECONDS = 10 * 60;
+const EMOJI_COOLDOWN_SECONDS = 5 * 60;
 
 export class EmotionImage extends plugin {
   constructor() {
