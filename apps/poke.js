@@ -1,11 +1,10 @@
 import moment from "moment";
 import path from "path";
-import { pluginresources, plugindata } from "../lib/path.js";
+import { pluginresources} from "../lib/path.js";
 import { yandeimage } from "../lib/ImageUtils/ImageUtils.js";
 import Setting from "../lib/setting.js";
 import _ from "lodash";
 import { getAI } from "../lib/AIUtils/getAI.js";
-import fsp from "fs/promises";
 import common from "../../../src/utils/common.js";
 import EconomyManager from "../lib/economy/EconomyManager.js";
 import { imageEmbeddingManager } from "../lib/AIUtils/ImageEmbedding.js";
