@@ -8,6 +8,7 @@ import { getAI } from "../lib/AIUtils/getAI.js";
 import fsp from "fs/promises";
 import common from "../../../src/utils/common.js";
 import EconomyManager from "../lib/economy/EconomyManager.js";
+import { imageEmbeddingManager } from "../lib/AIUtils/ImageEmbedding.js";
 
 export class poke extends plugin {
   constructor() {
@@ -490,31 +491,19 @@ export class poke extends plugin {
 
   async replyWithImage(e, pokeConfig, count, usercount) {
     try {
-      const emojiRootDir = path.join(plugindata, "EmojiThief");
-      let emojiPath;
+      const allEmojis = imageEmbeddingManager.getAll();
 
-      const groupDirs = (
-        await fsp.readdir(emojiRootDir, { withFileTypes: true })
-      )
-        .filter((dirent) => dirent.isDirectory())
-        .map((dirent) => dirent.name);
-
-      if (groupDirs.length > 0) {
-        const randomGroupDir = groupDirs[_.random(0, groupDirs.length - 1)];
-        const groupDirPath = path.join(emojiRootDir, randomGroupDir);
-        const files = await fsp.readdir(groupDirPath);
-        if (files.length > 0) {
-          const randomIndex = _.random(0, files.length - 1);
-          emojiPath = path.join(groupDirPath, files[randomIndex]);
+      if (allEmojis.length > 0) {
+        const randomEmoji = allEmojis[_.random(0, allEmojis.length - 1)];
+        if (randomEmoji && randomEmoji.localPath) {
+          await e.reply(this.sendImage(randomEmoji.localPath));
+          return;
         }
       }
 
-      if (emojiPath) {
-        await e.reply(this.sendImage(emojiPath));
-      } else {
-        await this.replyWithText(e, pokeConfig, count, usercount);
-      }
+      await this.replyWithText(e, pokeConfig, count, usercount);
     } catch (error) {
+      logger.error(`[戳一戳] 表情发送失败: ${error}`);
       await this.replyWithText(e, pokeConfig, count, usercount);
     }
   }
