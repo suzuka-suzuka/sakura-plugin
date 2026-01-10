@@ -250,6 +250,8 @@ export default class Fishing extends plugin {
       const equippedRodId = fishingManager.getEquippedRod(userId);
       const rodConfig = fishingManager.getRodConfig(equippedRodId);
       const rodCapacity = fishingManager.getCurrentRodCapacity(userId);
+      // 获取鱼竿熟练度（在增加之前获取）
+      const rodProficiency = fishingManager.getRodProficiency(userId, equippedRodId);
 
       const eco = new EconomyManager(e);
       if (!eco.data[fish.user_id]) {
@@ -265,11 +267,22 @@ export default class Fishing extends plugin {
 
       let successRate = 100;
       if (rodConfig?.lucky) {
-        if (fishWeight > (rodConfig.capacity || 80)) {
+        // 幸运鱼竿：基础承重 + 熟练度，超过这个值才计算概率
+        const luckyCapacity = (rodConfig.capacity || -6) + rodProficiency;
+        if (fishWeight > luckyCapacity) {
           successRate = rodConfig.luckyRate || 66;
         }
-      } else if (fishWeight > rodCapacity) {
-        successRate = Math.max(0, 100 - (fishWeight - rodCapacity));
+      } else if (rodCapacity <= 30) {
+        // 剩余承重 <= 30，不加熟练度加成
+        if (fishWeight > rodCapacity) {
+          successRate = Math.max(0, 100 - (fishWeight - rodCapacity));
+        }
+      } else {
+        // 普通鱼竿：实际承重 = 剩余承重 + 熟练度
+        const effectiveCapacity = rodCapacity + rodProficiency;
+        if (fishWeight > effectiveCapacity) {
+          successRate = Math.max(0, 100 - (fishWeight - effectiveCapacity));
+        }
       }
 
       if (successRate < 100 && !rodConfig?.lucky) {
@@ -472,6 +485,10 @@ export default class Fishing extends plugin {
     const equippedRodId = fishingManager.getEquippedRod(userId);
     const rodConfig = fishingManager.getRodConfig(equippedRodId);
     const rodCapacity = fishingManager.getCurrentRodCapacity(userId);
+    // 获取鱼竿熟练度（在增加之前获取）
+    const rodProficiency = fishingManager.getRodProficiency(userId, equippedRodId);
+    // 增加鱼竿熟练度
+    fishingManager.addRodProficiency(userId, equippedRodId);
 
     let fishWeight, successRate;
     if (state.calculatedWeight !== undefined) {
@@ -492,11 +509,22 @@ export default class Fishing extends plugin {
 
       successRate = 100;
       if (rodConfig?.lucky) {
-        if (fishWeight > (rodConfig.capacity || 30)) {
+        // 幸运鱼竿：基础承重 + 熟练度，超过这个值才计算概率
+        const luckyCapacity = (rodConfig.capacity || 30) + rodProficiency;
+        if (fishWeight > luckyCapacity) {
           successRate = rodConfig.luckyRate || 66;
         }
-      } else if (fishWeight > rodCapacity) {
-        successRate = Math.max(0, 100 - (fishWeight - rodCapacity));
+      } else if (rodCapacity <= 30) {
+        // 剩余承重 <= 30，不加熟练度加成
+        if (fishWeight > rodCapacity) {
+          successRate = Math.max(0, 100 - (fishWeight - rodCapacity));
+        }
+      } else {
+        // 普通鱼竿：实际承重 = 剩余承重 + 熟练度
+        const effectiveCapacity = rodCapacity + rodProficiency;
+        if (fishWeight > effectiveCapacity) {
+          successRate = Math.max(0, 100 - (fishWeight - effectiveCapacity));
+        }
       }
     }
 
@@ -549,10 +577,6 @@ export default class Fishing extends plugin {
     let fishLevel = Number(fish.level) || 1;
     let price = Math.round(fishLevel * (1 + fishWeight / 100));
 
-    const proficiency = fishingManager.getProficiency(userId, fish.user_id);
-    const proficiencyBonus = 1 + proficiency / 100;
-    price = Math.round(price * proficiencyBonus);
-
     const currentTime = Math.floor(Date.now() / 1000);
     const lastSentTime = fish.last_sent_time || currentTime;
 
@@ -586,6 +610,15 @@ export default class Fishing extends plugin {
       isGoldenBonus = true;
     }
 
+    // 群钓鱼翻倍配置
+    const economyConfig = Setting.getConfig("economy");
+    const fishingMultiplier = economyConfig?.fishingMultiplier || [];
+    const groupMultiplierConfig = fishingMultiplier.find(item => String(item.group) === String(groupId));
+    const groupMultiplier = groupMultiplierConfig?.multiplier || 1;
+    if (groupMultiplier > 1) {
+      price = Math.round(price * groupMultiplier);
+    }
+
     const economyManager = new EconomyManager(e);
     economyManager.addCoins(e, price);
 
@@ -612,8 +645,8 @@ export default class Fishing extends plugin {
     }
 
     resultMsg.push(`📊 稀有度：${rarity.color}${rarity.name}\n`);
-    if (proficiency > 0) {
-      resultMsg.push(`📈 熟练度：${proficiency}\n`);
+    if (rodProficiency > 0) {
+      resultMsg.push(`📈 鱼竿熟练度：${rodProficiency}\n`);
     }
     resultMsg.push(`⚖️ 重量：${displayWeight}\n`);
     resultMsg.push(`🧊 新鲜度：${freshnessDisplay}\n`);
@@ -682,6 +715,7 @@ export default class Fishing extends plugin {
     const capacityPercent = Math.round(capacityInfo.percentage * 100);
 
     fishingManager.clearRodCapacityLoss(e.user_id, rod.id);
+    fishingManager.clearRodProficiency(e.user_id, rod.id);
 
     const economyManager = new EconomyManager(e);
     economyManager.addCoins(e, sellPrice);
@@ -1069,10 +1103,6 @@ export default class Fishing extends plugin {
     // 计算价格（和蚯蚓钓鱼同理，但价格减半）
     let price = Math.round(fishLevel * (1 + fishWeight / 100));
 
-    const proficiency = fishingManager.getProficiency(userId, fish.user_id);
-    const proficiencyBonus = 1 + proficiency / 100;
-    price = Math.round(price * proficiencyBonus);
-
     const currentTime = Math.floor(Date.now() / 1000);
     const lastSentTime = fish.last_sent_time || currentTime;
     const maxDuration = 60 * 24 * 3600;
@@ -1086,6 +1116,15 @@ export default class Fishing extends plugin {
 
     // 鱼雷炸鱼价格减半（鱼损伤了）
     price = Math.round(price / 2);
+
+    // 群钓鱼翻倍配置
+    const economyConfig = Setting.getConfig("economy");
+    const fishingMultiplier = economyConfig?.fishingMultiplier || [];
+    const groupMultiplierConfig = fishingMultiplier.find(item => String(item.group) === String(groupId));
+    const groupMultiplier = groupMultiplierConfig?.multiplier || 1;
+    if (groupMultiplier > 1) {
+      price = Math.round(price * groupMultiplier);
+    }
 
     const economyManager = new EconomyManager(e);
     economyManager.addCoins(e, price);
@@ -1117,9 +1156,6 @@ export default class Fishing extends plugin {
     }
 
     resultMsg.push(`📊 稀有度：${rarity.color}${rarity.name}\n`);
-    if (proficiency > 0) {
-      resultMsg.push(`📈 熟练度：${proficiency}\n`);
-    }
     resultMsg.push(`⚖️ 重量：${displayWeight}\n`);
     resultMsg.push(`🧊 新鲜度：${freshnessDisplay}\n`);
     resultMsg.push(`💢 鱼被炸伤了，价格减半！\n`);

@@ -1,3 +1,8 @@
 enable: true
 Groups:
   - 123456789
+
+# 钓鱼樱花币翻倍配置
+fishingMultiplier:
+  - group: 123456
+    multiplier: 2

@@ -52,7 +52,7 @@ categories:
         name: 幸运鱼竿
         price: 666
         type: equipment
-        capacity: 30
+        capacity: -6
         lucky: true
         luckyRate: 66
         description: 被幸运女神眷顾的神奇鱼竿，无论鱼多重都有概率上钩！
