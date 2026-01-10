@@ -594,7 +594,9 @@ export default class Fishing extends plugin {
 
     const economyConfig = Setting.getConfig("economy");
     const fishingMultiplier = economyConfig?.fishingMultiplier || [];
-    if (fishingMultiplier.includes(String(groupId)) || fishingMultiplier.includes(Number(groupId))) {
+    const dayOfWeek = new Date().getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    if ((fishingMultiplier.includes(String(groupId)) || fishingMultiplier.includes(Number(groupId))) && isWeekend) {
       price = Math.round(price * 2);
     }
 
@@ -1079,12 +1081,6 @@ export default class Fishing extends plugin {
     }
 
     price = Math.round(price / 2);
-
-    const economyConfig = Setting.getConfig("economy");
-    const fishingMultiplier = economyConfig?.fishingMultiplier || [];
-    if (fishingMultiplier.includes(String(groupId)) || fishingMultiplier.includes(Number(groupId))) {
-      price = Math.round(price * 2);
-    }
 
     const economyManager = new EconomyManager(e);
     economyManager.addCoins(e, price);
