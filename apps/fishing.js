@@ -410,7 +410,7 @@ export default class Fishing extends plugin {
       fishingManager.triggerTorpedo(userId, torpedo.ownerId);
 
       const torpedoScareKey = `sakura:fishing:torpedo_scare:${groupId}`;
-      await redis.set(torpedoScareKey, String(Date.now()), "EX", 2 * 60 * 60);
+      await redis.set(torpedoScareKey, String(Date.now()), "EX", 1 * 60 * 60);
 
       if (rodConfig?.lucky) {
         fishingManager.removeEquippedRod(userId);
@@ -425,7 +425,7 @@ export default class Fishing extends plugin {
           `💥 但鱼雷爆炸了！鱼竿被炸毁了！\n`,
           `✨ 幸运女神的眷顾：获得 300 樱花币作为补偿！\n`,
           `⚠️ 鱼竿已丢失，请去商店重新购买！\n`,
-          `😱 鱼雷爆炸引发恐慌！接下来1.5小时内鱼价翻倍！`,
+          `😱 鱼雷爆炸引发恐慌！接下来1小时内鱼价1.5倍！`,
         ];
         fishingManager.recordCatch(userId, 300, null);
         await e.reply(resultMsg);
@@ -441,7 +441,7 @@ export default class Fishing extends plugin {
           `💥 你的【${rodName}】已经破旧不堪，被炸毁了！\n`,
           `💰 获得：0 樱花币\n`,
           `⚠️ 鱼竿已丢失，请去商店重新购买！\n`,
-          `😱 鱼雷爆炸引发恐慌！接下来1.5小时内鱼价翻倍！`,
+          `😱 鱼雷爆炸引发恐慌！接下来1小时内鱼价1.5倍！`,
         ];
         fishingManager.recordCatch(userId, 0, null);
         await e.reply(resultMsg);
@@ -460,7 +460,7 @@ export default class Fishing extends plugin {
         `🛡️ 还能抵御 ${remainingHits} 次损伤\n`,
         `💰 获得：0 樱花币\n`,
         `💡 鱼竿损伤过多可能会被炸毁哦...\n`,
-        `😱 鱼雷爆炸引发恐慌！接下来1.5小时内鱼价翻倍！`,
+        `😱 鱼雷爆炸引发恐慌！接下来1小时内鱼价1.5倍！`,
       ];
       fishingManager.recordCatch(userId, 0, null);
       await e.reply(resultMsg);
@@ -598,7 +598,7 @@ export default class Fishing extends plugin {
       isTorpedoScare = true;
       const scareStartTime = parseInt(torpedoScareTime);
       const elapsed = Date.now() - scareStartTime;
-      scareRemainingMinutes = Math.ceil((2 * 60 * 60 * 1000 - elapsed) / 60000);
+      scareRemainingMinutes = Math.ceil((1 * 60 * 60 * 1000 - elapsed) / 60000);
       price = Math.round(price * 1.5);
     }
 
@@ -1095,7 +1095,7 @@ export default class Fishing extends plugin {
       isTorpedoScare = true;
       const scareStartTime = parseInt(torpedoScareTime);
       const elapsed = Date.now() - scareStartTime;
-      scareRemainingMinutes = Math.ceil((2 * 60 * 60 * 1000 - elapsed) / 60000);
+      scareRemainingMinutes = Math.ceil((1 * 60 * 60 * 1000 - elapsed) / 60000);
       price = Math.round(price * 1.5);
     }
 
