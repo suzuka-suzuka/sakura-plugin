@@ -644,7 +644,7 @@ export default class Fishing extends plugin {
 
     resultMsg.push(`📊 稀有度：${rarity.color}${rarity.name}\n`);
     if (rodProficiency > 0) {
-      resultMsg.push(`📈 鱼竿熟练度：${rodProficiency}\n`);
+      resultMsg.push(`📈 熟练度：${rodProficiency}\n`);
     }
     resultMsg.push(`⚖️ 重量：${displayWeight}\n`);
     resultMsg.push(`🧊 新鲜度：${freshnessDisplay}\n`);
