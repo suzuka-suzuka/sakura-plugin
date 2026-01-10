@@ -232,7 +232,7 @@ export class EmotionImage extends plugin {
         return true;
       }
 
-      await e.reply(segment.image(result.localPath));
+      await e.reply(segment.image(result.localPath,1));
 
       const nickname = e.sender.card || e.sender.nickname || "表情库";
       const forwardMsg = [
