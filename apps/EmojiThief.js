@@ -88,7 +88,12 @@ export class TextMsg extends plugin {
 
         const randomEmoji = allEmojis[_.random(0, allEmojis.length - 1)];
         logger.info(`触发表情包`);
-        await e.reply(segment.image(randomEmoji.filepath, 1));
+        
+        if (randomEmoji && randomEmoji.localPath) {
+             await e.reply(segment.image(randomEmoji.localPath, 1));
+        } else {
+             logger.warn(`[表情包小偷] 表情包路径无效`);
+        }
       } catch (error) {
         logger.error(`表情包发送失败: ${error}`);
       }
