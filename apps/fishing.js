@@ -409,13 +409,8 @@ export default class Fishing extends plugin {
 
       fishingManager.triggerTorpedo(userId, torpedo.ownerId);
 
-      let torpedoOwnerName = torpedo.ownerId;
-      try {
-        const ownerInfo = await e.getInfo(torpedo.ownerId);
-        if (ownerInfo) {
-          torpedoOwnerName = ownerInfo.card || ownerInfo.nickname || torpedo.ownerId;
-        }
-      } catch (err) {}
+      const torpedoScareKey = `sakura:fishing:torpedo_scare:${groupId}`;
+      await redis.set(torpedoScareKey, String(Date.now()), "EX", 2 * 60 * 60);
 
       if (rodConfig?.lucky) {
         fishingManager.removeEquippedRod(userId);
@@ -429,7 +424,8 @@ export default class Fishing extends plugin {
           `🍀 你的【${rodName}】闪烁着幸运的光芒...\n`,
           `💥 但鱼雷爆炸了！鱼竿被炸毁了！\n`,
           `✨ 幸运女神的眷顾：获得 300 樱花币作为补偿！\n`,
-          `⚠️ 鱼竿已丢失，请去商店重新购买！`,
+          `⚠️ 鱼竿已丢失，请去商店重新购买！\n`,
+          `😱 鱼雷爆炸引发恐慌！接下来1.5小时内鱼价翻倍！`,
         ];
         fishingManager.recordCatch(userId, 300, null);
         await e.reply(resultMsg);
@@ -444,7 +440,8 @@ export default class Fishing extends plugin {
           ` 埋的鱼雷被钓到了！\n`,
           `💥 你的【${rodName}】已经破旧不堪，被炸毁了！\n`,
           `💰 获得：0 樱花币\n`,
-          `⚠️ 鱼竿已丢失，请去商店重新购买！`,
+          `⚠️ 鱼竿已丢失，请去商店重新购买！\n`,
+          `😱 鱼雷爆炸引发恐慌！接下来1.5小时内鱼价翻倍！`,
         ];
         fishingManager.recordCatch(userId, 0, null);
         await e.reply(resultMsg);
@@ -462,7 +459,8 @@ export default class Fishing extends plugin {
         `💢 你的【${rodName}】受到了损伤！\n`,
         `🛡️ 还能抵御 ${remainingHits} 次损伤\n`,
         `💰 获得：0 樱花币\n`,
-        `💡 鱼竿损伤过多可能会被炸毁哦...`,
+        `💡 鱼竿损伤过多可能会被炸毁哦...\n`,
+        `😱 鱼雷爆炸引发恐慌！接下来1.5小时内鱼价翻倍！`,
       ];
       fishingManager.recordCatch(userId, 0, null);
       await e.reply(resultMsg);
@@ -592,12 +590,16 @@ export default class Fishing extends plugin {
       isGoldenBonus = true;
     }
 
-    const economyConfig = Setting.getConfig("economy");
-    const fishingMultiplier = economyConfig?.fishingMultiplier || [];
-    const dayOfWeek = new Date().getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    if ((fishingMultiplier.includes(String(groupId)) || fishingMultiplier.includes(Number(groupId))) && isWeekend) {
-      price = Math.round(price * 2);
+    const torpedoScareKey = `sakura:fishing:torpedo_scare:${groupId}`;
+    const torpedoScareTime = await redis.get(torpedoScareKey);
+    let isTorpedoScare = false;
+    let scareRemainingMinutes = 0;
+    if (torpedoScareTime) {
+      isTorpedoScare = true;
+      const scareStartTime = parseInt(torpedoScareTime);
+      const elapsed = Date.now() - scareStartTime;
+      scareRemainingMinutes = Math.ceil((2 * 60 * 60 * 1000 - elapsed) / 60000);
+      price = Math.round(price * 1.5);
     }
 
     const economyManager = new EconomyManager(e);
@@ -636,6 +638,9 @@ export default class Fishing extends plugin {
     }
     if (isGoldenBonus) {
       resultMsg.push(`🌟黄金鱼竿加成！额外获得20%樱花币！\n`);
+    }
+    if (isTorpedoScare) {
+      resultMsg.push(`😱 鱼雷恐慌中！鱼价1.5倍！(剩余${scareRemainingMinutes}分钟)\n`);
     }
     resultMsg.push(`💰 获得：${price} 樱花币`);
 
@@ -1082,6 +1087,18 @@ export default class Fishing extends plugin {
 
     price = Math.round(price / 2);
 
+    const torpedoScareKey = `sakura:fishing:torpedo_scare:${groupId}`;
+    const torpedoScareTime = await redis.get(torpedoScareKey);
+    let isTorpedoScare = false;
+    let scareRemainingMinutes = 0;
+    if (torpedoScareTime) {
+      isTorpedoScare = true;
+      const scareStartTime = parseInt(torpedoScareTime);
+      const elapsed = Date.now() - scareStartTime;
+      scareRemainingMinutes = Math.ceil((2 * 60 * 60 * 1000 - elapsed) / 60000);
+      price = Math.round(price * 1.5);
+    }
+
     const economyManager = new EconomyManager(e);
     economyManager.addCoins(e, price);
 
@@ -1115,6 +1132,9 @@ export default class Fishing extends plugin {
     resultMsg.push(`⚖️ 重量：${displayWeight}\n`);
     resultMsg.push(`🧊 新鲜度：${freshnessDisplay}\n`);
     resultMsg.push(`💢 鱼被炸伤了，价格减半！\n`);
+    if (isTorpedoScare) {
+      resultMsg.push(`😱 鱼雷恐慌中！鱼价1.5倍！(剩余${scareRemainingMinutes}分钟)\n`);
+    }
     resultMsg.push(`💰 获得：${price} 樱花币`);
 
     await e.reply(resultMsg);
