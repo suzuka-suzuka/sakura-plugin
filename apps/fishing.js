@@ -111,20 +111,17 @@ export default class Fishing extends plugin {
     const trashItems = fishingManager.getTrashItems();
     const dangerousCreatures = fishingManager.getDangerousCreatures();
 
-    // 检查鱼塘中是否有鱼雷（排除自己的）
     const torpedoCheck = fishingManager.checkTorpedoCatch(userId);
     const torpedoCount = torpedoCheck.hasTorpedo ? torpedoCheck.count : 0;
     
-    // 计算总权重：垃圾5 + 危险生物5 + 成员90 + 鱼雷数量
     const totalWeight = 100 + torpedoCount;
-    const torpedoThreshold = torpedoCount; // 鱼雷占 torpedoCount/totalWeight 的概率
+    const torpedoThreshold = torpedoCount;
     const trashThreshold = torpedoThreshold + 5;
     const dangerousThreshold = trashThreshold + 5;
     
     const randomRoll = _.random(1, totalWeight);
 
     if (torpedoCount > 0 && randomRoll <= torpedoThreshold) {
-      // 钓到鱼雷
       catchType = "torpedo";
       catchData = fishingManager.getRandomTorpedo(userId);
     } else if (randomRoll <= trashThreshold && trashItems.length > 0) {
@@ -250,7 +247,6 @@ export default class Fishing extends plugin {
       const equippedRodId = fishingManager.getEquippedRod(userId);
       const rodConfig = fishingManager.getRodConfig(equippedRodId);
       const rodCapacity = fishingManager.getCurrentRodCapacity(userId);
-      // 获取鱼竿熟练度（在增加之前获取）
       const rodProficiency = fishingManager.getRodProficiency(userId, equippedRodId);
 
       const eco = new EconomyManager(e);
@@ -267,18 +263,15 @@ export default class Fishing extends plugin {
 
       let successRate = 100;
       if (rodConfig?.lucky) {
-        // 幸运鱼竿：基础承重 + 熟练度，超过这个值才计算概率
         const luckyCapacity = (rodConfig.capacity || -6) + rodProficiency;
         if (fishWeight > luckyCapacity) {
           successRate = rodConfig.luckyRate || 66;
         }
       } else if (rodCapacity <= 30) {
-        // 剩余承重 <= 30，不加熟练度加成
         if (fishWeight > rodCapacity) {
           successRate = Math.max(0, 100 - (fishWeight - rodCapacity));
         }
       } else {
-        // 普通鱼竿：实际承重 = 剩余承重 + 熟练度
         const effectiveCapacity = rodCapacity + rodProficiency;
         if (fishWeight > effectiveCapacity) {
           successRate = Math.max(0, 100 - (fishWeight - effectiveCapacity));
@@ -407,7 +400,6 @@ export default class Fishing extends plugin {
       return true;
     }
 
-    // 处理鱼雷
     if (catchType === "torpedo") {
       const torpedo = catchData;
       const equippedRodId = fishingManager.getEquippedRod(userId);
@@ -415,10 +407,8 @@ export default class Fishing extends plugin {
       const rodName = rodConfig?.name || "鱼竿";
       const currentCapacity = fishingManager.getCurrentRodCapacity(userId);
 
-      // 触发鱼雷，更新统计
       fishingManager.triggerTorpedo(userId, torpedo.ownerId);
 
-      // 获取埋雷者信息
       let torpedoOwnerName = torpedo.ownerId;
       try {
         const ownerInfo = await e.getInfo(torpedo.ownerId);
@@ -427,7 +417,6 @@ export default class Fishing extends plugin {
         }
       } catch (err) {}
 
-      // 幸运鱼竿钓到鱼雷直接消失，只给300补偿
       if (rodConfig?.lucky) {
         fishingManager.removeEquippedRod(userId);
         const economyManager = new EconomyManager(e);
@@ -447,7 +436,6 @@ export default class Fishing extends plugin {
         return true;
       }
 
-      // 损耗 <= 30 直接消失
       if (currentCapacity <= 30) {
         fishingManager.removeEquippedRod(userId);
         const resultMsg = [
@@ -463,7 +451,6 @@ export default class Fishing extends plugin {
         return true;
       }
 
-      // 正常情况下损耗鱼竿
       const reduceResult = fishingManager.reduceRodCapacity(userId, 10);
       const remainingHits = Math.floor(
         (reduceResult.currentCapacity - 30) / 10
@@ -485,9 +472,7 @@ export default class Fishing extends plugin {
     const equippedRodId = fishingManager.getEquippedRod(userId);
     const rodConfig = fishingManager.getRodConfig(equippedRodId);
     const rodCapacity = fishingManager.getCurrentRodCapacity(userId);
-    // 获取鱼竿熟练度（在增加之前获取）
     const rodProficiency = fishingManager.getRodProficiency(userId, equippedRodId);
-    // 增加鱼竿熟练度
     fishingManager.addRodProficiency(userId, equippedRodId);
 
     let fishWeight, successRate;
@@ -509,18 +494,15 @@ export default class Fishing extends plugin {
 
       successRate = 100;
       if (rodConfig?.lucky) {
-        // 幸运鱼竿：基础承重 + 熟练度，超过这个值才计算概率
         const luckyCapacity = (rodConfig.capacity || 30) + rodProficiency;
         if (fishWeight > luckyCapacity) {
           successRate = rodConfig.luckyRate || 66;
         }
       } else if (rodCapacity <= 30) {
-        // 剩余承重 <= 30，不加熟练度加成
         if (fishWeight > rodCapacity) {
           successRate = Math.max(0, 100 - (fishWeight - rodCapacity));
         }
       } else {
-        // 普通鱼竿：实际承重 = 剩余承重 + 熟练度
         const effectiveCapacity = rodCapacity + rodProficiency;
         if (fishWeight > effectiveCapacity) {
           successRate = Math.max(0, 100 - (fishWeight - effectiveCapacity));
@@ -610,7 +592,6 @@ export default class Fishing extends plugin {
       isGoldenBonus = true;
     }
 
-    // 群钓鱼双倍配置
     const economyConfig = Setting.getConfig("economy");
     const fishingMultiplier = economyConfig?.fishingMultiplier || [];
     if (fishingMultiplier.includes(String(groupId)) || fishingMultiplier.includes(Number(groupId))) {
@@ -860,9 +841,10 @@ export default class Fishing extends plugin {
 
     try {
       const generator = new FishingImageGenerator();
+      const displayHistory = history.slice(0, 20);
       const image = await generator.generateFishingRecord(
         userData,
-        history,
+        displayHistory,
         targetName,
         targetId
       );
@@ -921,7 +903,6 @@ export default class Fishing extends plugin {
     return true;
   });
 
-  // 投放鱼雷
   deployTorpedo = Command(/^#?投放鱼雷$/, async (e) => {
     const groupId = e.group_id;
     const userId = e.user_id;
@@ -929,7 +910,6 @@ export default class Fishing extends plugin {
     const fishingManager = new FishingManager(groupId);
     const inventoryManager = new InventoryManager(groupId, userId);
 
-    // 检查是否已有未引爆的鱼雷
     if (fishingManager.hasDeployedTorpedo(userId)) {
       const torpedo = fishingManager.getUserTorpedo(userId);
       const canResult = fishingManager.canDetonateTorpedo(userId);
@@ -948,44 +928,37 @@ export default class Fishing extends plugin {
       return true;
     }
 
-    // 检查背包是否有鱼雷
     const torpedoCount = inventoryManager.getItemCount("torpedo");
     if (torpedoCount <= 0) {
       await e.reply("💣 你没有鱼雷！\n快去「商店」买一个吧~", 10);
       return true;
     }
 
-    // 消耗鱼雷
     inventoryManager.removeItem("torpedo", 1);
 
-    // 投放鱼雷
     const result = fishingManager.deployTorpedo(userId);
     if (result.success) {
       await e.reply(
         `💣 鱼雷投放成功！\n🌊 鱼雷悄悄沉入水底...\n⏰ 12小时后可以引爆`
       );
     } else {
-      // 投放失败，退还鱼雷
       inventoryManager.addItem("torpedo", 1);
       await e.reply("💣 投放失败，请稍后再试~", 10);
     }
     return true;
   });
 
-  // 引爆鱼雷
   detonateTorpedo = Command(/^#?引爆鱼雷$/, async (e) => {
     const groupId = e.group_id;
     const userId = e.user_id;
 
     const fishingManager = new FishingManager(groupId);
 
-    // 检查是否有已投放的鱼雷
     if (!fishingManager.hasDeployedTorpedo(userId)) {
       await e.reply("💣 你没有在鱼塘里投放鱼雷！\n先去投放一颗吧~", 10);
       return true;
     }
 
-    // 检查是否可以引爆
     const canResult = fishingManager.canDetonateTorpedo(userId);
     if (!canResult.canDetonate) {
       if (canResult.reason === "not_ready") {
@@ -999,7 +972,6 @@ export default class Fishing extends plugin {
       return true;
     }
 
-    // 获取群成员列表
     const memberList = await e.group.getMemberList(true);
     const memberMap = Array.isArray(memberList)
       ? new Map(memberList.map((m) => [m.user_id, m]))
@@ -1010,7 +982,6 @@ export default class Fishing extends plugin {
       return true;
     }
 
-    // 构建可炸的目标列表（和蚯蚓钓鱼同理）
     const members = [];
     memberMap.forEach((member) => {
       if (member.user_id === e.self_id || member.user_id === userId) {
@@ -1024,10 +995,8 @@ export default class Fishing extends plugin {
       return true;
     }
 
-    // 引爆鱼雷
     fishingManager.detonateTorpedo(userId);
 
-    // 随机决定炸到什么
     const randomChance = _.random(1, 100);
     let catchType = "member";
     let catchData = null;
@@ -1046,7 +1015,6 @@ export default class Fishing extends plugin {
       catchData = members[_.random(0, members.length - 1)];
     }
 
-    // 处理炸到的结果
     if (catchType === "trash") {
       const trash = catchData;
       const resultMsg = [
@@ -1081,7 +1049,6 @@ export default class Fishing extends plugin {
       return true;
     }
 
-    // 炸到普通鱼（群成员）
     const fish = catchData;
     const fishName = fish.card || fish.nickname || fish.user_id;
     let fishLevel = Number(fish.level) || 1;
@@ -1098,7 +1065,6 @@ export default class Fishing extends plugin {
     const randomMultiplier = 0.8 + Math.random() * 0.4;
     const fishWeight = Math.round(baseWeight * randomMultiplier);
 
-    // 计算价格（和蚯蚓钓鱼同理，但价格减半）
     let price = Math.round(fishLevel * (1 + fishWeight / 100));
 
     const currentTime = Math.floor(Date.now() / 1000);
@@ -1112,10 +1078,8 @@ export default class Fishing extends plugin {
       price *= 2;
     }
 
-    // 鱼雷炸鱼价格减半（鱼损伤了）
     price = Math.round(price / 2);
 
-    // 群钓鱼双倍配置
     const economyConfig = Setting.getConfig("economy");
     const fishingMultiplier = economyConfig?.fishingMultiplier || [];
     if (fishingMultiplier.includes(String(groupId)) || fishingMultiplier.includes(Number(groupId))) {
@@ -1161,7 +1125,6 @@ export default class Fishing extends plugin {
     return true;
   });
 
-  // 查看鱼雷状态
   torpedoStatus = Command(/^#?鱼雷状态$/, async (e) => {
     const groupId = e.group_id;
     const userId = e.user_id;
