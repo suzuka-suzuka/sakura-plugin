@@ -121,9 +121,8 @@ export class TextMsg extends plugin {
       if (toDelete.length > 0) {
         logger.info(`[表情包小偷] 发现 ${toDelete.length} 条旧数据，正在自动修复...`);
         for (const emoji of toDelete) {
-          await imageEmbeddingManager.remove(emoji.hash);
-          if (emoji.filepath) {
-            await fsp.rm(emoji.filepath, { force: true }).catch(() => {});
+          if (emoji.id) {
+            await imageEmbeddingManager.deleteImage(emoji.id);
           }
         }
         logger.info(`[表情包小偷] 已自动删除 ${toDelete.length} 条旧表情数据`);
