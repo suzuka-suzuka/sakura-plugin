@@ -5,6 +5,8 @@ import {
 import { getImg } from "../lib/utils.js";
 import fs from "fs";
 
+const EMOJI_COOLDOWN_SECONDS = 10 * 60;
+
 export class EmotionImage extends plugin {
   constructor() {
     super({
@@ -12,6 +14,27 @@ export class EmotionImage extends plugin {
       event: "message",
       priority: 1135,
     });
+  }
+
+  getEmojiCooldownKey(userId) {
+    return `sakura:emoji:cooldown:${userId}`;
+  }
+
+  async checkAndSetCooldown(e) {
+    if (e.iswhite) {
+      return { onCooldown: false };
+    }
+
+    const cooldownKey = this.getEmojiCooldownKey(e.user_id);
+    const ttl = await redis.ttl(cooldownKey);
+
+    if (ttl > 0) {
+      const remainingMinutes = Math.ceil(ttl / 60);
+      return { onCooldown: true, remainingMinutes };
+    }
+
+    await redis.set(cooldownKey, String(Date.now()), "EX", EMOJI_COOLDOWN_SECONDS);
+    return { onCooldown: false };
   }
 
   autoCleanup = Cron("0 3 * * 0", async () => {
@@ -48,7 +71,7 @@ export class EmotionImage extends plugin {
     }
   });
 
-  saveEmoji = Command(/^#?存表情$/, "white", async (e) => {
+  saveEmoji = Command(/^#?存表情$/, async (e) => {
     let imageMsg = e.message?.find((item) => item.type === "image");
 
     if (!imageMsg && e.reply_id) {
@@ -67,6 +90,12 @@ export class EmotionImage extends plugin {
 
     if (!imgUrls || imgUrls.length === 0) {
       return false;
+    }
+
+    const cooldownResult = await this.checkAndSetCooldown(e);
+    if (cooldownResult.onCooldown) {
+      await e.reply(`操作太频繁啦！请等待 ${cooldownResult.remainingMinutes} 分钟后再试~`, 10);
+      return true;
     }
 
     await e.react(124);
@@ -167,13 +196,19 @@ export class EmotionImage extends plugin {
     return true;
   });
 
-  sendEmoji = Command(/^#?发表情(.+)$/, "white", async (e) => {
+  sendEmoji = Command(/^#?发表情(.+)$/, async (e) => {
     const match = e.msg.match(/^#?发表情(.+)$/);
     if (!match) return false;
 
     const query = match[1].trim();
     if (!query) {
       return false;
+    }
+
+    const cooldownResult = await this.checkAndSetCooldown(e);
+    if (cooldownResult.onCooldown) {
+      await e.reply(`操作太频繁啦！请等待 ${cooldownResult.remainingMinutes} 分钟后再试~`, 10);
+      return true;
     }
 
     if (imageEmbeddingManager.getCount() === 0) {
@@ -234,6 +269,12 @@ export class EmotionImage extends plugin {
   });
 
   deleteEmoji = Command(/^#?删表情(.*)$/, async (e) => {
+    const cooldownResult = await this.checkAndSetCooldown(e);
+    if (cooldownResult.onCooldown) {
+      await e.reply(`操作太频繁啦！请等待 ${cooldownResult.remainingMinutes} 分钟后再试~`, 10);
+      return true;
+    }
+
     const imgUrls = await getImg(e);
 
     if (imgUrls && imgUrls.length > 0) {
