@@ -610,13 +610,11 @@ export default class Fishing extends plugin {
       isGoldenBonus = true;
     }
 
-    // 群钓鱼翻倍配置
+    // 群钓鱼双倍配置
     const economyConfig = Setting.getConfig("economy");
     const fishingMultiplier = economyConfig?.fishingMultiplier || [];
-    const groupMultiplierConfig = fishingMultiplier.find(item => String(item.group) === String(groupId));
-    const groupMultiplier = groupMultiplierConfig?.multiplier || 1;
-    if (groupMultiplier > 1) {
-      price = Math.round(price * groupMultiplier);
+    if (fishingMultiplier.includes(String(groupId)) || fishingMultiplier.includes(Number(groupId))) {
+      price = Math.round(price * 2);
     }
 
     const economyManager = new EconomyManager(e);
@@ -1117,13 +1115,11 @@ export default class Fishing extends plugin {
     // 鱼雷炸鱼价格减半（鱼损伤了）
     price = Math.round(price / 2);
 
-    // 群钓鱼翻倍配置
+    // 群钓鱼双倍配置
     const economyConfig = Setting.getConfig("economy");
     const fishingMultiplier = economyConfig?.fishingMultiplier || [];
-    const groupMultiplierConfig = fishingMultiplier.find(item => String(item.group) === String(groupId));
-    const groupMultiplier = groupMultiplierConfig?.multiplier || 1;
-    if (groupMultiplier > 1) {
-      price = Math.round(price * groupMultiplier);
+    if (fishingMultiplier.includes(String(groupId)) || fishingMultiplier.includes(Number(groupId))) {
+      price = Math.round(price * 2);
     }
 
     const economyManager = new EconomyManager(e);
