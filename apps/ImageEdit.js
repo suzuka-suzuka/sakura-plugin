@@ -19,7 +19,7 @@ export class EditImage extends plugin {
   dispatchHandler = OnEvent("message", async (e) => {
     if (!e.msg) return false;
 
-    if (/^#?i/.test(e.msg)) {
+    if (/^#i/.test(e.msg)) {
       return this.editImageHandler(e);
     }
 
@@ -152,7 +152,7 @@ export class EditImage extends plugin {
   }
 
   async editImageHandler(e) {
-    let msg = e.msg.replace(/^#?i/, "").trim();
+    let msg = e.msg.replace(/^#i/, "").trim();
     const imgBase64List = await getImg(e, true, true);
 
     const {

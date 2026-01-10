@@ -14,20 +14,14 @@ export class TextMsg extends plugin {
       event: "message.group",
       priority: 35,
     });
-
-    this.rootDir = path.join(plugindata, `EmojiThief`);
-    this.jsonDbPath = path.join(this.rootDir, "EmojiThief.json");
+    this.fixOldData();
   }
-
-  clearAllEmojisTask = Cron("0 0 * * 0", async () => {
-    await this.clearAllEmojis();
-  });
 
   get appconfig() {
     return setting.getConfig("EmojiThief");
   }
 
-  async saveToVectorDb(buffer, hash, groupId) {
+  async saveToVectorDb(buffer, hash, groupId, userId) {
     try {
       const existing = imageEmbeddingManager.getAll().find((item) => item.hash === hash);
       if (existing) {
@@ -54,7 +48,7 @@ export class TextMsg extends plugin {
         description,
         {
           groupId: groupId,
-          source: "EmojiThief",
+          userId: userId,
         }
       );
 
@@ -64,21 +58,6 @@ export class TextMsg extends plugin {
       logger.error(`[表情包小偷] 存入向量库失败: ${error.message}`);
       return false;
     }
-  }
-
-  async readMd5Db() {
-    try {
-      await fsp.access(this.jsonDbPath);
-      const data = await fsp.readFile(this.jsonDbPath, "utf-8");
-      return new Set(JSON.parse(data));
-    } catch (error) {
-      return new Set();
-    }
-  }
-
-  async writeMd5Db(md5Set) {
-    const dataArray = Array.from(md5Set);
-    await fsp.writeFile(this.jsonDbPath, JSON.stringify(dataArray, null, 2));
   }
 
   表情包小偷 = OnEvent("message.group", async (e) => {
@@ -91,14 +70,13 @@ export class TextMsg extends plugin {
       return false;
     }
 
-    await fsp.mkdir(this.rootDir, { recursive: true }).catch(() => {});
-
-    const md5Db = await this.readMd5Db();
-    let hasNewEmoji = false;
-
     for (const item of e.message) {
       if (item.type === "image" && (item.data?.sub_type === 1 || item.data?.emoji_id)) {
         try {
+          if (vectorRate <= 0 || _.random(true) >= vectorRate) {
+            continue;
+          }
+
           const response = await axios.get(item.data?.url, {
             responseType: "arraybuffer",
             timeout: 10000,
@@ -107,59 +85,26 @@ export class TextMsg extends plugin {
 
           const hash = crypto.createHash("md5").update(buffer).digest("hex");
 
-          if (md5Db.has(hash)) {
-            continue;
-          }
-
-          const groupDir = path.join(this.rootDir, `${e.group_id}`);
-          await fsp.mkdir(groupDir, { recursive: true }).catch(() => {});
-
-          const fileName = `${hash}.gif`;
-          const filePath = path.join(groupDir, fileName);
-
-          await fsp.writeFile(filePath, buffer);
-
-          md5Db.add(hash);
-          hasNewEmoji = true;
-
-          if (vectorRate > 0 && _.random(true) < vectorRate) {
-            this.saveToVectorDb(buffer, hash, e.group_id).catch((err) => {
-              logger.error(`[表情包小偷] 向量库存储异常: ${err.message}`);
-            });
-          }
+          this.saveToVectorDb(buffer, hash, e.group_id, e.user_id).catch((err) => {
+            logger.error(`[表情包小偷] 向量库存储异常: ${err.message}`);
+          });
         } catch (error) {
           logger.error(`处理表情包失败: ${error}`);
         }
       }
     }
 
-    if (hasNewEmoji) {
-      await this.writeMd5Db(md5Db);
-    }
-
     if (_.random(true) < rate) {
       try {
-        let emojiPath;
-        const groupDirs = (
-          await fsp.readdir(this.rootDir, { withFileTypes: true })
-        )
-          .filter((dirent) => dirent.isDirectory())
-          .map((dirent) => dirent.name);
+        const allEmojis = imageEmbeddingManager.getAll();
 
-        if (groupDirs.length > 0) {
-          const randomGroupDir = groupDirs[_.random(0, groupDirs.length - 1)];
-          const groupDirPath = path.join(this.rootDir, randomGroupDir);
-          const files = await fsp.readdir(groupDirPath);
-          if (files.length > 0) {
-            const randomIndex = _.random(0, files.length - 1);
-            emojiPath = path.join(groupDirPath, files[randomIndex]);
-          }
-        }
-        if (!emojiPath) {
+        if (allEmojis.length === 0) {
           return false;
         }
-        logger.info(`触发表情包`);
-        await e.reply(segment.image(emojiPath, 1));
+
+        const randomEmoji = allEmojis[_.random(0, allEmojis.length - 1)];
+        logger.info(`触发表情包: ${randomEmoji.description?.substring(0, 30)}...`);
+        await e.reply(segment.image(randomEmoji.filepath, 1));
       } catch (error) {
         logger.error(`表情包发送失败: ${error}`);
       }
@@ -168,25 +113,23 @@ export class TextMsg extends plugin {
     return false;
   });
 
-  async clearAllEmojis() {
+  async fixOldData() {
     try {
-      await fsp.access(this.rootDir);
-
-      const entries = await fsp.readdir(this.rootDir, { withFileTypes: true });
-
-      for (const entry of entries) {
-        const fullPath = path.join(this.rootDir, entry.name);
-        if (entry.isDirectory()) {
-          await fsp.rm(fullPath, { recursive: true, force: true });
-        } else if (entry.name === "EmojiThief.json") {
-          await fsp.rm(fullPath);
+      const allEmojis = imageEmbeddingManager.getAll();
+      const toDelete = allEmojis.filter((emoji) => emoji.metadata?.source);
+      
+      if (toDelete.length > 0) {
+        logger.info(`[表情包小偷] 发现 ${toDelete.length} 条旧数据，正在自动修复...`);
+        for (const emoji of toDelete) {
+          await imageEmbeddingManager.remove(emoji.hash);
+          if (emoji.filepath) {
+            await fsp.rm(emoji.filepath, { force: true }).catch(() => {});
+          }
         }
+        logger.info(`[表情包小偷] 已自动删除 ${toDelete.length} 条旧表情数据`);
       }
-      logger.mark("定时清理任务已完成，图片及数据库均已清除。");
     } catch (error) {
-      if (error.code !== "ENOENT") {
-        logger.error(`清理失败: ${error.stack}`);
-      }
+      logger.error(`[表情包小偷] 自动修复数据失败: ${error.message}`);
     }
   }
 }

@@ -233,7 +233,7 @@ export class EmotionImage extends plugin {
     return true;
   });
 
-  deleteEmoji = Command(/^#?删表情(.*)$/, "white", async (e) => {
+  deleteEmoji = Command(/^#?删表情(.*)$/, async (e) => {
     const imgUrls = await getImg(e);
 
     if (imgUrls && imgUrls.length > 0) {
