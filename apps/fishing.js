@@ -593,12 +593,8 @@ export default class Fishing extends plugin {
     const torpedoScareKey = `sakura:fishing:torpedo_scare:${groupId}`;
     const torpedoScareTime = await redis.get(torpedoScareKey);
     let isTorpedoScare = false;
-    let scareRemainingMinutes = 0;
     if (torpedoScareTime) {
       isTorpedoScare = true;
-      const scareStartTime = parseInt(torpedoScareTime);
-      const elapsed = Date.now() - scareStartTime;
-      scareRemainingMinutes = Math.ceil((1 * 60 * 60 * 1000 - elapsed) / 60000);
       price = Math.round(price * 1.5);
     }
 
@@ -640,7 +636,7 @@ export default class Fishing extends plugin {
       resultMsg.push(`🌟黄金鱼竿加成！额外获得20%樱花币！\n`);
     }
     if (isTorpedoScare) {
-      resultMsg.push(`😱 鱼雷恐慌中！鱼价1.5倍！(剩余${scareRemainingMinutes}分钟)\n`);
+      resultMsg.push(`😱 鱼雷恐慌中！鱼价1.5倍！\n`);
     }
     resultMsg.push(`💰 获得：${price} 樱花币`);
 
@@ -1090,12 +1086,8 @@ export default class Fishing extends plugin {
     const torpedoScareKey = `sakura:fishing:torpedo_scare:${groupId}`;
     const torpedoScareTime = await redis.get(torpedoScareKey);
     let isTorpedoScare = false;
-    let scareRemainingMinutes = 0;
     if (torpedoScareTime) {
       isTorpedoScare = true;
-      const scareStartTime = parseInt(torpedoScareTime);
-      const elapsed = Date.now() - scareStartTime;
-      scareRemainingMinutes = Math.ceil((1 * 60 * 60 * 1000 - elapsed) / 60000);
       price = Math.round(price * 1.5);
     }
 
@@ -1133,7 +1125,7 @@ export default class Fishing extends plugin {
     resultMsg.push(`🧊 新鲜度：${freshnessDisplay}\n`);
     resultMsg.push(`💢 鱼被炸伤了，价格减半！\n`);
     if (isTorpedoScare) {
-      resultMsg.push(`😱 鱼雷恐慌中！鱼价1.5倍！(剩余${scareRemainingMinutes}分钟)\n`);
+      resultMsg.push(`😱 鱼雷恐慌中！鱼价1.5倍！\n`);
     }
     resultMsg.push(`💰 获得：${price} 樱花币`);
 
