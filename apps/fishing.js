@@ -272,9 +272,13 @@ export default class Fishing extends plugin {
           successRate = Math.max(0, 100 - (fishWeight - rodCapacity));
         }
       } else {
-        const effectiveCapacity = rodCapacity + rodProficiency;
-        if (fishWeight > effectiveCapacity) {
-          successRate = Math.max(0, 100 - (fishWeight - effectiveCapacity));
+        if (fishWeight - rodCapacity >= 100) {
+          successRate = 0;
+        } else {
+          const effectiveCapacity = rodCapacity + rodProficiency;
+          if (fishWeight > effectiveCapacity) {
+            successRate = Math.max(0, 100 - (fishWeight - effectiveCapacity));
+          }
         }
       }
 
@@ -501,9 +505,13 @@ export default class Fishing extends plugin {
           successRate = Math.max(0, 100 - (fishWeight - rodCapacity));
         }
       } else {
-        const effectiveCapacity = rodCapacity + rodProficiency;
-        if (fishWeight > effectiveCapacity) {
-          successRate = Math.max(0, 100 - (fishWeight - effectiveCapacity));
+        if (fishWeight - rodCapacity >= 100) {
+          successRate = 0;
+        } else {
+          const effectiveCapacity = rodCapacity + rodProficiency;
+          if (fishWeight > effectiveCapacity) {
+            successRate = Math.max(0, 100 - (fishWeight - effectiveCapacity));
+          }
         }
       }
     }
