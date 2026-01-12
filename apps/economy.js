@@ -25,16 +25,11 @@ export default class Economy extends plugin {
     }
 
     const cooldownKey = `sakura:economy:rob:cooldown:${e.group_id}:${e.user_id}`;
-    const lastRobTime = await redis.get(cooldownKey);
-    if (lastRobTime) {
-      const newLastRobTime = Number(lastRobTime) + 300;
-      const ttl = await redis.ttl(cooldownKey);
-      if (ttl > 0) {
-        await redis.set(cooldownKey, String(newLastRobTime), "EX", ttl + 300);
-      }
-      const remainingTime = Math.ceil(
-        (1800 - (Date.now() / 1000 - newLastRobTime)) / 60
-      );
+    const ttl = await redis.ttl(cooldownKey);
+    if (ttl > 0) {
+      const newTtl = ttl + 300;
+      await redis.expire(cooldownKey, newTtl);
+      const remainingTime = Math.ceil(newTtl / 60);
       await e.reply(
         `精英巫女察觉到了你的躁动，加强了戒备...\n请等待 ${remainingTime} 分钟后再行动！`,
         10
@@ -43,91 +38,21 @@ export default class Economy extends plugin {
     }
 
     const economyManager = new EconomyManager(e);
-    const shopManager = new ShopManager();
     const targetCoins = economyManager.getCoins({
       user_id: targetId,
       group_id: e.group_id,
     });
+    const attackerCoins = economyManager.getCoins(e);
 
-    if (targetCoins < 100) {
-      await e.reply("那个人太穷了，连买鲷鱼烧的钱都没有~", 10);
-      return true;
-    }
+    if (Math.abs(attackerCoins - targetCoins) > 1000) {
 
-    const hasProtection = shopManager.hasBuff(e.group_id, targetId, 'sakuraProtection');
-    if (hasProtection) {
-      const attackerCoins = economyManager.getCoins(e);
-      const penalty = Math.min(50, attackerCoins);
-      economyManager.reduceCoins(e, penalty);
-      economyManager.addCoins(
-        { user_id: e.self_id, group_id: e.group_id },
-        penalty
-      );
-
-      await redis.set(
+      await this.handleRobberyPenalty(
+        e,
+        economyManager,
         cooldownKey,
-        String(Math.floor(Date.now() / 1000)),
-        "EX",
-        1800
+        attackerCoins,
+        "由于双方贫富差距过大，"
       );
-
-      const attackerName = e.sender.card || e.sender.nickname || e.user_id;
-      let targetName = targetId;
-      try {
-        const info = await e.getInfo(targetId);
-        if (info) {
-          targetName = info.card || info.nickname || targetId;
-        }
-      } catch (err) {}
-
-      await e.reply(
-        `⚡️ 神罚降临！\n${attackerName} 试图打劫受小叶守护的 ${targetName}！\n小叶的神力显现，${attackerName} 受到神罚！\n💸 失去 ${penalty} 樱花币`
-      );
-      return true;
-    }
-
-    if (targetId == e.self_id) {
-      const attackerCoins = economyManager.getCoins(e);
-      const successRate = Math.max(
-        0,
-        Math.min(100, 50 + (targetCoins - attackerCoins) / 20)
-      );
-
-      await redis.set(
-        cooldownKey,
-        String(Math.floor(Date.now() / 1000)),
-        "EX",
-        1800
-      );
-
-      const roll = _.random(1, 100);
-      const attackerName = e.sender.card || e.sender.nickname || e.user_id;
-
-      if (roll <= successRate) {
-        const robPercent = _.random(1, 20);
-        const robAmount = Math.round((targetCoins * robPercent) / 100);
-
-        economyManager.reduceCoins(
-          { user_id: targetId, group_id: e.group_id },
-          robAmount
-        );
-        economyManager.addCoins(e, robAmount);
-
-        await e.reply(
-          `🌸 抢夺成功！\n${attackerName} 从小叶那里抢走了 ${robAmount} 樱花币！`
-        );
-      } else {
-        const penalty = Math.min(50, attackerCoins);
-        economyManager.reduceCoins(e, penalty);
-        economyManager.addCoins(
-          { user_id: e.self_id, group_id: e.group_id },
-          penalty
-        );
-
-        await e.reply(
-          `🚨 抢夺失败！\n${attackerName} 被小叶当场抓获！\n受到神罚，失去 ${penalty} 樱花币！`
-        );
-      }
       return true;
     }
 
@@ -147,7 +72,6 @@ export default class Economy extends plugin {
     }
 
     const levelDiff = attackerLevel - targetLevel;
-    const attackerCoins = economyManager.getCoins(e);
     const successRate = Math.max(
       20,
       Math.min(
@@ -198,21 +122,62 @@ export default class Economy extends plugin {
         `🌸 抢夺成功！\n${attackerName} 从 ${targetName} 那里抢走了 ${robAmount} 樱花币！`
       );
     } else {
-      const attackerCoins = economyManager.getCoins(e);
-      const penalty = Math.min(50, attackerCoins);
-      economyManager.reduceCoins(e, penalty);
-      economyManager.addCoins(
-        { user_id: e.self_id, group_id: e.group_id },
-        penalty
-      );
-
-      await e.reply(
-        `🚨 抢夺失败！\n${attackerName} 被神使当场抓获！\n受到神罚，失去 ${penalty} 樱花币！`
+      await this.handleRobberyPenalty(
+        e,
+        economyManager,
+        cooldownKey,
+        attackerCoins,
+        ""
       );
     }
 
     return true;
   });
+
+  async handleRobberyPenalty(e, economyManager, cooldownKey, attackerCoins, reasonPrefix) {
+    const attackerName = e.sender.card || e.sender.nickname || e.user_id;
+
+    if (attackerCoins < 50) {
+      const jailHours = 50 - attackerCoins;
+      const jailSeconds = jailHours * 60 * 60;
+
+      economyManager.reduceCoins(e, attackerCoins);
+      economyManager.addCoins(
+        { user_id: e.self_id, group_id: e.group_id },
+        attackerCoins
+      );
+
+      await redis.set(
+        cooldownKey,
+        String(Math.floor(Date.now() / 1000)),
+        "EX",
+        jailSeconds
+      );
+
+      await e.reply(
+        `🚨 抢夺失败！\n${reasonPrefix}${attackerName} 被神使当场抓获！\n由于付不起罚款，被直接打入地牢！\n监禁 ${jailHours} 小时`
+      );
+      return;
+    }
+
+    const penalty = 50;
+    economyManager.reduceCoins(e, penalty);
+    economyManager.addCoins(
+      { user_id: e.self_id, group_id: e.group_id },
+      penalty
+    );
+
+    await redis.set(
+      cooldownKey,
+      String(Math.floor(Date.now() / 1000)),
+      "EX",
+      1800
+    );
+
+    await e.reply(
+      `🚨 抢夺失败！\n${reasonPrefix}${attackerName} 被神使当场抓获！\n受到神罚，失去 ${penalty} 樱花币！`
+    );
+  }
 
   counter = Command(/^#?(反击|复仇|神罚)\s*.*$/, async (e) => {
     const targetId = e.at;
