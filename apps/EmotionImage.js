@@ -381,4 +381,27 @@ export class EmotionImage extends plugin {
 
     return true;
   });
+
+  cleanOrphanedEmoji = Command(/^#?清理孤儿表情$/, async (e) => {
+    if (!e.isMaster) {
+      return false;
+    }
+
+    await e.reply("正在清理孤儿表情索引...", true);
+
+    try {
+      const result = await imageEmbeddingManager.cleanupOrphanedIndexes();
+      
+      if (result.cleaned === 0) {
+        await e.reply(`✅ 没有发现孤儿索引，表情库共 ${result.total} 个表情`, true);
+      } else {
+        await e.reply(`✅ 清理完成！\n🗑️ 清理孤儿索引: ${result.cleaned} 个\n📦 剩余表情: ${result.total} 个`, true);
+      }
+    } catch (error) {
+      logger.error(`[清理孤儿表情] 失败: ${error.message}`);
+      await e.reply(`清理失败: ${error.message}`, 10);
+    }
+
+    return true;
+  });
 }

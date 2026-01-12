@@ -870,9 +870,10 @@ export default class Fishing extends plugin {
     await redis.set(redisKey, JSON.stringify(state), "EX", 10 * 60);
 
     const memKey = `${groupId}:${userId}`;
-    if (fishingState[memKey]) {
-      Object.assign(fishingState[memKey], state);
+    if (!fishingState[memKey]) {
+      fishingState[memKey] = {};
     }
+    Object.assign(fishingState[memKey], state);
   }
 
   async clearFishingState(groupId, userId) {
