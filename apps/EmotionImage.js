@@ -48,7 +48,7 @@ export class EmotionImage extends plugin {
     }
   });
 
-  saveEmoji = Command(/^#?存表情$/, white, async (e) => {
+  saveEmoji = Command(/^#?存表情$/, "white", async (e) => {
     let imageMsg = e.message?.find((item) => item.type === "image");
 
     if (!imageMsg && e.reply_id) {
@@ -217,7 +217,7 @@ export class EmotionImage extends plugin {
     return true;
   });
 
-  sendEmoji = Command(/^#?发表情(.+)$/, white, async (e) => {
+  sendEmoji = Command(/^#?发表情(.+)$/, "white", async (e) => {
     const match = e.msg.match(/^#?发表情(.+)$/);
     if (!match) return false;
 
@@ -283,7 +283,7 @@ export class EmotionImage extends plugin {
     return true;
   });
 
-  deleteEmoji = Command(/^#?删表情(.*)$/, white, async (e) => {
+  deleteEmoji = Command(/^#?删表情(.*)$/, "white", async (e) => {
     const imgUrls = await getImg(e);
 
     if (imgUrls && imgUrls.length > 0) {
@@ -391,7 +391,7 @@ export class EmotionImage extends plugin {
     return true;
   });
 
-  cleanOrphanedEmoji = Command(/^#?清理孤儿表情$/, white, async (e) => {
+  cleanOrphanedEmoji = Command(/^#?清理孤儿表情$/, "white", async (e) => {
     await e.reply("正在清理孤儿表情索引...", true);
 
     try {
