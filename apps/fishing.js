@@ -177,7 +177,7 @@ export default class Fishing extends plugin {
     const currentCount = groupFishingCount ? parseInt(groupFishingCount) : 0;
     
     if (currentCount >= 20) {
-      await e.reply("😭鱼塘里的鱼都被钓光啦！\n🐟 为了可持续发展，请等待凌晨4点鱼苗投放后再来吧~", 10);
+      await e.reply("😭 鱼塘里的鱼都被钓光啦！\n🐟 为了可持续发展，请等待凌晨4点鱼苗投放后再来吧~", 10);
       return true;
     }
 
