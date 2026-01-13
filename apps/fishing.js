@@ -16,6 +16,135 @@ function getRarityByLevel(level) {
   return { name: "垃圾", color: "⚫" };
 }
 
+// ==================== 公共算法方法 ====================
+
+/**
+ * 计算鱼的重量
+ * @param {number} fishCoins - 鱼（群友）的樱花币数量
+ * @returns {number} 计算后的重量值
+ */
+function calculateFishWeight(fishCoins) {
+  const baseWeight =
+    fishCoins > 100
+      ? 100 + Math.pow(Math.log2(fishCoins - 100), 2)
+      : fishCoins;
+  const randomMultiplier = 0.8 + Math.random() * 0.4;
+  return Math.round(baseWeight * randomMultiplier);
+}
+
+/**
+ * 计算钓鱼成功率
+ * @param {number} fishWeight - 鱼的重量
+ * @param {number} rodCapacity - 鱼竿容量
+ * @param {number} rodProficiency - 鱼竿熟练度
+ * @param {object} rodConfig - 鱼竿配置
+ * @returns {number} 成功率 (0-100)
+ */
+function calculateSuccessRate(fishWeight, rodCapacity, rodProficiency, rodConfig) {
+  // 幸运鱼竿特殊逻辑
+  if (rodConfig?.lucky) {
+    const luckyCapacity = (rodConfig.capacity || 30) + rodProficiency;
+    return fishWeight > luckyCapacity ? (rodConfig.luckyRate || 66) : 100;
+  }
+
+  // 基础鱼竿（容量 <= 30）
+  if (rodCapacity <= 30) {
+    return fishWeight > rodCapacity
+      ? Math.max(0, 100 - (fishWeight - rodCapacity))
+      : 100;
+  }
+
+  // 高级鱼竿
+  if (fishWeight - rodCapacity >= 100) {
+    return 0;
+  }
+
+  const effectiveCapacity = rodCapacity + rodProficiency;
+  return fishWeight > effectiveCapacity
+    ? Math.max(0, 100 - (fishWeight - effectiveCapacity))
+    : 100;
+}
+
+/**
+ * 计算鱼的价格
+ * @param {object} fish - 鱼（群友）对象
+ * @param {number} fishWeight - 鱼的重量
+ * @param {object} fishingManager - 钓鱼管理器实例
+ * @param {object} options - 可选配置
+ * @returns {object} { price, freshness, fishNameBonus, isDoubled, isGoldenBonus, isTorpedoScare }
+ */
+async function calculateFishPrice(fish, fishWeight, fishingManager, options = {}) {
+  const {
+    rodConfig = null,
+    groupId = null,
+    isExplosion = false, // 是否被炸（鱼雷引爆）
+  } = options;
+
+  let fishLevel = Number(fish.level) || 1;
+  let price = Math.round(fishLevel * (1 + fishWeight / 100));
+
+  // 计算新鲜度
+  const currentTime = Math.floor(Date.now() / 1000);
+  const lastSentTime = fish.last_sent_time || currentTime;
+  const maxDuration = 60 * 24 * 3600;
+  const timeDiff = Math.max(0, currentTime - lastSentTime);
+  let freshness = Math.max(0, 1 - timeDiff / maxDuration);
+  price = Math.round(price * freshness);
+
+  // 管理员/群主加成
+  if (fish.role === "owner" || fish.role === "admin") {
+    price *= 2;
+  }
+
+  // 鱼名加成
+  let fishNameBonus = "";
+  const fishNameData = fishingManager.getFishName(fish.user_id);
+  if (fishNameData) {
+    fishNameBonus = fishNameData.name;
+    price += 10;
+  }
+
+  // 爆炸减价
+  if (isExplosion) {
+    price = Math.round(price / 2);
+  }
+
+  // 招财鱼竿双倍
+  let isDoubled = false;
+  if (rodConfig?.doubleChance && _.random(1, 100) <= rodConfig.doubleChance) {
+    price *= 2;
+    isDoubled = true;
+  }
+
+  // 黄金鱼竿加成
+  let isGoldenBonus = false;
+  if (rodConfig?.goldenBonus && _.random(1, 100) <= 50) {
+    const bonusAmount = Math.round(price * 0.2);
+    price += bonusAmount;
+    isGoldenBonus = true;
+  }
+
+  // 鱼雷恐慌加成
+  let isTorpedoScare = false;
+  if (groupId) {
+    const torpedoScareKey = `sakura:fishing:torpedo_scare:${groupId}`;
+    const torpedoScareTime = await redis.get(torpedoScareKey);
+    if (torpedoScareTime) {
+      isTorpedoScare = true;
+      price = Math.round(price * 1.5);
+    }
+  }
+
+  return {
+    price,
+    freshness,
+    fishNameBonus,
+    isDoubled,
+    isGoldenBonus,
+    isTorpedoScare,
+  };
+}
+
 export default class Fishing extends plugin {
   constructor() {
     super({
@@ -39,6 +168,16 @@ export default class Fishing extends plugin {
     const equippedBait = fishingManager.getEquippedBait(userId);
     if (!equippedBait) {
       await e.reply("🪱 鱼饵用光啦！\n没饵可钓不到鱼，去「商店」看看吧~", 10);
+      return true;
+    }
+
+    // 检查群每日钓鱼次数限制
+    const groupFishingKey = `sakura:fishing:group_daily:${groupId}`;
+    const groupFishingCount = await redis.get(groupFishingKey);
+    const currentCount = groupFishingCount ? parseInt(groupFishingCount) : 0;
+    
+    if (currentCount >= 20) {
+      await e.reply("� 鱼塘里的鱼都被钓光啦！\n🐟 为了可持续发展，请等待凌晨4点鱼苗投放后再来吧~", 10);
       return true;
     }
 
@@ -67,28 +206,7 @@ export default class Fishing extends plugin {
       return true;
     }
 
-    const dailyLimitKey = `sakura:fishing:daily_limit:${groupId}`;
-    const currentCount = await redis.get(dailyLimitKey);
-    if (currentCount && Number(currentCount) >= 20) {
-      await e.reply("� 鱼塘里的鱼都被钓光啦！\n🐟 为了可持续发展，请等待凌晨4点鱼苗投放后再来吧~", 10);
-      return true;
-    }
-
     fishingManager.consumeBait(userId);
-
-    const newCount = await redis.incr(dailyLimitKey);
-    if (newCount === 1) {
-      const now = new Date();
-      const target = new Date(now);
-      if (now.getHours() >= 4) {
-        target.setDate(target.getDate() + 1);
-      }
-      target.setHours(4, 0, 0, 0);
-      const expireSeconds = Math.floor((target.getTime() - now.getTime()) / 1000);
-      if (expireSeconds > 0) {
-        await redis.expire(dailyLimitKey, expireSeconds);
-      }
-    }
 
     const memberList = await e.group.getMemberList(true);
     const memberMap = Array.isArray(memberList)
@@ -168,69 +286,467 @@ export default class Fishing extends plugin {
 
     const stateKey = `${groupId}:${userId}`;
 
-    const cleanupState = () => {
-      const state = fishingState[stateKey];
+    const cleanupState = (key) => {
+      const state = fishingState[key];
       if (state) {
         if (state.waitingTimer) clearTimeout(state.waitingTimer);
         if (state.bitingTimer) clearTimeout(state.bitingTimer);
         if (state.totalTimer) clearTimeout(state.totalTimer);
         if (state.confirmTimer) clearTimeout(state.confirmTimer);
-        delete fishingState[stateKey];
+        delete fishingState[key];
       }
     };
 
-    const stateData = {
+    fishingState[stateKey] = {
       fish: fish,
       fishName: fishName,
       catchType: catchType,
       catchData: catchData,
       startTime: Date.now(),
-      biteStartTime: Date.now() + waitTime,
       phase: "waiting",
+      cleanup: () => cleanupState(stateKey),
     };
-
-    await this.saveFishingState(groupId, userId, stateData);
-
-    if (fishingState[stateKey]) {
-      fishingState[stateKey].cleanup = cleanupState;
-    }
 
     const state = fishingState[stateKey];
 
+    // 增加群钓鱼计数，设置到凌晨4点刷新
+    const now = new Date();
+    const nextReset = new Date(now);
+    
+    // 如果当前时间已过4点，则设置到明天4点；否则设置到今天4点
+    if (now.getHours() >= 4) {
+      nextReset.setDate(nextReset.getDate() + 1);
+    }
+    nextReset.setHours(4, 0, 0, 0);
+    
+    const secondsUntilReset = Math.floor((nextReset - now) / 1000);
+    
+    await redis.incr(groupFishingKey);
+    await redis.expire(groupFishingKey, secondsUntilReset);
+
     state.totalTimer = setTimeout(() => {
-        this.clearFishingState(groupId, userId);
+      if (fishingState[stateKey]) {
+        cleanupState(stateKey);
         this.finish("pullRod", stateKey);
+      }
     }, 5 * 60 * 1000);
 
     state.waitingTimer = setTimeout(async () => {
-      const currentState = await this.getFishingState(groupId, userId);
+      const currentState = fishingState[stateKey];
       if (!currentState || currentState.phase !== "waiting") {
         return;
       }
 
       currentState.phase = "biting";
-      currentState.biteTime = Date.now(); // Update to actual notice time
-      await this.saveFishingState(groupId, userId, currentState);
+      currentState.biteTime = Date.now();
 
       await e.reply(`🌊 浮漂沉下去了！快收竿！`, false, true);
 
       this.setContext("pullRod", stateKey, 60);
 
-      if (fishingState[stateKey]) {
-        fishingState[stateKey].bitingTimer = setTimeout(() => {
-             this.clearFishingState(groupId, userId);
-             this.finish("pullRod", stateKey);
-             e.reply(
-               `🍃 鱼线松了... 那条鱼挣脱鱼钩跑了...\n下次手脚麻利点！`,
-               false,
-               true
-             );
-        }, 60 * 1000);
-      }
+      currentState.bitingTimer = setTimeout(() => {
+        const s = fishingState[stateKey];
+        if (s && s.phase === "biting") {
+          this.finish("pullRod", stateKey);
+          cleanupState(stateKey);
+          e.reply(
+            `🍃 鱼线松了... 那条鱼挣脱鱼钩跑了...\n下次手脚麻利点！`,
+            false,
+            true
+          );
+        }
+      }, 60 * 1000);
     }, waitTime);
 
     return true;
   });
+
+  // ==================== pullRod 子处理函数 ====================
+
+  /**
+   * 处理钓到垃圾的情况
+   */
+  async handleTrash(e, catchData, fishingManager, userId) {
+    const trash = catchData;
+    const resultMsg = [
+      `😔 可惜...不是鱼！\n`,
+      `${trash.emoji} 钓到了【${trash.name}】！\n`,
+      `📝 ${trash.description}\n`,
+      `💰 获得：0 樱花币\n`,
+      `💡 运气不好，下次再接再厉！`,
+    ];
+    fishingManager.recordCatch(userId, 0, null);
+    await e.reply(resultMsg);
+    return true;
+  }
+
+  /**
+   * 处理钓到危险生物的情况
+   */
+  async handleDangerous(e, catchData, fishingManager, userId) {
+    const creature = catchData;
+    const equippedRodId = fishingManager.getEquippedRod(userId);
+    const rodConfig = fishingManager.getRodConfig(equippedRodId);
+    const rodName = rodConfig?.name || "鱼竿";
+    const currentCapacity = fishingManager.getCurrentRodCapacity(userId);
+
+    // 传说鱼竿：可以钓起危险生物
+    if (rodConfig?.legendary) {
+      const reduceResult = fishingManager.reduceRodCapacity(userId, 10);
+      const remainingHits = Math.floor(
+        (reduceResult.currentCapacity - 30) / 10
+      );
+
+      const economyManager = new EconomyManager(e);
+      economyManager.addCoins(e, 1000);
+
+      const resultMsg = [
+        `😱 危险！强大的生物出现了！\n`,
+        `${creature.emoji} 【${creature.name}】袭来！\n`,
+        `📝 ${creature.description}\n`,
+        `⚔️ 你的【${rodName}】散发着传说的力量...\n`,
+        `🎉 成功钓起了这只危险生物！\n`,
+        `💢 但是你的【${rodName}】受到了损伤！\n`,
+        `🛡️ 还能抵御 ${remainingHits} 次损伤\n`,
+        `💰 获得：1000 樱花币\n`,
+        `🏆 击败危险生物是真正的勇者！`,
+      ];
+      fishingManager.recordDangerousCatch(userId, 1000, creature.name);
+      await e.reply(resultMsg);
+      return true;
+    }
+
+    // 幸运鱼竿：被吞但有补偿
+    if (rodConfig?.lucky) {
+      fishingManager.removeEquippedRod(userId);
+      const economyManager = new EconomyManager(e);
+      economyManager.addCoins(e, 666);
+
+      const resultMsg = [
+        `😱 糟糕！遇到可怕的生物！\n`,
+        `${creature.emoji} 【${creature.name}】出现了！\n`,
+        `📝 ${creature.description}\n`,
+        `🍀 你的【${rodName}】闪烁着幸运的光芒...\n`,
+        `💥 但还是被一口吞掉了！\n`,
+        `✨ 幸运女神的眷顾：获得 666 樱花币作为补偿！\n`,
+        `⚠️ 鱼竿已丢失，请去商店重新购买！`,
+      ];
+      fishingManager.recordCatch(userId, 666, null);
+      await e.reply(resultMsg);
+      return true;
+    }
+
+    // 鱼竿已破旧：直接被吞
+    if (currentCapacity <= 30) {
+      fishingManager.removeEquippedRod(userId);
+      const resultMsg = [
+        `😱 糟糕！遇到可怕的生物！\n`,
+        `${creature.emoji} 【${creature.name}】出现了！\n`,
+        `📝 ${creature.description}\n`,
+        `💥 你的【${rodName}】已经破旧不堪，被它一口吞掉了！\n`,
+        `💰 获得：0 樱花币\n`,
+        `⚠️ 鱼竿已丢失，请去商店重新购买！`,
+      ];
+      fishingManager.recordCatch(userId, 0, null);
+      await e.reply(resultMsg);
+      return true;
+    }
+
+    // 普通情况：鱼竿受损
+    const reduceResult = fishingManager.reduceRodCapacity(userId, 10);
+    const remainingHits = Math.floor(
+      (reduceResult.currentCapacity - 30) / 10
+    );
+    const resultMsg = [
+      `😱 糟糕！遇到可怕的生物！\n`,
+      `${creature.emoji} 【${creature.name}】出现了！\n`,
+      `📝 ${creature.description}\n`,
+      `💢 你的【${rodName}】受到了损伤！\n`,
+      `🛡️ 还能抵御 ${remainingHits} 次损伤\n`,
+      `💰 获得：0 樱花币\n`,
+      `💡 鱼竿损伤过多可能会被吞掉哦...`,
+    ];
+    fishingManager.recordCatch(userId, 0, null);
+    await e.reply(resultMsg);
+    return true;
+  }
+
+  /**
+   * 处理钓到鱼雷的情况
+   */
+  async handleTorpedo(e, catchData, fishingManager, userId, groupId) {
+    const torpedo = catchData;
+    const equippedRodId = fishingManager.getEquippedRod(userId);
+    const rodConfig = fishingManager.getRodConfig(equippedRodId);
+    const rodName = rodConfig?.name || "鱼竿";
+    const currentCapacity = fishingManager.getCurrentRodCapacity(userId);
+
+    // 触发鱼雷
+    fishingManager.triggerTorpedo(userId, torpedo.ownerId);
+
+    // 设置鱼雷恐慌
+    const torpedoScareKey = `sakura:fishing:torpedo_scare:${groupId}`;
+    await redis.set(torpedoScareKey, String(Date.now()), "EX", 1 * 60 * 60);
+
+    const scareMsg = `😱 鱼雷爆炸引发恐慌！接下来1小时内鱼价1.5倍！`;
+
+    // 幸运鱼竿：被炸但有补偿
+    if (rodConfig?.lucky) {
+      fishingManager.removeEquippedRod(userId);
+      const economyManager = new EconomyManager(e);
+      economyManager.addCoins(e, 300);
+
+      const resultMsg = [
+        `💣 糟糕！钓到了鱼雷！\n`,
+        segment.at(torpedo.ownerId),
+        ` 埋的鱼雷被钓到了！\n`,
+        `🍀 你的【${rodName}】闪烁着幸运的光芒...\n`,
+        `💥 但鱼雷爆炸了！鱼竿被炸毁了！\n`,
+        `✨ 幸运女神的眷顾：获得 300 樱花币作为补偿！\n`,
+        `⚠️ 鱼竿已丢失，请去商店重新购买！\n`,
+        scareMsg,
+      ];
+      fishingManager.recordCatch(userId, 300, null);
+      await e.reply(resultMsg);
+      return true;
+    }
+
+    // 鱼竿已破旧：直接炸毁
+    if (currentCapacity <= 30) {
+      fishingManager.removeEquippedRod(userId);
+      const resultMsg = [
+        `💣 糟糕！钓到了鱼雷！\n`,
+        segment.at(torpedo.ownerId),
+        ` 埋的鱼雷被钓到了！\n`,
+        `💥 你的【${rodName}】已经破旧不堪，被炸毁了！\n`,
+        `💰 获得：0 樱花币\n`,
+        `⚠️ 鱼竿已丢失，请去商店重新购买！\n`,
+        scareMsg,
+      ];
+      fishingManager.recordCatch(userId, 0, null);
+      await e.reply(resultMsg);
+      return true;
+    }
+
+    // 普通情况：鱼竿受损
+    const reduceResult = fishingManager.reduceRodCapacity(userId, 10);
+    const remainingHits = Math.floor(
+      (reduceResult.currentCapacity - 30) / 10
+    );
+    const resultMsg = [
+      `💣 糟糕！钓到了鱼雷！\n`,
+      segment.at(torpedo.ownerId),
+      ` 埋的鱼雷被钓到了！\n`,
+      `💢 你的【${rodName}】受到了损伤！\n`,
+      `🛡️ 还能抵御 ${remainingHits} 次损伤\n`,
+      `💰 获得：0 樱花币\n`,
+      `💡 鱼竿损伤过多可能会被炸毁哦...\n`,
+      scareMsg,
+    ];
+    fishingManager.recordCatch(userId, 0, null);
+    await e.reply(resultMsg);
+    return true;
+  }
+
+  /**
+   * 处理钓到群友（鱼）的情况
+   */
+  async handleMember(e, state, fishingManager, userId, groupId) {
+    const { fish, fishName, calculatedWeight: fishWeight, calculatedSuccessRate: successRate } = state;
+    const equippedRodId = fishingManager.getEquippedRod(userId);
+    const rodConfig = fishingManager.getRodConfig(equippedRodId);
+    const rodProficiency = fishingManager.getRodProficiency(userId, equippedRodId);
+    fishingManager.addRodProficiency(userId, equippedRodId);
+
+    // 判断是否钓鱼失败
+    if (_.random(1, 100) > successRate) {
+      return await this.handleFishingFailure(e, fishWeight, successRate, fishingManager, userId, rodConfig);
+    }
+
+    // 钓鱼成功，计算价格
+    const priceResult = await calculateFishPrice(fish, fishWeight, fishingManager, {
+      rodConfig,
+      groupId,
+      isExplosion: false,
+    });
+
+    const { price, freshness, fishNameBonus, isDoubled, isGoldenBonus, isTorpedoScare } = priceResult;
+
+    const economyManager = new EconomyManager(e);
+    economyManager.addCoins(e, price);
+    fishingManager.recordCatch(userId, price, fish.user_id);
+
+    // 构建结果消息
+    const rarity = getRarityByLevel(Number(fish.level) || 1);
+    const displayWeight = Math.max(1, fishWeight);
+    const freshnessDisplay =
+      freshness <= 0 ? "死鱼" : (freshness * 100).toFixed(2) + "%";
+
+    const resultMsg = [
+      `🎉 钓鱼成功！\n`,
+      `🐟 钓到了【${fishName}】！\n`,
+      segment.image(`https://q1.qlogo.cn/g?b=qq&nk=${fish.user_id}&s=640`),
+    ];
+
+    if (fishNameBonus) {
+      resultMsg.push(`🐠 鱼种：${fishNameBonus}\n`);
+    }
+
+    if (fish.role === "owner" || fish.role === "admin") {
+      const roleName = fish.role === "owner" ? "群主" : "管理员";
+      resultMsg.push(`👑 身份：${roleName}\n`);
+    }
+
+    resultMsg.push(`📊 稀有度：${rarity.color}${rarity.name}\n`);
+    if (rodProficiency > 0) {
+      resultMsg.push(`📈 熟练度：${rodProficiency}\n`);
+    }
+    resultMsg.push(`⚖️ 重量：${displayWeight}\n`);
+    resultMsg.push(`🧊 新鲜度：${freshnessDisplay}\n`);
+    if (isDoubled) {
+      resultMsg.push(`✨ 招财加持！樱花币翻倍！\n`);
+    }
+    if (isGoldenBonus) {
+      resultMsg.push(`🌟黄金鱼竿加成！额外获得20%樱花币！\n`);
+    }
+    if (isTorpedoScare) {
+      resultMsg.push(`😱 鱼雷恐慌中！鱼价1.5倍！\n`);
+    }
+    resultMsg.push(`💰 获得：${price} 樱花币`);
+
+    await e.reply(resultMsg);
+    return true;
+  }
+
+  /**
+   * 处理钓鱼失败的情况
+   */
+  async handleFishingFailure(e, fishWeight, successRate, fishingManager, userId, rodConfig) {
+    // 幸运鱼竿：失败但不损坏
+    if (rodConfig?.lucky) {
+      await e.reply([
+        `🍀 幸运女神今天没有眷顾你...\n`,
+        `😅 你的【${rodConfig?.name}】闪烁了一下，但鱼还是跑了！\n`,
+        `💨 下次一定会有好运的！`,
+      ]);
+      fishingManager.recordCatch(userId, 0, null);
+      return true;
+    }
+
+    // 成功率为0：鱼竿可能损坏
+    if (successRate <= 0) {
+      const currentCapacity = fishingManager.getCurrentRodCapacity(userId);
+
+      if (currentCapacity <= 30) {
+        fishingManager.removeEquippedRod(userId);
+        await e.reply([
+          `🎣 哎呀！鱼太重了（${fishWeight}）！\n`,
+          `😓 你的【${rodConfig?.name}】弯到了极限...\n`,
+          `💥 咔嚓！鱼竿断了！\n`,
+          `⚠️ 鱼竿已丢失，请去商店重新购买！`,
+        ]);
+        fishingManager.recordCatch(userId, 0, null);
+        return true;
+      }
+
+      const reduceResult = fishingManager.reduceRodCapacity(userId, 10);
+      const remainingHits = Math.floor(
+        (reduceResult.currentCapacity - 30) / 10
+      );
+      await e.reply([
+        `🎣 哎呀！鱼太重了（${fishWeight}）！\n`,
+        `😓 你的【${rodConfig?.name}】弯到了极限，难以控制这条巨物！\n`,
+        `💢 鱼竿受到了损伤！还能抵御 ${remainingHits} 次损伤\n`,
+        `💨 鱼儿猛地一挣，逃之夭夭...`,
+      ]);
+      fishingManager.recordCatch(userId, 0, null);
+      return true;
+    }
+
+    // 普通失败
+    await e.reply([
+      `🎣 哎呀！鱼太重了（${fishWeight}）！\n`,
+      `😓 你的【${rodConfig?.name}】弯到了极限，难以控制这条巨物！\n`,
+      `💨 鱼儿猛地一挣，逃之夭夭...`,
+    ]);
+    fishingManager.recordCatch(userId, 0, null);
+    return true;
+  }
+
+  // ==================== 状态机处理 ====================
+
+  /**
+   * 处理咬钩阶段 (biting)
+   * @returns {object|null} { shouldReturn, result } 或 null 表示继续处理
+   */
+  async handleBitingPhase(e, state, stateKey, fishingManager, userId, groupId) {
+    const { fish, catchType } = state;
+
+    // 只有钓到群友才需要检查重量确认
+    if (catchType !== "member") {
+      return null;
+    }
+
+    const equippedRodId = fishingManager.getEquippedRod(userId);
+    const rodConfig = fishingManager.getRodConfig(equippedRodId);
+    const rodCapacity = fishingManager.getCurrentRodCapacity(userId);
+    const rodProficiency = fishingManager.getRodProficiency(userId, equippedRodId);
+
+    // 计算重量和成功率
+    const eco = new EconomyManager(e);
+    if (!eco.data[fish.user_id]) {
+      eco.data[fish.user_id] = { coins: 0, experience: 0, level: 1 };
+    }
+    const fishCoins = eco.data[fish.user_id]?.coins || 0;
+    const fishWeight = calculateFishWeight(fishCoins);
+    const successRate = calculateSuccessRate(fishWeight, rodCapacity, rodProficiency, rodConfig);
+
+    // 始终存储计算结果，避免重复计算
+    state.calculatedWeight = fishWeight;
+    state.calculatedSuccessRate = successRate;
+
+    // 需要确认：成功率 < 100 且不是幸运鱼竿
+    if (successRate < 100 && !rodConfig?.lucky) {
+      state.phase = "confirming";
+
+      this.setContext("pullRod", stateKey, 60);
+
+      state.confirmTimer = setTimeout(() => {
+        const s = fishingState[stateKey];
+        if (s && s.phase === "confirming") {
+          this.finish("pullRod", stateKey);
+          if (s.cleanup) s.cleanup();
+          else delete fishingState[stateKey];
+          e.reply(
+            `🐟 犹豫就会败北...\n这条大鱼已经挣脱鱼钩游走啦！`
+          );
+        }
+      }, 60000);
+
+      await e.reply(
+        `⚠️ 这条鱼有点重，有可能会损耗鱼竿...\n💪 不过拼一把说不定能钓起来！\n🎯 发送「收竿」强行拉起，「放弃」放生鱼儿`
+      );
+      return { shouldReturn: true, result: true };
+    }
+
+    return null;
+  }
+
+  /**
+   * 处理确认阶段 (confirming) - 放弃操作
+   * @returns {boolean} 是否已处理
+   */
+  async handleConfirmingGiveUp(e, state, stateKey) {
+    this.finish("pullRod", stateKey);
+    if (state.cleanup) state.cleanup();
+    else delete fishingState[stateKey];
+    await e.reply(
+      `🐟 你轻轻松开了鱼线，让这条大鱼游走了...\n💡 明智的选择，保护好你的鱼竿！`
+    );
+    return true;
+  }
+
+  // ==================== 主函数 pullRod ====================
 
   async pullRod() {
     const e = this.e;
@@ -238,87 +754,54 @@ export default class Fishing extends plugin {
     const userId = e.user_id;
     const msg = e.msg?.trim();
 
-    let state = await this.getFishingState(groupId, userId);
-    if (!state) return;
-
     const stateKey = `${groupId}:${userId}`;
-    const now = Date.now();
+    const state = fishingState[stateKey];
+    if (!state) {
+      return;
+    }
 
+    // ========== 状态机：处理不同阶段 ==========
+
+    // 确认阶段 (confirming)
     if (state.phase === "confirming") {
+      // 放弃操作
       if (/^(放弃|算了|不要|跑|放生)$/.test(msg)) {
-        this.finish("pullRod", stateKey);
-        await this.clearFishingState(groupId, userId);
-        await e.reply(
-          `🐟 你轻轻松开了鱼线，让这条大鱼游走了...\n💡 明智的选择，保护好你的鱼竿！`
-        );
-        return true;
+        return await this.handleConfirmingGiveUp(e, state, stateKey);
       }
-      if (!/^(收|拉)(杆|竿)$/.test(msg)) return;
-    } else {
-      if (state.phase === "waiting") {
-        if (state.biteStartTime && now >= state.biteStartTime) {
-          if (now > state.biteStartTime + 60000) {
-            this.finish("pullRod", stateKey);
-            await this.clearFishingState(groupId, userId);
-            await e.reply(
-              `🍃 鱼线松了... 那条鱼挣脱鱼钩跑了...\n下次手脚麻利点！`
-            );
-            return true;
-          }
-          state.phase = "biting";
-        } else {
-          if (/^(收|拉)(杆|竿)$/.test(msg)) {
-            await e.reply("🌊 别急！浮漂还没动呢，再等等...", true);
-            return true;
-          }
-          return;
-        }
-      }
-
-      if (state.phase === "biting") {
-        if (!/^(收|拉)(杆|竿)$/.test(msg)) return;
-      } else {
+      // 非收竿命令则忽略
+      if (!/^(收|拉)(杆|竿)$/.test(msg)) {
         return;
       }
+    }
+    // 咬钩阶段 (biting)
+    else if (state.phase === "biting") {
+      // 非收竿命令则忽略
+      if (!/^(收|拉)(杆|竿)$/.test(msg)) {
+        return;
+      }
+    }
+    // 其他阶段直接返回
+    else {
+      return;
     }
 
     const { catchType, catchData } = state;
     const fishingManager = new FishingManager(groupId);
 
-    if (catchType === "member") {
-      await this.handleFishCatch(e, groupId, userId, state, fishingManager);
-      
-      const userState = await this.getFishingState(groupId, userId);
-      if (userState && userState.phase === "confirming") {
-        return true;
-      }
-    } else {
-      const cooldownKey = `sakura:fishing:cooldown:${groupId}:${userId}`;
-      await redis.set(
-        cooldownKey,
-        String(Math.floor(Date.now() / 1000)),
-        "EX",
-        900
+    // ========== 咬钩阶段：检查是否需要进入确认阶段 ==========
+    if (state.phase === "biting") {
+      const phaseResult = await this.handleBitingPhase(
+        e, state, stateKey, fishingManager, userId, groupId
       );
-
-      this.finish("pullRod", stateKey);
-      await this.clearFishingState(groupId, userId);
-
-      if (catchType === "trash") {
-        await this.handleTrashCatch(e, userId, catchData, fishingManager);
-      } else if (catchType === "dangerous") {
-        await this.handleDangerousCatch(e, userId, catchData, fishingManager);
-      } else if (catchType === "torpedo") {
-        await this.handleTorpedoCatch(
-          e,
-          groupId,
-          userId,
-          catchData,
-          fishingManager
-        );
+      if (phaseResult?.shouldReturn) {
+        return phaseResult.result;
       }
-      return true;
     }
+
+    // ========== 清理状态，设置冷却 ==========
+    this.finish("pullRod", stateKey);
+    if (state.cleanup) state.cleanup();
+    else delete fishingState[stateKey];
 
     const cooldownKey = `sakura:fishing:cooldown:${groupId}:${userId}`;
     await redis.set(
@@ -328,10 +811,23 @@ export default class Fishing extends plugin {
       900
     );
 
-    this.finish("pullRod", stateKey);
-    await this.clearFishingState(groupId, userId);
+    // ========== 根据捕获类型分发处理 ==========
+    switch (catchType) {
+      case "trash":
+        return await this.handleTrash(e, catchData, fishingManager, userId);
 
-    return true;
+      case "dangerous":
+        return await this.handleDangerous(e, catchData, fishingManager, userId);
+
+      case "torpedo":
+        return await this.handleTorpedo(e, catchData, fishingManager, userId, groupId);
+
+      case "member":
+        return await this.handleMember(e, state, fishingManager, userId, groupId);
+
+      default:
+        return true;
+    }
   }
 
   equipRod = Command(/^#?装备鱼竿\s*(.+)$/, async (e) => {
@@ -741,51 +1237,32 @@ export default class Fishing extends plugin {
       return true;
     }
 
+    // 使用公共算法计算重量和价格
     const fish = catchData;
     const fishName = fish.card || fish.nickname || fish.user_id;
-    let fishLevel = Number(fish.level) || 1;
 
     const eco = new EconomyManager(e);
     if (!eco.data[fish.user_id]) {
       eco.data[fish.user_id] = { coins: 0, experience: 0, level: 1 };
     }
     const fishCoins = eco.data[fish.user_id]?.coins || 0;
-    const baseWeight =
-      fishCoins > 100
-        ? 100 + Math.pow(Math.log2(fishCoins - 100), 2)
-        : fishCoins;
-    const randomMultiplier = 0.8 + Math.random() * 0.4;
-    const fishWeight = Math.round(baseWeight * randomMultiplier);
+    const fishWeight = calculateFishWeight(fishCoins);
 
-    let price = Math.round(fishLevel * (1 + fishWeight / 100));
+    // 使用公共价格计算（爆炸模式）
+    const priceResult = await calculateFishPrice(fish, fishWeight, fishingManager, {
+      rodConfig: null,
+      groupId,
+      isExplosion: true,
+    });
 
-    const currentTime = Math.floor(Date.now() / 1000);
-    const lastSentTime = fish.last_sent_time || currentTime;
-    const maxDuration = 60 * 24 * 3600;
-    const timeDiff = Math.max(0, currentTime - lastSentTime);
-    let freshness = Math.max(0, 1 - timeDiff / maxDuration);
-    price = Math.round(price * freshness);
-
-    if (fish.role === "owner" || fish.role === "admin") {
-      price *= 2;
-    }
-
-    price = Math.round(price / 2);
-
-    const torpedoScareKey = `sakura:fishing:torpedo_scare:${groupId}`;
-    const torpedoScareTime = await redis.get(torpedoScareKey);
-    let isTorpedoScare = false;
-    if (torpedoScareTime) {
-      isTorpedoScare = true;
-      price = Math.round(price * 1.5);
-    }
+    const { price, freshness, fishNameBonus, isTorpedoScare } = priceResult;
 
     const economyManager = new EconomyManager(e);
     economyManager.addCoins(e, price);
-
     fishingManager.recordCatch(userId, price, fish.user_id);
 
-    const rarity = getRarityByLevel(fishLevel);
+    // 构建结果消息
+    const rarity = getRarityByLevel(Number(fish.level) || 1);
     const displayWeight = Math.max(1, fishWeight);
     const freshnessDisplay =
       freshness <= 0 ? "死鱼" : (freshness * 100).toFixed(2) + "%";
@@ -797,10 +1274,7 @@ export default class Fishing extends plugin {
       segment.image(`https://q1.qlogo.cn/g?b=qq&nk=${fish.user_id}&s=640`),
     ];
 
-    let fishNameBonus = "";
-    const fishNameData = fishingManager.getFishName(fish.user_id);
-    if (fishNameData) {
-      fishNameBonus = `${fishNameData.name}`;
+    if (fishNameBonus) {
       resultMsg.push(`🐠 鱼种：${fishNameBonus}\n`);
     }
 
@@ -852,405 +1326,4 @@ export default class Fishing extends plugin {
     await e.sendForwardMsg(forwardMsg, { prompt: "💣 鱼雷状态" });
     return true;
   });
-
-  async getFishingState(groupId, userId) {
-    const memKey = `${groupId}:${userId}`;
-    if (fishingState[memKey]) return fishingState[memKey];
-
-    const redisKey = `sakura:fishing:state:${groupId}:${userId}`;
-    const data = await redis.get(redisKey);
-    if (data) {
-      return JSON.parse(data);
-    }
-    return null;
-  }
-
-  async saveFishingState(groupId, userId, state) {
-    const redisKey = `sakura:fishing:state:${groupId}:${userId}`;
-    await redis.set(redisKey, JSON.stringify(state), "EX", 10 * 60);
-
-    const memKey = `${groupId}:${userId}`;
-    if (!fishingState[memKey]) {
-      fishingState[memKey] = {};
-    }
-    Object.assign(fishingState[memKey], state);
-  }
-
-  async clearFishingState(groupId, userId) {
-    const memKey = `${groupId}:${userId}`;
-    const state = fishingState[memKey];
-    if (state && state.cleanup) {
-      state.cleanup();
-    }
-    if (fishingState[memKey]) delete fishingState[memKey];
-
-    const redisKey = `sakura:fishing:state:${groupId}:${userId}`;
-    await redis.del(redisKey);
-  }
-
-  calculateFishWeight(e, fishUserId) {
-    const eco = new EconomyManager(e);
-    if (!eco.data[fishUserId]) {
-        eco.data[fishUserId] = { coins: 0, experience: 0, level: 1 };
-    }
-    const fishCoins = eco.data[fishUserId]?.coins || 0;
-    const baseWeight =
-        fishCoins > 100
-        ? 100 + Math.pow(Math.log2(fishCoins - 100), 2)
-        : fishCoins;
-    const randomMultiplier = 0.8 + Math.random() * 0.4;
-    return Math.round(baseWeight * randomMultiplier);
-  }
-
-  getRemainingHits(currentCapacity) {
-    return Math.max(0, Math.floor((currentCapacity - 30) / 10));
-  }
-
-  async handleTrashCatch(e, userId, catchData, fishingManager) {
-    const trash = catchData;
-    const resultMsg = [
-      `😔 可惜...不是鱼！\n`,
-      `${trash.emoji} 钓到了【${trash.name}】！\n`,
-      `📝 ${trash.description}\n`,
-      `💰 获得：0 樱花币\n`,
-      `💡 运气不好，下次再接再厉！`,
-    ];
-    fishingManager.recordCatch(userId, 0, null);
-    await e.reply(resultMsg);
-  }
-
-  async handleDangerousCatch(e, userId, catchData, fishingManager) {
-    const creature = catchData;
-    const equippedRodId = fishingManager.getEquippedRod(userId);
-    const rodConfig = fishingManager.getRodConfig(equippedRodId);
-    const rodName = rodConfig?.name || "鱼竿";
-    const currentCapacity = fishingManager.getCurrentRodCapacity(userId);
-
-    if (rodConfig?.legendary) {
-      const reduceResult = fishingManager.reduceRodCapacity(userId, 10);
-      const remainingHits = this.getRemainingHits(reduceResult.currentCapacity);
-
-      const economyManager = new EconomyManager(e);
-      economyManager.addCoins(e, 1000);
-
-      const resultMsg = [
-        `😱 危险！强大的生物出现了！\n`,
-        `${creature.emoji} 【${creature.name}】袭来！\n`,
-        `📝 ${creature.description}\n`,
-        `⚔️ 你的【${rodName}】散发着传说的力量...\n`,
-        `🎉 成功钓起了这只危险生物！\n`,
-        `💢 但是你的【${rodName}】受到了损伤！\n`,
-        `🛡️ 还能抵御 ${remainingHits} 次损伤\n`,
-        `💰 获得：1000 樱花币\n`,
-        `🏆 击败危险生物是真正的勇者！`,
-      ];
-      fishingManager.recordDangerousCatch(userId, 1000, creature.name);
-      await e.reply(resultMsg);
-      return;
-    }
-
-    if (rodConfig?.lucky) {
-      fishingManager.removeEquippedRod(userId);
-      const economyManager = new EconomyManager(e);
-      economyManager.addCoins(e, 1000);
-
-      const resultMsg = [
-        `😱 糟糕！遇到可怕的生物！\n`,
-        `${creature.emoji} 【${creature.name}】出现了！\n`,
-        `📝 ${creature.description}\n`,
-        `🍀 你的【${rodName}】闪烁着幸运的光芒...\n`,
-        `💥 但还是被一口吞掉了！\n`,
-        `✨ 幸运女神的眷顾：获得 666 樱花币作为补偿！\n`,
-        `⚠️ 鱼竿已丢失，请去商店重新购买！`,
-      ];
-      fishingManager.recordCatch(userId, 666, null);
-      await e.reply(resultMsg);
-      return;
-    }
-
-    if (currentCapacity <= 30) {
-      fishingManager.removeEquippedRod(userId);
-      const resultMsg = [
-        `😱 糟糕！遇到可怕的生物！\n`,
-        `${creature.emoji} 【${creature.name}】出现了！\n`,
-        `📝 ${creature.description}\n`,
-        `💥 你的【${rodName}】已经破旧不堪，被它一口吞掉了！\n`,
-        `💰 获得：0 樱花币\n`,
-        `⚠️ 鱼竿已丢失，请去商店重新购买！`,
-      ];
-      fishingManager.recordCatch(userId, 0, null);
-      await e.reply(resultMsg);
-      return;
-    }
-
-    const reduceResult = fishingManager.reduceRodCapacity(userId, 10);
-    const remainingHits = this.getRemainingHits(reduceResult.currentCapacity);
-    const resultMsg = [
-      `😱 糟糕！遇到可怕的生物！\n`,
-      `${creature.emoji} 【${creature.name}】出现了！\n`,
-      `📝 ${creature.description}\n`,
-      `💢 你的【${rodName}】受到了损伤！\n`,
-      `🛡️ 还能抵御 ${remainingHits} 次损伤\n`,
-      `💰 获得：0 樱花币\n`,
-      `💡 鱼竿损伤过多可能会被吞掉哦...`,
-    ];
-    fishingManager.recordCatch(userId, 0, null);
-    await e.reply(resultMsg);
-  }
-
-  async handleTorpedoCatch(e, groupId, userId, catchData, fishingManager) {
-    const torpedo = catchData;
-    const equippedRodId = fishingManager.getEquippedRod(userId);
-    const rodConfig = fishingManager.getRodConfig(equippedRodId);
-    const rodName = rodConfig?.name || "鱼竿";
-    const currentCapacity = fishingManager.getCurrentRodCapacity(userId);
-
-    fishingManager.triggerTorpedo(userId, torpedo.ownerId);
-
-    const torpedoScareKey = `sakura:fishing:torpedo_scare:${groupId}`;
-    await redis.set(torpedoScareKey, String(Date.now()), "EX", 1 * 60 * 60);
-
-    if (rodConfig?.lucky) {
-      fishingManager.removeEquippedRod(userId);
-      const economyManager = new EconomyManager(e);
-      economyManager.addCoins(e, 300);
-
-      const resultMsg = [
-        `💣 糟糕！钓到了鱼雷！\n`,
-        segment.at(torpedo.ownerId),
-        ` 埋的鱼雷被钓到了！\n`,
-        `🍀 你的【${rodName}】闪烁着幸运的光芒...\n`,
-        `💥 但鱼雷爆炸了！鱼竿被炸毁了！\n`,
-        `✨ 幸运女神的眷顾：获得 300 樱花币作为补偿！\n`,
-        `⚠️ 鱼竿已丢失，请去商店重新购买！\n`,
-        `😱 鱼雷爆炸引发恐慌！接下来1小时内鱼价1.5倍！`,
-      ];
-      fishingManager.recordCatch(userId, 300, null);
-      await e.reply(resultMsg);
-      return;
-    }
-
-    if (currentCapacity <= 30) {
-      fishingManager.removeEquippedRod(userId);
-      const resultMsg = [
-        `💣 糟糕！钓到了鱼雷！\n`,
-        segment.at(torpedo.ownerId),
-        ` 埋的鱼雷被钓到了！\n`,
-        `💥 你的【${rodName}】已经破旧不堪，被炸毁了！\n`,
-        `💰 获得：0 樱花币\n`,
-        `⚠️ 鱼竿已丢失，请去商店重新购买！\n`,
-        `😱 鱼雷爆炸引发恐慌！接下来1小时内鱼价1.5倍！`,
-      ];
-      fishingManager.recordCatch(userId, 0, null);
-      await e.reply(resultMsg);
-      return;
-    }
-
-    const reduceResult = fishingManager.reduceRodCapacity(userId, 10);
-    const remainingHits = this.getRemainingHits(reduceResult.currentCapacity);
-    const resultMsg = [
-      `💣 糟糕！钓到了鱼雷！\n`,
-      segment.at(torpedo.ownerId),
-      ` 埋的鱼雷被钓到了！\n`,
-      `💢 你的【${rodName}】受到了损伤！\n`,
-      `🛡️ 还能抵御 ${remainingHits} 次损伤\n`,
-      `💰 获得：0 樱花币\n`,
-        `💡 鱼竿损伤过多可能会被炸毁哦...\n`,
-        `😱 鱼雷爆炸引发恐慌！接下来1小时内鱼价1.5倍！`,
-    ];
-    fishingManager.recordCatch(userId, 0, null);
-    await e.reply(resultMsg);
-  }
-
-  async handleFishCatch(e, groupId, userId, state, fishingManager) {
-    const { fish, fishName } = state;
-    const equippedRodId = fishingManager.getEquippedRod(userId);
-    const rodConfig = fishingManager.getRodConfig(equippedRodId);
-    const rodCapacity = fishingManager.getCurrentRodCapacity(userId);
-    const rodProficiency = fishingManager.getRodProficiency(userId, equippedRodId);
-
-    let fishWeight, successRate;
-
-    if (state.calculatedWeight !== undefined) {
-      fishWeight = state.calculatedWeight;
-      successRate = state.calculatedSuccessRate;
-    } else {
-      fishWeight = this.calculateFishWeight(e, fish.user_id);
-
-      successRate = 100;
-      if (rodConfig?.lucky) {
-        const luckyCapacity = (rodConfig.capacity || 30) + rodProficiency;
-        if (fishWeight > luckyCapacity) {
-          successRate = rodConfig.luckyRate || 66;
-        }
-      } else if (rodCapacity <= 30) {
-        if (fishWeight > rodCapacity) {
-          successRate = Math.max(0, 100 - (fishWeight - rodCapacity));
-        }
-      } else {
-        if (fishWeight - rodCapacity >= 100) {
-          successRate = 0;
-        } else {
-          const effectiveCapacity = rodCapacity + rodProficiency;
-          if (fishWeight > effectiveCapacity) {
-            successRate = Math.max(0, 100 - (fishWeight - effectiveCapacity));
-          }
-        }
-      }
-    }
-
-    if (state.calculatedWeight === undefined) {
-      if (successRate < 100 && !rodConfig?.lucky) {
-        state.phase = "confirming";
-        state.calculatedWeight = fishWeight;
-        state.calculatedSuccessRate = successRate;
-        state.confirmDeadline = Date.now() + 60000;
-
-        await this.saveFishingState(groupId, userId, state);
-        this.setContext("pullRod", `${groupId}:${userId}`, 60);
-
-        const stateKey = `${groupId}:${userId}`;
-        if (fishingState[stateKey]) {
-            fishingState[stateKey].confirmTimer = setTimeout(() => {
-                const s = fishingState[stateKey];
-                if (s && s.phase === "confirming") {
-                    this.finish("pullRod", stateKey);
-                    if (s.cleanup) s.cleanup();
-                    else delete fishingState[stateKey];
-                    this.clearFishingState(groupId, userId);
-                    e.reply(
-                    `🐟 犹豫就会败北...\n这条大鱼已经挣脱鱼钩游走啦！`
-                    );
-                }
-            }, 60000);
-        }
-
-        await e.reply(
-          `⚠️ 这条鱼有点重，有可能会损耗鱼竿...\n💪 不过拼一把说不定能钓起来！\n🎯 发送「收竿」强行拉起，「放弃」放生鱼儿`
-        );
-        return;
-      }
-    }
-
-    fishingManager.addRodProficiency(userId, equippedRodId);
-
-    if (_.random(1, 100) > successRate) {
-      if (rodConfig?.lucky) {
-        await e.reply([
-          `🍀 幸运女神今天没有眷顾你...\n`,
-          `😅 你的【${rodConfig?.name}】闪烁了一下，但鱼还是跑了！\n`,
-          `💨 下次一定会有好运的！`,
-        ]);
-        fishingManager.recordCatch(userId, 0, null);
-      } else {
-        if (successRate <= 0) {
-          const currentCapacity = fishingManager.getCurrentRodCapacity(userId);
-
-          if (currentCapacity <= 30) {
-            fishingManager.removeEquippedRod(userId);
-            await e.reply([
-              `🎣 哎呀！鱼太重了（${fishWeight}）！\n`,
-              `😓 你的【${rodConfig?.name}】弯到了极限...\n`,
-              `💥 咔嚓！鱼竿断了！\n`,
-              `⚠️ 鱼竿已丢失，请去商店重新购买！`,
-            ]);
-            fishingManager.recordCatch(userId, 0, null);
-          } else {
-            const reduceResult = fishingManager.reduceRodCapacity(userId, 10);
-            const remainingHits = this.getRemainingHits(reduceResult.currentCapacity);
-            await e.reply([
-              `🎣 哎呀！鱼太重了（${fishWeight}）！\n`,
-              `😓 你的【${rodConfig?.name}】弯到了极限，难以控制这条巨物！\n`,
-              `💢 鱼竿受到了损伤！还能抵御 ${remainingHits} 次损伤\n`,
-              `💨 鱼儿猛地一挣，逃之夭夭...`,
-            ]);
-            fishingManager.recordCatch(userId, 0, null);
-          }
-        } else {
-          await e.reply([
-            `🎣 哎呀！鱼太重了（${fishWeight}）！\n`,
-            `😓 你的【${rodConfig?.name}】弯到了极限，难以控制这条巨物！\n`,
-            `💨 鱼儿猛地一挣，逃之夭夭...`,
-          ]);
-          fishingManager.recordCatch(userId, 0, null);
-        }
-      }
-      return;
-    }
-
-    let fishLevel = Number(fish.level) || 1;
-    let price = Math.round(fishLevel * (1 + fishWeight / 100));
-
-    const currentTime = Math.floor(Date.now() / 1000);
-    const lastSentTime = fish.last_sent_time || currentTime;
-    const maxDuration = 60 * 24 * 3600;
-    const timeDiff = Math.max(0, currentTime - lastSentTime);
-    let freshness = Math.max(0, 1 - timeDiff / maxDuration);
-    price = Math.round(price * freshness);
-
-    if (fish.role === "owner" || fish.role === "admin") {
-      price *= 2;
-    }
-
-    let fishNameBonus = "";
-    const fishNameData = fishingManager.getFishName(fish.user_id);
-    if (fishNameData) {
-      fishNameBonus = `${fishNameData.name}`;
-      price += 10;
-    }
-
-    let isDoubled = false;
-    if (rodConfig?.doubleChance && _.random(1, 100) <= rodConfig.doubleChance) {
-      price *= 2;
-      isDoubled = true;
-    }
-
-    let isGoldenBonus = false;
-    if (rodConfig?.goldenBonus && _.random(1, 100) <= 50) {
-      const bonusAmount = Math.round(price * 0.2);
-      price += bonusAmount;
-      isGoldenBonus = true;
-    }
-
-    const torpedoScareKey = `sakura:fishing:torpedo_scare:${groupId}`;
-    const torpedoScareTime = await redis.get(torpedoScareKey);
-    let isTorpedoScare = false;
-    if (torpedoScareTime) {
-      isTorpedoScare = true;
-      price = Math.round(price * 1.5);
-    }
-
-    const economyManager = new EconomyManager(e);
-    economyManager.addCoins(e, price);
-
-    fishingManager.recordCatch(userId, price, fish.user_id);
-
-    const rarity = getRarityByLevel(fishLevel);
-    const displayWeight = Math.max(1, fishWeight);
-    const freshnessDisplay =
-      freshness <= 0 ? "死鱼" : (freshness * 100).toFixed(2) + "%";
-
-    const resultMsg = [
-      `🎉 钓鱼成功！\n`,
-      `🐟 钓到了【${fishName}】！\n`,
-      segment.image(`https://q1.qlogo.cn/g?b=qq&nk=${fish.user_id}&s=640`),
-    ];
-
-    if (fishNameBonus) resultMsg.push(`🐠 鱼种：${fishNameBonus}\n`);
-    if (fish.role === "owner" || fish.role === "admin") {
-      const roleName = fish.role === "owner" ? "群主" : "管理员";
-      resultMsg.push(`👑 身份：${roleName}\n`);
-    }
-
-    resultMsg.push(`📊 稀有度：${rarity.color}${rarity.name}\n`);
-    if (rodProficiency > 0) resultMsg.push(`📈 熟练度：${rodProficiency}\n`);
-    resultMsg.push(`⚖️ 重量：${displayWeight}\n`);
-    resultMsg.push(`🧊 新鲜度：${freshnessDisplay}\n`);
-    if (isDoubled) resultMsg.push(`✨ 招财加持！樱花币翻倍！\n`);
-    if (isGoldenBonus) resultMsg.push(`🌟黄金鱼竿加成！额外获得20%樱花币！\n`);
-    if (isTorpedoScare) resultMsg.push(`😱 鱼雷恐慌中！鱼价1.5倍！\n`);
-    resultMsg.push(`💰 获得：${price} 樱花币`);
-
-    await e.reply(resultMsg);
-  }
 }

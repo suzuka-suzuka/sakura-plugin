@@ -5,8 +5,6 @@ import {
 import { getImg } from "../lib/utils.js";
 import fs from "fs";
 
-const EMOJI_COOLDOWN_SECONDS = 5 * 60;
-
 export class EmotionImage extends plugin {
   constructor() {
     super({
@@ -14,27 +12,6 @@ export class EmotionImage extends plugin {
       event: "message",
       priority: 1135,
     });
-  }
-
-  getEmojiCooldownKey(userId) {
-    return `sakura:emoji:cooldown:${userId}`;
-  }
-
-  async checkAndSetCooldown(e) {
-    if (e.iswhite) {
-      return { onCooldown: false };
-    }
-
-    const cooldownKey = this.getEmojiCooldownKey(e.user_id);
-    const ttl = await redis.ttl(cooldownKey);
-
-    if (ttl > 0) {
-      const remainingMinutes = Math.ceil(ttl / 60);
-      return { onCooldown: true, remainingMinutes };
-    }
-
-    await redis.set(cooldownKey, String(Date.now()), "EX", EMOJI_COOLDOWN_SECONDS);
-    return { onCooldown: false };
   }
 
   autoCleanup = Cron("0 3 * * 0", async () => {
@@ -71,7 +48,7 @@ export class EmotionImage extends plugin {
     }
   });
 
-  saveEmoji = Command(/^#?存表情$/, async (e) => {
+  saveEmoji = Command(/^#?存表情$/, white, async (e) => {
     let imageMsg = e.message?.find((item) => item.type === "image");
 
     if (!imageMsg && e.reply_id) {
@@ -92,17 +69,52 @@ export class EmotionImage extends plugin {
       return false;
     }
 
-    const cooldownResult = await this.checkAndSetCooldown(e);
-    if (cooldownResult.onCooldown) {
-      await e.reply(`操作太频繁啦！请等待 ${cooldownResult.remainingMinutes} 分钟后再试~`, 10);
-      return true;
-    }
-
     await e.react(124);
     try {
       const checkResult = await imageEmbeddingManager.checkImage(imgUrls[0]);
+      
+      logger.mark(`[存表情] checkImage 返回: exists=${checkResult.exists}, fileInfo=${JSON.stringify(checkResult.fileInfo)}`);
 
       if (checkResult.exists) {
+        logger.mark(`[存表情] 表情已存在 ID=${checkResult.item.id}, 检查已存在表情的文件是否存在`);
+        
+        // 检查已存在表情的文件是否真的存在
+        const existingFilePath = checkResult.item.localPath;
+        const existingFileExists = existingFilePath && fs.existsSync(existingFilePath);
+        
+        logger.mark(`[存表情] 已存在表情文件路径: ${existingFilePath}, 文件存在: ${existingFileExists}`);
+        
+        if (!existingFileExists) {
+          logger.error(`[存表情] 检测到孤儿索引！索引 ID=${checkResult.item.id} 存在，但文件 ${existingFilePath} 不存在`);
+          
+          // 如果新下载的文件存在，用它来修复
+          if (
+            checkResult.fileInfo?.filepath &&
+            fs.existsSync(checkResult.fileInfo.filepath)
+          ) {
+            logger.warn(`[存表情] 尝试用新下载的文件修复孤儿索引: ${checkResult.fileInfo.filepath} -> ${existingFilePath}`);
+            // 这里需要调用 imageEmbeddingManager 的更新方法来修复
+            // 暂时先记录问题
+            await e.reply(`⚠️ 检测到数据异常：表情索引存在但文件丢失\n索引ID: ${checkResult.item.id}\n请联系管理员修复`, 10);
+          } else {
+            logger.error(`[存表情] 无法修复：新文件也不存在`);
+            await e.reply(`❌ 检测到严重数据异常：表情索引和文件都丢失\n索引ID: ${checkResult.item.id}\n建议删除此索引`, 10);
+          }
+          return true;
+        }
+        
+        // 已存在的表情文件正常，清理新下载的临时文件
+        if (
+          checkResult.fileInfo?.filepath &&
+          fs.existsSync(checkResult.fileInfo.filepath)
+        ) {
+          logger.warn(`[存表情] 表情已存在且文件正常，清理新下载的临时文件: ${checkResult.fileInfo.filepath}`);
+          fs.unlinkSync(checkResult.fileInfo.filepath);
+          logger.mark(`[存表情] 临时文件已清理`);
+        } else {
+          logger.mark(`[存表情] 无临时文件需要清理`);
+        }
+        
         const nickname = e.sender.card || e.sender.nickname || "表情库";
         await e.sendForwardMsg(
           [
@@ -130,30 +142,38 @@ export class EmotionImage extends plugin {
         );
         return true;
       }
+      
+      logger.mark(`[存表情] 表情不存在，准备保存新表情，临时文件路径: ${checkResult.fileInfo?.filepath}`);
 
       let description;
       try {
         description = await describeImage({ imageUrl: imgUrls[0] });
+        logger.mark(`[存表情] 识图成功: ${description}`);
       } catch (err) {
+        logger.error(`[存表情] 识图失败: ${err.message}`);
         if (
           checkResult.fileInfo?.filepath &&
           fs.existsSync(checkResult.fileInfo.filepath)
         ) {
+          logger.mark(`[存表情] 清理识图失败的临时文件: ${checkResult.fileInfo.filepath}`);
           fs.unlinkSync(checkResult.fileInfo.filepath);
         }
         throw err;
       }
 
       if (!description) {
+        logger.error(`[存表情] 识图返回空描述`);
         if (
           checkResult.fileInfo?.filepath &&
           fs.existsSync(checkResult.fileInfo.filepath)
         ) {
+          logger.mark(`[存表情] 清理空描述的临时文件: ${checkResult.fileInfo.filepath}`);
           fs.unlinkSync(checkResult.fileInfo.filepath);
         }
         throw new Error("识图失败");
       }
 
+      logger.mark(`[存表情] 准备添加到表情库...`);
       const result = await imageEmbeddingManager.addPreparedImage(
         checkResult.fileInfo,
         description,
@@ -162,6 +182,7 @@ export class EmotionImage extends plugin {
           userId: e.user_id,
         }
       );
+      logger.mark(`[存表情] 成功添加到表情库 ID=${result.id}`);
 
       const nickname = e.sender.card || e.sender.nickname || "表情库";
       await e.sendForwardMsg(
@@ -196,19 +217,13 @@ export class EmotionImage extends plugin {
     return true;
   });
 
-  sendEmoji = Command(/^#?发表情(.+)$/, async (e) => {
+  sendEmoji = Command(/^#?发表情(.+)$/, white, async (e) => {
     const match = e.msg.match(/^#?发表情(.+)$/);
     if (!match) return false;
 
     const query = match[1].trim();
     if (!query) {
       return false;
-    }
-
-    const cooldownResult = await this.checkAndSetCooldown(e);
-    if (cooldownResult.onCooldown) {
-      await e.reply(`操作太频繁啦！请等待 ${cooldownResult.remainingMinutes} 分钟后再试~`, 10);
-      return true;
     }
 
     if (imageEmbeddingManager.getCount() === 0) {
@@ -232,7 +247,7 @@ export class EmotionImage extends plugin {
         return true;
       }
 
-      await e.reply(segment.image(result.localPath,1));
+      await e.reply(segment.image(result.localPath, 1));
 
       const nickname = e.sender.card || e.sender.nickname || "表情库";
       const forwardMsg = [
@@ -268,13 +283,7 @@ export class EmotionImage extends plugin {
     return true;
   });
 
-  deleteEmoji = Command(/^#?删表情(.*)$/, async (e) => {
-    const cooldownResult = await this.checkAndSetCooldown(e);
-    if (cooldownResult.onCooldown) {
-      await e.reply(`操作太频繁啦！请等待 ${cooldownResult.remainingMinutes} 分钟后再试~`, 10);
-      return true;
-    }
-
+  deleteEmoji = Command(/^#?删表情(.*)$/, white, async (e) => {
     const imgUrls = await getImg(e);
 
     if (imgUrls && imgUrls.length > 0) {
@@ -382,20 +391,22 @@ export class EmotionImage extends plugin {
     return true;
   });
 
-  cleanOrphanedEmoji = Command(/^#?清理孤儿表情$/, async (e) => {
-    if (!e.isMaster) {
-      return false;
-    }
-
+  cleanOrphanedEmoji = Command(/^#?清理孤儿表情$/, white, async (e) => {
     await e.reply("正在清理孤儿表情索引...", true);
 
     try {
       const result = await imageEmbeddingManager.cleanupOrphanedIndexes();
-      
+
       if (result.cleaned === 0) {
-        await e.reply(`✅ 没有发现孤儿索引，表情库共 ${result.total} 个表情`, true);
+        await e.reply(
+          `✅ 没有发现孤儿索引，表情库共 ${result.total} 个表情`,
+          true
+        );
       } else {
-        await e.reply(`✅ 清理完成！\n🗑️ 清理孤儿索引: ${result.cleaned} 个\n📦 剩余表情: ${result.total} 个`, true);
+        await e.reply(
+          `✅ 清理完成！\n🗑️ 清理孤儿索引: ${result.cleaned} 个\n📦 剩余表情: ${result.total} 个`,
+          true
+        );
       }
     } catch (error) {
       logger.error(`[清理孤儿表情] 失败: ${error.message}`);
