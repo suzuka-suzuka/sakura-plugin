@@ -176,8 +176,8 @@ export default class Fishing extends plugin {
     const groupFishingCount = await redis.get(groupFishingKey);
     const currentCount = groupFishingCount ? parseInt(groupFishingCount) : 0;
     
-    if (currentCount >= 40) {
-      await e.reply("😭 鱼塘里的鱼都被钓光啦！\n🐟 为了可持续发展，请等待凌晨4点鱼苗投放后再来吧~", 10);
+    if (currentCount >= 20) {
+      await e.reply("😭 鱼塘里的鱼都被钓光啦！\n🐟 为了可持续发展，请等待下次鱼苗投放（每天4点和16点）后再来吧~", 10);
       return true;
     }
 
@@ -796,16 +796,21 @@ export default class Fishing extends plugin {
       900
     );
 
-    // ========== 增加群钓鱼计数，设置到凌晨4点刷新 ==========
+    // ========== 增加群钓鱼计数，设置到每天4点和16点刷新 ==========
     const groupFishingKey = `sakura:fishing:group_daily:${groupId}`;
     const now = new Date();
     const nextReset = new Date(now);
+    const currentHour = now.getHours();
     
-    // 如果当前时间已过4点，则设置到明天4点；否则设置到今天4点
-    if (now.getHours() >= 4) {
+    // 判断下次刷新时间：0-4点→今天4点，4-16点→今天16点，16-24点→明天4点
+    if (currentHour < 4) {
+      nextReset.setHours(4, 0, 0, 0);
+    } else if (currentHour < 16) {
+      nextReset.setHours(16, 0, 0, 0);
+    } else {
       nextReset.setDate(nextReset.getDate() + 1);
+      nextReset.setHours(4, 0, 0, 0);
     }
-    nextReset.setHours(4, 0, 0, 0);
     
     const secondsUntilReset = Math.floor((nextReset - now) / 1000);
     await redis.incr(groupFishingKey);
