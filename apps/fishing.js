@@ -309,21 +309,6 @@ export default class Fishing extends plugin {
 
     const state = fishingState[stateKey];
 
-    // 增加群钓鱼计数，设置到凌晨4点刷新
-    const now = new Date();
-    const nextReset = new Date(now);
-    
-    // 如果当前时间已过4点，则设置到明天4点；否则设置到今天4点
-    if (now.getHours() >= 4) {
-      nextReset.setDate(nextReset.getDate() + 1);
-    }
-    nextReset.setHours(4, 0, 0, 0);
-    
-    const secondsUntilReset = Math.floor((nextReset - now) / 1000);
-    
-    await redis.incr(groupFishingKey);
-    await redis.expire(groupFishingKey, secondsUntilReset);
-
     state.totalTimer = setTimeout(() => {
       if (fishingState[stateKey]) {
         cleanupState(stateKey);
@@ -810,6 +795,21 @@ export default class Fishing extends plugin {
       "EX",
       900
     );
+
+    // ========== 增加群钓鱼计数，设置到凌晨4点刷新 ==========
+    const groupFishingKey = `sakura:fishing:group_daily:${groupId}`;
+    const now = new Date();
+    const nextReset = new Date(now);
+    
+    // 如果当前时间已过4点，则设置到明天4点；否则设置到今天4点
+    if (now.getHours() >= 4) {
+      nextReset.setDate(nextReset.getDate() + 1);
+    }
+    nextReset.setHours(4, 0, 0, 0);
+    
+    const secondsUntilReset = Math.floor((nextReset - now) / 1000);
+    await redis.incr(groupFishingKey);
+    await redis.expire(groupFishingKey, secondsUntilReset);
 
     // ========== 根据捕获类型分发处理 ==========
     switch (catchType) {
