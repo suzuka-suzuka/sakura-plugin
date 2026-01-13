@@ -177,7 +177,7 @@ export default class Fishing extends plugin {
     const currentCount = groupFishingCount ? parseInt(groupFishingCount) : 0;
     
     if (currentCount >= 20) {
-      await e.reply("� 鱼塘里的鱼都被钓光啦！\n🐟 为了可持续发展，请等待凌晨4点鱼苗投放后再来吧~", 10);
+      await e.reply("😭鱼塘里的鱼都被钓光啦！\n🐟 为了可持续发展，请等待凌晨4点鱼苗投放后再来吧~", 10);
       return true;
     }
 
@@ -428,10 +428,10 @@ export default class Fishing extends plugin {
         `📝 ${creature.description}\n`,
         `🍀 你的【${rodName}】闪烁着幸运的光芒...\n`,
         `💥 但还是被一口吞掉了！\n`,
-        `✨ 幸运女神的眷顾：获得 666 樱花币作为补偿！\n`,
+        `✨ 幸运女神的眷顾：获得 1000 樱花币作为补偿！\n`,
         `⚠️ 鱼竿已丢失，请去商店重新购买！`,
       ];
-      fishingManager.recordCatch(userId, 666, null);
+      fishingManager.recordCatch(userId, 1000, null);
       await e.reply(resultMsg);
       return true;
     }
