@@ -43,7 +43,7 @@ function calculateFishWeight(fishCoins) {
 function calculateSuccessRate(fishWeight, rodCapacity, rodProficiency, rodConfig) {
   // 幸运鱼竿特殊逻辑
   if (rodConfig?.lucky) {
-    const luckyCapacity = (rodConfig.capacity || 30) + rodProficiency;
+    const luckyCapacity = (rodConfig.capacity || -6) + rodProficiency;
     return fishWeight > luckyCapacity ? (rodConfig.luckyRate || 66) : 100;
   }
 
@@ -405,7 +405,7 @@ export default class Fishing extends plugin {
     if (rodConfig?.lucky) {
       fishingManager.removeEquippedRod(userId);
       const economyManager = new EconomyManager(e);
-      economyManager.addCoins(e, 666);
+      economyManager.addCoins(e, 1000);
 
       const resultMsg = [
         `😱 糟糕！遇到可怕的生物！\n`,
@@ -413,10 +413,10 @@ export default class Fishing extends plugin {
         `📝 ${creature.description}\n`,
         `🍀 你的【${rodName}】闪烁着幸运的光芒...\n`,
         `💥 但还是被一口吞掉了！\n`,
-        `✨ 幸运女神的眷顾：获得 666 樱花币作为补偿！\n`,
+        `✨ 幸运女神的眷顾：获得 1000 樱花币作为补偿！\n`,
         `⚠️ 鱼竿已丢失，请去商店重新购买！`,
       ];
-      fishingManager.recordCatch(userId, 666, null);
+      fishingManager.recordCatch(userId, 1000, null);
       await e.reply(resultMsg);
       return true;
     }
