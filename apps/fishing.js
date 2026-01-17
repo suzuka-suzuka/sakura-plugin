@@ -793,7 +793,7 @@ export default class Fishing extends plugin {
       cooldownKey,
       String(Math.floor(Date.now() / 1000)),
       "EX",
-      900
+      180
     );
 
     // ========== 增加群钓鱼计数，设置到凌晨4点刷新 ==========
