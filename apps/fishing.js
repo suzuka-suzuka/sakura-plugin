@@ -176,7 +176,7 @@ export default class Fishing extends plugin {
     const groupFishingCount = await redis.get(groupFishingKey);
     const currentCount = groupFishingCount ? parseInt(groupFishingCount) : 0;
     
-    if (currentCount >= 20) {
+    if (currentCount >= 1000) {
       await e.reply("😭 鱼塘里的鱼都被钓光啦！\n🐟 为了可持续发展，请等待凌晨4点鱼苗投放后再来吧~", 10);
       return true;
     }
@@ -850,7 +850,7 @@ export default class Fishing extends plugin {
     return true;
   });
 
-  sellRod = Command(/^#?(出售|卖掉?)鱼竿\s*(.+)$/, async (e) => {
+sellRod = Command(/^#?(出售|卖掉?)鱼竿\s*(.+)$/, async (e) => {
     const rodName = e.msg.match(/^#?(出售|卖掉?)鱼竿\s*(.+)$/)[2].trim();
     const fishingManager = new FishingManager(e.group_id);
 
@@ -877,9 +877,14 @@ export default class Fishing extends plugin {
       fishingManager.clearEquippedRod(e.user_id);
     }
 
+    // --- 修改开始 ---
+    
+    // 获取耐久度信息仅用于展示（如果不需要展示耐久也可以删除这两行）
     const capacityInfo = fishingManager.getRodCapacityInfo(e.user_id, rod.id);
-    const sellPrice = Math.round(rod.price * capacityInfo.percentage * 0.8);
     const capacityPercent = Math.round(capacityInfo.percentage * 100);
+
+    // 核心修改：直接使用原价，不再乘以百分比和0.8
+    const sellPrice = rod.price; 
 
     fishingManager.clearRodCapacityLoss(e.user_id, rod.id);
     fishingManager.clearRodProficiency(e.user_id, rod.id);
@@ -887,9 +892,13 @@ export default class Fishing extends plugin {
     const economyManager = new EconomyManager(e);
     economyManager.addCoins(e, sellPrice);
 
+    // 修改回复文案，去掉计算公式，直接显示全额退款
     await e.reply(
-      `💰 成功出售【${rod.name}】！\n🎣 耐久：${capacityPercent}%\n💵 原价 ${rod.price} × ${capacityPercent}% × 80% = ${sellPrice} 樱花币`
+      `💰 成功全额出售【${rod.name}】！\n🎣 剩余耐久：${capacityPercent}%\n💵 获得退款：${sellPrice} 樱花币`
     );
+    
+    // --- 修改结束 ---
+    
     return true;
   });
 
