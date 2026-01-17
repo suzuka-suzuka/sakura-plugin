@@ -23,9 +23,6 @@ export class helpMenu extends plugin {
   }
 
   async getImageUrl() {
-    if (e.isGroup && typeof e.group?.setMsgEmojiLike === "function") {
-      await e.group.setMsgEmojiLike(e.message_id, "124")
-    }
 
     const url = "https://yande.re/post.json?tags=loli+-rating:e+-nipples&limit=500"
     try {
@@ -118,6 +115,7 @@ export class helpMenu extends plugin {
       browser = await puppeteer.launch({
         headless: "new",
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        protocolTimeout: 180000,
       })
       const page = await browser.newPage()
 
