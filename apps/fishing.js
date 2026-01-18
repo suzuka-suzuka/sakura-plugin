@@ -783,7 +783,7 @@ export default class Fishing extends plugin {
     return true;
   });
 
-  sellRod = Command(/^#?(出售|卖掉?)鱼竿\s*(.+)$/, async (e) => {
+sellRod = Command(/^#?(出售|卖掉?)鱼竿\s*(.+)$/, async (e) => {
     const rodName = e.msg.match(/^#?(出售|卖掉?)鱼竿\s*(.+)$/)[2].trim();
     const fishingManager = new FishingManager(e.group_id);
 
@@ -816,9 +816,13 @@ export default class Fishing extends plugin {
     const economyManager = new EconomyManager(e);
     economyManager.addCoins(e, sellPrice);
 
+    // 修改回复文案，去掉计算公式，直接显示全额退款
     await e.reply(
       `💰 成功出售【${rod.name}】！\n💵 原价 ${rod.price} × 80% = ${sellPrice} 樱花币`
     );
+    
+    // --- 修改结束 ---
+    
     return true;
   });
 
