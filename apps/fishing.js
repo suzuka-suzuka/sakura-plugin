@@ -5,14 +5,14 @@ import InventoryManager from "../lib/economy/InventoryManager.js";
 import _ from "lodash";
 import fs from "node:fs";
 import path from "node:path";
-import { pluginroot } from "../lib/path.js";
+import { pluginresources } from "../lib/path.js";
 
 const fishingState = {};
 
 // 加载鱼类数据
 let fishData = [];
 try {
-  const fishJsonPath = path.join(pluginroot, "resources", "fish", "fish.json");
+  const fishJsonPath = path.join(pluginresources, "fish", "fish.json");
   fishData = JSON.parse(fs.readFileSync(fishJsonPath, "utf8"));
 } catch (err) {
   logger.error(`[钓鱼] 加载鱼类数据失败: ${err.message}`);
@@ -159,7 +159,7 @@ function calculateFishPrice(fish) {
 
 // 获取鱼的图片路径
 function getFishImagePath(fishId) {
-  return path.join(pluginroot, "resources", "fish", "img", `${fishId}.png`);
+  return path.join(pluginresources, "fish", "img", `${fishId}.png`);
 }
 
 export default class Fishing extends plugin {
