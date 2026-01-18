@@ -137,6 +137,8 @@ export default class Fishing extends plugin {
   }
 
   startFishing = Command(/^#?钓鱼$/, async (e) => {
+    await e.reply("⏳ 钓鱼功能维护中，请出售所有渔具并等待更新，谢谢！");
+    return true
     const groupId = e.group_id;
     const userId = e.user_id;
 
