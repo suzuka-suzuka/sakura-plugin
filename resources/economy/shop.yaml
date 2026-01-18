@@ -5,106 +5,131 @@
 # handler: 特殊处理器 (fishing=钓鱼系统, buff=增益系统)
 
 categories:
-  # 鱼竿分类 - 永久装备
+  # 鱼竿分类 - 永久装备（控制力决定对鱼的控制能力，对应鱼的困难度）
+  # 价格经过平衡计算，使长期ROI接近0
   rods:
     name: "🎣 鱼竿"
-    description: "钓鱼必备工具，选择合适的鱼竿提升钓鱼效率"
+    description: "钓鱼必备工具，控制力决定能否驾驭高难度的鱼"
     handler: fishing_rod
     items:
-      - id: rod_basic
+      - id: rod_bamboo
         name: 竹竿
-        price: 50
+        price: 30
         type: equipment
-        capacity: 40
-        description: 随处可见的普通竹竿，适合新手练习。
+        control: 30
+        description: 随处可见的普通竹竿，适合新手练习，只能钓小鱼。
+
+      - id: rod_fiberglass
+        name: 玻璃纤维竿
+        price: 240
+        type: equipment
+        control: 60
+        description: 轻便耐用的玻璃纤维鱼竿，控制力有所提升。
 
       - id: rod_carbon
         name: 碳素鱼竿
-        price: 300
+        price: 500
         type: equipment
-        capacity: 80
-        description: 轻盈强韧的碳素纤维打造，能应对稍大的鱼。
+        control: 100
+        description: 轻盈强韧的碳素纤维打造，能应对大多数普通鱼类。
 
       - id: rod_titanium
         name: 钛合金鱼竿
-        price: 1000
+        price: 1350
         type: equipment
-        capacity: 120
-        description: 泛着冷光的钛合金鱼竿，坚不可摧。
-
-      - id: rod_golden
-        name: 黄金鱼竿
-        price: 2500
-        type: equipment
-        capacity: 160
-        goldenBonus: true
-        description: 纯金打造的奢华鱼竿，有概率获得额外樱花币。
+        control: 150
+        description: 泛着冷光的钛合金鱼竿，即使是凶猛的大鱼也能驾驭。
 
       - id: rod_legendary
         name: 传说之竿
-        price: 5000
+        price: 3200
         type: equipment
-        capacity: 200
-        legendary: true
-        description: 神秘的传说之竿，说不定连海怪也能征服。
+        control: 200
+        description: 传说中的神器，拥有最强控制力，能征服任何鱼类！
 
-      - id: rod_lucky
-        name: 幸运鱼竿
-        price: 666
+  # 鱼线分类 - 永久装备（承重决定能钓多重的鱼）
+  # 承重经过调整以匹配鱼类重量分布，价格经过平衡计算
+  lines:
+    name: "🧵 鱼线"
+    description: "钓鱼必备工具，承重决定能钓多重的鱼"
+    handler: fishing_line
+    items:
+      - id: line_basic
+        name: 尼龙线
+        price: 10
         type: equipment
-        capacity: -6
-        lucky: true
-        luckyRate: 66
-        description: 被幸运女神眷顾的神奇鱼竿，无论鱼多重都有概率上钩！
+        capacity: 15
+        description: 最基础的尼龙鱼线，只能承受15斤以内的鱼。
 
-      - id: rod_fortune
-        name: 招财竿
-        price: 1888
+      - id: line_braided
+        name: 编织线
+        price: 30
         type: equipment
-        capacity: 120
-        doubleChance: 20
-        description: 镶嵌着金色鳞片的神奇鱼竿，有一定概率让樱花币收益翻倍！
+        capacity: 20
+        description: 多股编织的耐用鱼线，承重提升到20斤。
 
-  # 鱼饵分类 - 消耗品
+      - id: line_fluorocarbon
+        name: 碳氟线
+        price: 60
+        type: equipment
+        capacity: 50
+        description: 几乎隐形的碳氟材质鱼线，承重50斤。
+
+      - id: line_steel
+        name: 钢丝线
+        price: 110
+        type: equipment
+        capacity: 150
+        description: 不锈钢打造的超强鱼线，承重150斤。
+
+      - id: line_mythril
+        name: 秘银线
+        price: 160
+        type: equipment
+        capacity: 250
+        description: 传说中的秘银材质，承重高达250斤，几乎无法扯断！
+
+  # 鱼饵分类 - 消耗品（决定钓到不同稀有度鱼的概率）
+  # 价格经过平衡计算，使长期ROI接近0
   baits:
     name: "🪱 鱼饵"
-    description: "钓鱼消耗品，用完需要补充"
+    description: "钓鱼消耗品，品质越高越容易钓到稀有鱼"
     handler: fishing_bait
     items:
-      - id: bait_basic
+      - id: bait_worm
         name: 蚯蚓
-        price: 20
+        price: 4
         type: consumable
         quality: 1
-        description: 刚挖出来的鲜活蚯蚓，最基础的诱饵，什么鱼都可能咬钩。
+        description: 刚挖出来的鲜活蚯蚓，只能钓到垃圾和普通鱼。
 
       - id: bait_shrimp
         name: 鲜虾饵
-        price: 50
+        price: 18
         type: consumable
         quality: 2
-        description: 鲜嫩多汁的虾肉，似乎能吸引到更挑剔的鱼儿。
+        description: 鲜嫩多汁的虾肉，有50%概率钓到精品鱼。
 
       - id: bait_premium
         name: 秘制鱼饵
-        price: 100
+        price: 58
         type: consumable
         quality: 3
-        description: 秘方调制的鱼饵，散发着独特的香气，普通的鱼对它不感兴趣。
+        description: 秘方调制的鱼饵，有50%概率钓到稀有鱼。
 
       - id: bait_magic
         name: 魔法鱼饵
-        price: 150
+        price: 105
         type: consumable
         quality: 4
-        description: 注入了魔法的鱼饵，在水中闪烁微光，据说能引来罕见的生物。
+        description: 注入了魔法的鱼饵，有50%概率钓到史诗鱼。
 
-      - id: bait_godly
+      - id: bait_divine
         name: 神之诱饵
-        price: 200
+        price: 158
         type: consumable
         quality: 5
-        description: 传说中的神之诱饵，散发着无法抗拒的魔力，只有真正的王者才配享用！
+        description: 传说中的神之诱饵，有50%概率钓到传说鱼！
 
   # 增益道具分类
   buffs:

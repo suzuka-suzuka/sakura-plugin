@@ -1,0 +1,1002 @@
+[
+  {
+    "id": "trash_boot",
+    "name": "破旧的靴子",
+    "rarity": "垃圾",
+    "description": "一只被遗弃很久的皮靴，里面塞满了淤泥。",
+    "base_price": 0,
+    "difficulty": 5,
+    "weight": [1.5, 3.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "trash_can",
+    "name": "压扁的易拉罐",
+    "rarity": "垃圾",
+    "description": "虽然已经生锈，但依稀能辨认出是某种碳酸饮料。",
+    "base_price": 1,
+    "difficulty": 2,
+    "weight": [0.1, 0.3],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "trash_seaweed",
+    "name": "纠缠的水草",
+    "rarity": "垃圾",
+    "description": "一大团黏糊糊的绿色植物，散发着腥味。",
+    "base_price": 1,
+    "difficulty": 10,
+    "weight": [0.5, 5.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "trash_driftwood",
+    "name": "吸饱水的浮木",
+    "rarity": "垃圾",
+    "description": "一块沉重的木头，表面已经被水流冲刷得非常光滑。",
+    "base_price": 2,
+    "difficulty": 15,
+    "weight": [5.0, 15.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "trash_tire",
+    "name": "废弃轮胎",
+    "rarity": "垃圾",
+    "description": "不知道是谁把它扔进水里的，非常沉重，毫无价值。",
+    "base_price": 0,
+    "difficulty": 30,
+    "weight": [25.0, 45.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "trash_bone",
+    "name": "不知名的骨头",
+    "rarity": "垃圾",
+    "description": "看起来像是某种大型哺乳动物的骨骼碎片，有点吓人。",
+    "base_price": 3,
+    "difficulty": 5,
+    "weight": [1.0, 4.0],
+    "active_hours": [[18, 24], [0, 6]]
+  },
+  {
+    "id": "trash_plastic_bag",
+    "name": "湿透的塑料袋",
+    "rarity": "垃圾",
+    "description": "水中常见的污染物，如果不仔细看会以为是水母。",
+    "base_price": 0,
+    "difficulty": 8,
+    "weight": [0.1, 0.5],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "trash_newspaper",
+    "name": "糊掉的报纸",
+    "rarity": "垃圾",
+    "description": "上面的文字已经模糊不清，只能隐约看到几十年前的日期。",
+    "base_price": 0,
+    "difficulty": 3,
+    "weight": [0.2, 0.6],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "trash_broken_glasses",
+    "name": "碎裂的眼镜",
+    "rarity": "垃圾",
+    "description": "镜片已经碎了一半，镜框也歪曲变形了。",
+    "base_price": 1,
+    "difficulty": 4,
+    "weight": [0.1, 0.2],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "trash_rusty_anchor",
+    "name": "生锈的铁锚",
+    "rarity": "垃圾",
+    "description": "极其沉重的废铁，虽然是垃圾，但卖给废品站或许能值点钱。",
+    "base_price": 15,
+    "difficulty": 50,
+    "weight": [60.0, 100.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_crucian_carp",
+    "name": "鲫鱼",
+    "rarity": "普通",
+    "description": "淡水水域中最常见的鱼类之一，生命力顽强。",
+    "base_price": 8,
+    "difficulty": 12,
+    "weight": [0.3, 1.2],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_carp",
+    "name": "鲤鱼",
+    "rarity": "普通",
+    "description": "体型较宽，鳞片较大，喜欢在水底拱泥觅食。",
+    "base_price": 10,
+    "difficulty": 25,
+    "weight": [1.5, 8.0],
+    "active_hours": [[6, 18]]
+  },
+  {
+    "id": "fish_grass_carp",
+    "name": "草鱼",
+    "rarity": "普通",
+    "description": "身体修长，游动迅速，以水草为食。",
+    "base_price": 12,
+    "difficulty": 30,
+    "weight": [2.0, 10.0],
+    "active_hours": [[5, 19]]
+  },
+  {
+    "id": "fish_bluegill",
+    "name": "蓝鳃太阳鱼",
+    "rarity": "普通",
+    "description": "体色鲜艳的小型鱼类，虽然好看但属于外来入侵物种。",
+    "base_price": 6,
+    "difficulty": 15,
+    "weight": [0.2, 0.8],
+    "active_hours": [[8, 16]]
+  },
+  {
+    "id": "fish_chub",
+    "name": "白鲢",
+    "rarity": "普通",
+    "description": "性情急躁，受到惊吓时会跃出水面。",
+    "base_price": 9,
+    "difficulty": 20,
+    "weight": [1.0, 5.0],
+    "active_hours": [[6, 18]]
+  },
+  {
+    "id": "fish_goby",
+    "name": "虾虎鱼",
+    "rarity": "普通",
+    "description": "趴在水底石头上的小鱼，呆头呆脑的。",
+    "base_price": 5,
+    "difficulty": 8,
+    "weight": [0.05, 0.2],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_minnow",
+    "name": "鲦鱼",
+    "rarity": "普通",
+    "description": "成群结队游动的小银鱼，通常作为其他大鱼的饵料。",
+    "base_price": 5,
+    "difficulty": 5,
+    "weight": [0.05, 0.15],
+    "active_hours": [[6, 18]]
+  },
+  {
+    "id": "fish_perch",
+    "name": "河鲈",
+    "rarity": "普通",
+    "description": "背部有锋利的刺鳍，肉质非常鲜美。",
+    "base_price": 15,
+    "difficulty": 22,
+    "weight": [0.5, 2.5],
+    "active_hours": [[5, 10], [16, 20]]
+  },
+  {
+    "id": "fish_mackerel",
+    "name": "鲭鱼",
+    "rarity": "普通",
+    "description": "背部有青黑色的纹路，游速很快。",
+    "base_price": 14,
+    "difficulty": 28,
+    "weight": [0.4, 1.5],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_sardine",
+    "name": "沙丁鱼",
+    "rarity": "普通",
+    "description": "总是成千上万地聚集在一起，非常脆弱。",
+    "base_price": 5,
+    "difficulty": 5,
+    "weight": [0.1, 0.3],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_anchovy",
+    "name": "凤尾鱼",
+    "rarity": "普通",
+    "description": "细长的小鱼，银白色的腹部在水中闪闪发光。",
+    "base_price": 6,
+    "difficulty": 6,
+    "weight": [0.05, 0.2],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_horse_mackerel",
+    "name": "竹荚鱼",
+    "rarity": "普通",
+    "description": "侧线上有明显的棱鳞，是常见的食用鱼。",
+    "base_price": 10,
+    "difficulty": 18,
+    "weight": [0.2, 0.6],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_flatfish",
+    "name": "比目鱼",
+    "rarity": "普通",
+    "description": "两只眼睛长在同一侧，喜欢把自己埋在沙子里。",
+    "base_price": 18,
+    "difficulty": 35,
+    "weight": [1.0, 4.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_catfish",
+    "name": "鲶鱼",
+    "rarity": "普通",
+    "description": "长着长长的胡须，皮肤光滑无鳞，喜欢浑浊的水域。",
+    "base_price": 15,
+    "difficulty": 45,
+    "weight": [2.0, 15.0],
+    "active_hours": [[18, 24], [0, 6]]
+  },
+  {
+    "id": "fish_loach",
+    "name": "泥鳅",
+    "rarity": "普通",
+    "description": "滑溜溜的，非常难以抓住。",
+    "base_price": 7,
+    "difficulty": 10,
+    "weight": [0.05, 0.2],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_crawfish",
+    "name": "小龙虾",
+    "rarity": "普通",
+    "description": "挥舞着两只钳子，虽然不是鱼，但也是水产之一。",
+    "base_price": 10,
+    "difficulty": 15,
+    "weight": [0.1, 0.3],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_tilapia",
+    "name": "罗非鱼",
+    "rarity": "普通",
+    "description": "适应力极强，背鳍上有硬刺。",
+    "base_price": 9,
+    "difficulty": 20,
+    "weight": [0.5, 2.0],
+    "active_hours": [[8, 18]]
+  },
+  {
+    "id": "fish_dace",
+    "name": "雅罗鱼",
+    "rarity": "普通",
+    "description": "喜欢生活在水流湍急的溪流中。",
+    "base_price": 11,
+    "difficulty": 25,
+    "weight": [0.3, 1.0],
+    "active_hours": [[6, 18]]
+  },
+  {
+    "id": "fish_sculpin",
+    "name": "杜父鱼",
+    "rarity": "普通",
+    "description": "头部很大且扁平，样子有点丑陋。",
+    "base_price": 8,
+    "difficulty": 15,
+    "weight": [0.2, 0.6],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_smelt",
+    "name": "胡瓜鱼",
+    "rarity": "普通",
+    "description": "身体散发着类似黄瓜的清香。",
+    "base_price": 12,
+    "difficulty": 10,
+    "weight": [0.1, 0.3],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_herring",
+    "name": "鲱鱼",
+    "rarity": "普通",
+    "description": "银色的鱼群像是一道流动的墙壁。",
+    "base_price": 8,
+    "difficulty": 10,
+    "weight": [0.2, 0.5],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_pollock",
+    "name": "黄线狭鳕",
+    "rarity": "普通",
+    "description": "深海中常见的经济鱼类。",
+    "base_price": 13,
+    "difficulty": 25,
+    "weight": [0.5, 3.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_mullet",
+    "name": "乌头鱼",
+    "rarity": "普通",
+    "description": "喜欢在河口和近海游弋，经常跃出水面。",
+    "base_price": 12,
+    "difficulty": 28,
+    "weight": [0.8, 3.0],
+    "active_hours": [[6, 18]]
+  },
+  {
+    "id": "fish_cod",
+    "name": "大西洋鳕鱼",
+    "rarity": "普通",
+    "description": "下巴上有一根明显的触须，肉质雪白。",
+    "base_price": 20,
+    "difficulty": 35,
+    "weight": [2.0, 10.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_haddock",
+    "name": "黑线鳕",
+    "rarity": "普通",
+    "description": "体侧有一条黑色的侧线，胸鳍上方有黑斑。",
+    "base_price": 18,
+    "difficulty": 30,
+    "weight": [1.0, 5.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_whiting",
+    "name": "牙鳕",
+    "rarity": "普通",
+    "description": "一种小型鳕鱼，通常在沙质海底活动。",
+    "base_price": 10,
+    "difficulty": 15,
+    "weight": [0.3, 1.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_bleak",
+    "name": "欧鲌",
+    "rarity": "普通",
+    "description": "在水面附近活动的小型银色鱼类。",
+    "base_price": 5,
+    "difficulty": 8,
+    "weight": [0.05, 0.15],
+    "active_hours": [[6, 18]]
+  },
+  {
+    "id": "fish_roach",
+    "name": "拟鲤",
+    "rarity": "普通",
+    "description": "眼睛是红色的，鳍也是红色的。",
+    "base_price": 7,
+    "difficulty": 12,
+    "weight": [0.2, 0.8],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_bream",
+    "name": "鳊鱼",
+    "rarity": "普通",
+    "description": "身体侧扁且高，呈菱形。",
+    "base_price": 15,
+    "difficulty": 20,
+    "weight": [1.0, 4.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_tench",
+    "name": "丁尤鱼",
+    "rarity": "普通",
+    "description": "鳞片非常细小，体表覆盖着厚厚的粘液。",
+    "base_price": 16,
+    "difficulty": 30,
+    "weight": [1.5, 5.0],
+    "active_hours": [[18, 24], [0, 6]]
+  },
+  {
+    "id": "fish_rainbow_trout",
+    "name": "虹鳟",
+    "rarity": "精品",
+    "description": "体侧有一条美丽的彩虹色纵带，对水质要求很高。",
+    "base_price": 35,
+    "difficulty": 45,
+    "weight": [2.0, 8.0],
+    "active_hours": [[6, 18]]
+  },
+  {
+    "id": "fish_black_bass",
+    "name": "大口黑鲈",
+    "rarity": "精品",
+    "description": "凶猛的掠食者，上钩后会剧烈挣扎并洗鳃。",
+    "base_price": 40,
+    "difficulty": 55,
+    "weight": [1.5, 6.0],
+    "active_hours": [[5, 9], [17, 21]]
+  },
+  {
+    "id": "fish_salmon",
+    "name": "鲑鱼",
+    "rarity": "精品",
+    "description": "为了繁衍后代会逆流而上的坚毅鱼类。",
+    "base_price": 45,
+    "difficulty": 60,
+    "weight": [3.0, 12.0],
+    "active_hours": [[5, 19]]
+  },
+  {
+    "id": "fish_pike",
+    "name": "白斑狗鱼",
+    "rarity": "精品",
+    "description": "水下的伏击者，牙齿极其锋利，性格凶暴。",
+    "base_price": 42,
+    "difficulty": 65,
+    "weight": [4.0, 15.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_eel",
+    "name": "鳗鱼",
+    "rarity": "精品",
+    "description": "身体像蛇一样长，力量惊人，会缠绕鱼线。",
+    "base_price": 50,
+    "difficulty": 40,
+    "weight": [1.0, 5.0],
+    "active_hours": [[18, 24], [0, 5]]
+  },
+  {
+    "id": "fish_clownfish",
+    "name": "小丑鱼",
+    "rarity": "精品",
+    "description": "橘色和白色相间的条纹，喜欢在海葵附近活动。",
+    "base_price": 30,
+    "difficulty": 20,
+    "weight": [0.1, 0.3],
+    "active_hours": [[6, 18]]
+  },
+  {
+    "id": "fish_puffer",
+    "name": "河豚",
+    "rarity": "精品",
+    "description": "受到威胁时会吸水膨胀成一个刺球。",
+    "base_price": 38,
+    "difficulty": 35,
+    "weight": [0.5, 2.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_squid",
+    "name": "乌贼",
+    "rarity": "精品",
+    "description": "虽然不是鱼，但会喷出墨汁干扰视线。",
+    "base_price": 32,
+    "difficulty": 30,
+    "weight": [0.5, 3.0],
+    "active_hours": [[18, 24], [0, 6]]
+  },
+  {
+    "id": "fish_octopus",
+    "name": "章鱼",
+    "rarity": "精品",
+    "description": "拥有八条灵活的腕足，吸附力极强。",
+    "base_price": 35,
+    "difficulty": 50,
+    "weight": [1.0, 8.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_red_snapper",
+    "name": "真鲷",
+    "rarity": "精品",
+    "description": "通体红色，被视为吉祥的象征。",
+    "base_price": 55,
+    "difficulty": 45,
+    "weight": [1.5, 6.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_barracuda",
+    "name": "梭鱼",
+    "rarity": "精品",
+    "description": "像鱼雷一样迅猛，满嘴獠牙，极具攻击性。",
+    "base_price": 48,
+    "difficulty": 70,
+    "weight": [3.0, 10.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_stingray",
+    "name": "黄貂鱼",
+    "rarity": "精品",
+    "description": "扁平的身体像风筝，尾部有剧毒的刺。",
+    "base_price": 52,
+    "difficulty": 60,
+    "weight": [5.0, 20.0],
+    "active_hours": [[18, 24], [0, 6]]
+  },
+  {
+    "id": "fish_seahorse",
+    "name": "海马",
+    "rarity": "精品",
+    "description": "垂直游泳的奇特生物，尾巴可以卷住物体。",
+    "base_price": 45,
+    "difficulty": 15,
+    "weight": [0.05, 0.2],
+    "active_hours": [[6, 18]]
+  },
+  {
+    "id": "fish_flying_fish",
+    "name": "飞鱼",
+    "rarity": "精品",
+    "description": "胸鳍极其发达，能够滑翔出水面。",
+    "base_price": 36,
+    "difficulty": 40,
+    "weight": [0.3, 1.0],
+    "active_hours": [[8, 16]]
+  },
+  {
+    "id": "fish_snakehead",
+    "name": "黑鱼",
+    "rarity": "精品",
+    "description": "凶猛的肉食性鱼类，护崽时攻击性倍增。",
+    "base_price": 40,
+    "difficulty": 65,
+    "weight": [2.0, 8.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_zander",
+    "name": "梭鲈",
+    "rarity": "精品",
+    "description": "眼睛具有反光层，能在弱光下看清猎物。",
+    "base_price": 44,
+    "difficulty": 50,
+    "weight": [2.0, 9.0],
+    "active_hours": [[19, 24], [0, 5]]
+  },
+  {
+    "id": "fish_grayling",
+    "name": "茴鱼",
+    "rarity": "精品",
+    "description": "拥有巨大的且色彩斑斓的背鳍。",
+    "base_price": 50,
+    "difficulty": 40,
+    "weight": [0.5, 2.0],
+    "active_hours": [[6, 18]]
+  },
+  {
+    "id": "fish_halibut",
+    "name": "大比目鱼",
+    "rarity": "精品",
+    "description": "比目鱼中的巨无霸，力量很大。",
+    "base_price": 60,
+    "difficulty": 75,
+    "weight": [10.0, 40.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_cobia",
+    "name": "军曹鱼",
+    "rarity": "精品",
+    "description": "体型像鲨鱼，力量极大，耐力持久。",
+    "base_price": 58,
+    "difficulty": 78,
+    "weight": [5.0, 25.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_monkfish",
+    "name": "安康鱼",
+    "rarity": "精品",
+    "description": "长相狰狞，深海底栖，头顶有发光器。",
+    "base_price": 55,
+    "difficulty": 55,
+    "weight": [3.0, 15.0],
+    "active_hours": [[18, 24], [0, 6]]
+  },
+  {
+    "id": "fish_parrotfish",
+    "name": "鹦嘴鱼",
+    "rarity": "精品",
+    "description": "牙齿愈合成鹦鹉嘴状，身体色彩艳丽。",
+    "base_price": 46,
+    "difficulty": 35,
+    "weight": [1.0, 5.0],
+    "active_hours": [[6, 18]]
+  },
+  {
+    "id": "fish_lionfish",
+    "name": "狮子鱼",
+    "rarity": "精品",
+    "description": "鳍棘有毒，游动时像一只开屏的孔雀。",
+    "base_price": 65,
+    "difficulty": 45,
+    "weight": [0.5, 2.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_moray_eel",
+    "name": "海鳗",
+    "rarity": "精品",
+    "description": "藏在岩缝中，牙齿向内弯曲，一旦咬住绝不松口。",
+    "base_price": 62,
+    "difficulty": 68,
+    "weight": [2.0, 10.0],
+    "active_hours": [[18, 24], [0, 6]]
+  },
+  {
+    "id": "fish_boxfish",
+    "name": "箱鲀",
+    "rarity": "精品",
+    "description": "身体像个硬盒子，游起来笨拙可爱。",
+    "base_price": 40,
+    "difficulty": 25,
+    "weight": [0.2, 1.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_triggerfish",
+    "name": "扳机鱼",
+    "rarity": "精品",
+    "description": "背鳍有锁定机制，牙齿非常坚硬。",
+    "base_price": 48,
+    "difficulty": 42,
+    "weight": [1.0, 4.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_tuna",
+    "name": "蓝鳍金枪鱼",
+    "rarity": "稀有",
+    "description": "海洋中的鱼雷，游速极快，肉质顶级。",
+    "base_price": 120,
+    "difficulty": 110,
+    "weight": [50.0, 120.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_swordfish",
+    "name": "剑鱼",
+    "rarity": "稀有",
+    "description": "上颌延长如剑，发怒时甚至会攻击船只。",
+    "base_price": 110,
+    "difficulty": 125,
+    "weight": [40.0, 100.0],
+    "active_hours": [[18, 24], [0, 6]]
+  },
+  {
+    "id": "fish_mahi_mahi",
+    "name": "鬼头刀",
+    "rarity": "稀有",
+    "description": "色彩绚丽，在水中呈现金绿色，出水后颜色迅速暗淡。",
+    "base_price": 95,
+    "difficulty": 90,
+    "weight": [5.0, 20.0],
+    "active_hours": [[6, 18]]
+  },
+  {
+    "id": "fish_sturgeon",
+    "name": "中华鲟",
+    "rarity": "稀有",
+    "description": "活化石鱼类，体表有五行硬鳞，体型巨大。",
+    "base_price": 130,
+    "difficulty": 130,
+    "weight": [30.0, 150.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_arapaima",
+    "name": "巨骨舌鱼",
+    "rarity": "稀有",
+    "description": "淡水中的巨怪，鳞片坚硬如盔甲，力大无穷。",
+    "base_price": 125,
+    "difficulty": 135,
+    "weight": [40.0, 160.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_alligator_gar",
+    "name": "鳄雀鳝",
+    "rarity": "稀有",
+    "description": "长着像鳄鱼一样的嘴，牙齿锋利，鳞片坚硬。",
+    "base_price": 105,
+    "difficulty": 115,
+    "weight": [20.0, 80.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_coelacanth",
+    "name": "腔棘鱼",
+    "rarity": "稀有",
+    "description": "被认为已经灭绝了亿万年的深海活化石。",
+    "base_price": 140,
+    "difficulty": 85,
+    "weight": [30.0, 70.0],
+    "active_hours": [[20, 24], [0, 4]]
+  },
+  {
+    "id": "fish_oarfish",
+    "name": "皇带鱼",
+    "rarity": "稀有",
+    "description": "身体极长，背鳍红色，传说中的“地震鱼”。",
+    "base_price": 135,
+    "difficulty": 95,
+    "weight": [20.0, 60.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_hammerhead",
+    "name": "双髻鲨",
+    "rarity": "稀有",
+    "description": "头部呈锤状，视野360度，极其敏锐的猎手。",
+    "base_price": 115,
+    "difficulty": 120,
+    "weight": [40.0, 110.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_napoleon_wrasse",
+    "name": "苏眉鱼",
+    "rarity": "稀有",
+    "description": "体型巨大，额头突起，色彩纹路非常复杂。",
+    "base_price": 128,
+    "difficulty": 100,
+    "weight": [20.0, 80.0],
+    "active_hours": [[6, 18]]
+  },
+  {
+    "id": "fish_electric_eel",
+    "name": "电鳗",
+    "rarity": "稀有",
+    "description": "能释放高压电流，靠近它非常危险。",
+    "base_price": 110,
+    "difficulty": 140,
+    "weight": [5.0, 20.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_giant_trevally",
+    "name": "浪人鲹",
+    "rarity": "稀有",
+    "description": "珊瑚礁的霸主，冲击力极强，甚至能捕食飞鸟。",
+    "base_price": 118,
+    "difficulty": 145,
+    "weight": [15.0, 50.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_sawfish",
+    "name": "锯鳐",
+    "rarity": "稀有",
+    "description": "吻部延长呈锯齿状，挥动起来是致命的武器。",
+    "base_price": 122,
+    "difficulty": 120,
+    "weight": [30.0, 90.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_tiger_fish",
+    "name": "巨型虎鱼",
+    "rarity": "稀有",
+    "description": "牙齿像匕首一样交错，性格极其凶暴。",
+    "base_price": 112,
+    "difficulty": 135,
+    "weight": [10.0, 40.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_wels_catfish",
+    "name": "欧鲶",
+    "rarity": "稀有",
+    "description": "欧洲淡水霸主，大嘴能吞下一切。",
+    "base_price": 108,
+    "difficulty": 140,
+    "weight": [30.0, 120.0],
+    "active_hours": [[18, 24], [0, 6]]
+  },
+  {
+    "id": "fantasy_glass_fish",
+    "name": "琉璃隐鱼",
+    "rarity": "稀有",
+    "description": "身体完全透明如玻璃，只有骨骼隐约发出蓝光。",
+    "base_price": 145,
+    "difficulty": 80,
+    "weight": [2.0, 5.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fantasy_magma_guppy",
+    "name": "熔岩孔雀鱼",
+    "rarity": "稀有",
+    "description": "生活在极热水域，鳞片如同燃烧的余烬。",
+    "base_price": 138,
+    "difficulty": 95,
+    "weight": [0.5, 1.5],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fantasy_leaf_skate",
+    "name": "枯叶鳐",
+    "rarity": "稀有",
+    "description": "完美伪装成一片巨大的枯叶，在水中随波逐流。",
+    "base_price": 125,
+    "difficulty": 70,
+    "weight": [8.0, 15.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fantasy_clockwork_trout",
+    "name": "发条鳟鱼",
+    "rarity": "稀有",
+    "description": "游动时发出滴答声，仿佛体内有机械装置。",
+    "base_price": 150,
+    "difficulty": 90,
+    "weight": [3.0, 8.0],
+    "active_hours": [[6, 18]]
+  },
+  {
+    "id": "fantasy_ink_phantom",
+    "name": "墨影幽灵",
+    "rarity": "稀有",
+    "description": "身体由黑色烟雾构成，在水中忽聚忽散。",
+    "base_price": 148,
+    "difficulty": 105,
+    "weight": [0.1, 0.5],
+    "active_hours": [[18, 24], [0, 5]]
+  },
+  {
+    "id": "fish_great_white",
+    "name": "大白鲨",
+    "rarity": "史诗",
+    "description": "海洋顶级掠食者，拥有令人绝望的咬合力和体型。",
+    "base_price": 240,
+    "difficulty": 190,
+    "weight": [120.0, 250.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_giant_squid",
+    "name": "大王酸浆鱿",
+    "rarity": "史诗",
+    "description": "深海梦魇，触手上长满钩爪，眼球大如篮球。",
+    "base_price": 230,
+    "difficulty": 185,
+    "weight": [100.0, 220.0],
+    "active_hours": [[20, 24], [0, 4]]
+  },
+  {
+    "id": "fish_manta_ray",
+    "name": "鬼蝠魟",
+    "rarity": "史诗",
+    "description": "巨大的双翼在海中滑翔，如同一张巨大的飞毯。",
+    "base_price": 220,
+    "difficulty": 175,
+    "weight": [150.0, 280.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_blue_marlin",
+    "name": "蓝枪鱼",
+    "rarity": "史诗",
+    "description": "海钓者的终极梦想之一，力量、速度与美的完美结合。",
+    "base_price": 250,
+    "difficulty": 200,
+    "weight": [100.0, 240.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fish_moonfish",
+    "name": "月鱼",
+    "rarity": "史诗",
+    "description": "圆盘状的身体呈现鲜红与银色，是唯一一种温血鱼类。",
+    "base_price": 210,
+    "difficulty": 160,
+    "weight": [40.0, 90.0],
+    "active_hours": [[18, 24], [0, 6]]
+  },
+  {
+    "id": "fantasy_crystal_turtle",
+    "name": "晶簇巨龟",
+    "rarity": "史诗",
+    "description": "背甲由璀璨的水晶簇构成，非常沉重。",
+    "base_price": 270,
+    "difficulty": 150,
+    "weight": [180.0, 300.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fantasy_void_ray",
+    "name": "虚空鳐",
+    "rarity": "史诗",
+    "description": "仿佛游动在星空中，身体映照着宇宙的星辰。",
+    "base_price": 265,
+    "difficulty": 180,
+    "weight": [20.0, 60.0],
+    "active_hours": [[22, 24], [0, 3]]
+  },
+  {
+    "id": "fantasy_siren_tear",
+    "name": "海妖之泪",
+    "rarity": "史诗",
+    "description": "一种散发着悲伤光芒的小鱼，据说会引诱渔人迷失。",
+    "base_price": 275,
+    "difficulty": 195,
+    "weight": [1.0, 3.0],
+    "active_hours": [[23, 24], [0, 2]]
+  },
+  {
+    "id": "fantasy_thunder_shark",
+    "name": "雷霆鲨",
+    "rarity": "史诗",
+    "description": "背鳍总是伴随着微型的雷云，游动时发出轰鸣。",
+    "base_price": 260,
+    "difficulty": 210,
+    "weight": [80.0, 180.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fantasy_golden_dragonfish",
+    "name": "金鳞龙鱼",
+    "rarity": "史诗",
+    "description": "通体纯金，胡须极长，隐约有化龙之势。",
+    "base_price": 280,
+    "difficulty": 170,
+    "weight": [10.0, 40.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fantasy_leviathan_spawn",
+    "name": "利维坦幼崽",
+    "rarity": "传说",
+    "description": "远古海怪的幼体，虽然还小，但力量已经足以在大海掀起波澜。",
+    "base_price": 380,
+    "difficulty": 240,
+    "weight": [250.0, 310.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fantasy_star_eater",
+    "name": "噬星者",
+    "rarity": "传说",
+    "description": "大嘴里仿佛有一个黑洞，吞噬一切光线，极其沉重。",
+    "base_price": 390,
+    "difficulty": 255,
+    "weight": [280.0, 320.0],
+    "active_hours": [[22, 24], [0, 4]]
+  },
+  {
+    "id": "fantasy_kraken_tentacle",
+    "name": "克拉肯之触",
+    "rarity": "传说",
+    "description": "虽然只是一条巨大的触手，但它拥有独立的意识和怪力。",
+    "base_price": 350,
+    "difficulty": 230,
+    "weight": [200.0, 280.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "fantasy_phoenix_koi",
+    "name": "浴火锦鲤",
+    "rarity": "传说",
+    "description": "在水中燃烧的神奇鱼类，水温会因它而沸腾。",
+    "base_price": 400,
+    "difficulty": 220,
+    "weight": [15.0, 50.0],
+    "active_hours": [[10, 14]]
+  },
+  {
+    "id": "fantasy_abyssal_whale",
+    "name": "深渊幽鲸",
+    "rarity": "传说",
+    "description": "来自最深海沟的孤独歌者，身体承载着深海的高压。",
+    "base_price": 375,
+    "difficulty": 260,
+    "weight": [260.0, 320.0],
+    "active_hours": [[0, 24]]
+  }
+]
