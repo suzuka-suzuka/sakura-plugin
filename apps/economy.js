@@ -261,8 +261,6 @@ export default class Economy extends plugin {
   });
 
   buyItem = Command(/^#?(购买|兑换)\s*(\S+)\s*(\d*)$/, async (e) => {
-    await e.reply('商店暂时维护中')
-    return true
     const shopManager = new ShopManager();
     const itemName = e.match[2].trim();
     const count = parseInt(e.match[3]) || 1;
