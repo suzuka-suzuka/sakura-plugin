@@ -281,7 +281,6 @@ export default class Economy extends plugin {
     const level = economyManager.getBagLevel(e);
 
     const shopManager = new ShopManager();
-    const buffs = shopManager.getActiveBuffs(e.group_id, e.user_id);
     const fishingManager = new FishingManager(e.group_id);
 
     const nickname = e.sender.card || e.sender.nickname || e.user_id;
@@ -318,20 +317,6 @@ export default class Economy extends plugin {
       user_id: e.user_id,
       content: bagMsg.trim(),
     });
-
-    if (Object.keys(buffs).length > 0) {
-      let buffMsg = "✨ 活跃增益\n━━━━━━━━━━━━━━━━\n";
-      const now = Date.now();
-      for (const buff of Object.values(buffs)) {
-        const remainingTime = Math.ceil((buff.expireTime - now) / 1000 / 60);
-        buffMsg += `💫 ${buff.name}（剩余 ${remainingTime} 分钟）\n`;
-      }
-      forwardMsg.push({
-        nickname: nickname,
-        user_id: e.user_id,
-        content: buffMsg.trim(),
-      });
-    }
 
     await e.sendForwardMsg(forwardMsg, {
       prompt: "查看我的背包",
@@ -455,44 +440,46 @@ export default class Economy extends plugin {
     return true;
   });
 
-  useItem = Command(/^#?使用道具\s*(\S+)$/, async (e) => {
+  sell = Command(/^#?出售\s*(\S+)\s*(\d*)$/, async (e) => {
     const itemName = e.match[1].trim();
+    const count = parseInt(e.match[2]) || 1;
     const shopManager = new ShopManager();
     const inventoryManager = new InventoryManager(e);
 
     const item = shopManager.findItemByName(itemName) || shopManager.findItemById(itemName);
     if (!item) {
-      return false;
-    }
-
-    if (item.handler !== 'buff') {
-      await e.reply(`【${item.name}】不是可使用的道具哦~`, 10);
+      await e.reply(`找不到【${itemName}】这个物品~`, 10);
       return true;
     }
 
-    const itemId = item.id;
+    // 只允许消耗品出售多个，装备类只能出售1个
+    if (item.type !== 'consumable' && count > 1) {
+      await e.reply(`【${item.name}】不能批量出售，只能出售1个~`, 10);
+      return true;
+    }
+
+    const itemId = item.id || itemName;
     const ownedCount = inventoryManager.getItemCount(itemId);
-    if (ownedCount < 1) {
-      await e.reply(`你的背包里没有【${item.name}】~`, 10);
+    if (ownedCount < count) {
+      await e.reply(`你的背包里只有【${item.name}】${ownedCount}个，不足${count}个~`, 10);
       return true;
     }
 
-    const existingBuff = shopManager.hasBuff(e.group_id, e.user_id, item.effect?.type);
-    let overrideMsg = "";
-    if (existingBuff) {
-      overrideMsg = `\n⚠️ 原有的【${existingBuff.name}】效果已被覆盖`;
-    }
-
-    const removeResult = inventoryManager.removeItem(itemId, 1);
+    const removeResult = inventoryManager.removeItem(itemId, count);
     if (!removeResult) {
-      await e.reply(`使用失败：背包中没有该道具`, 10);
+      await e.reply(`出售失败，请稍后再试~`, 10);
       return true;
     }
 
-    shopManager.activateBuff(e.group_id, e.user_id, item);
+    const totalSellPrice = Math.round(item.price * count);
 
-    const durationText = shopManager.formatDuration(item.duration || 3600);
-    await e.reply(`✨ 使用成功！\n【${item.name}】效果已激活！\n⏱️ 持续时间：${durationText}${overrideMsg}`);
+    const economyManager = new EconomyManager(e);
+    economyManager.addCoins(e, totalSellPrice);
+
+    const countText = count > 1 ? `${count}个` : '1个';
+    await e.reply(
+      `💰 成功出售${countText}【${item.name}】！\n💵 获得 ${totalSellPrice} 樱花币`
+    );
     return true;
   });
 

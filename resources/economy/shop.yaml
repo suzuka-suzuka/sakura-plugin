@@ -1,12 +1,4 @@
-# 统一商店配置
-# category: 商品分类
-# type: 商品类型 (consumable=消耗品, equipment=装备, buff=增益效果)
-# stackable: 是否可叠加 (consumable默认true, equipment默认false)
-# handler: 特殊处理器 (fishing=钓鱼系统, buff=增益系统)
-
 categories:
-  # 鱼竿分类 - 永久装备（控制力决定对鱼的控制能力，对应鱼的困难度）
-  # 价格经过平衡计算，使长期ROI接近0
   rods:
     name: "🎣 鱼竿"
     description: "钓鱼必备工具，控制力决定能否驾驭高难度的鱼"
@@ -47,8 +39,6 @@ categories:
         control: 200
         description: 传说中的神器，拥有最强控制力，能征服任何鱼类！
 
-  # 鱼线分类 - 永久装备（承重决定能钓多重的鱼）
-  # 承重经过调整以匹配鱼类重量分布，价格经过平衡计算
   lines:
     name: "🧵 鱼线"
     description: "钓鱼必备工具，承重决定能钓多重的鱼"
@@ -89,8 +79,6 @@ categories:
         capacity: 250
         description: 传说中的秘银材质，承重高达250斤，几乎无法扯断！
 
-  # 鱼饵分类 - 消耗品（决定钓到不同稀有度鱼的概率）
-  # 价格经过平衡计算，使长期ROI接近0
   baits:
     name: "🪱 鱼饵"
     description: "钓鱼消耗品，品质越高越容易钓到稀有鱼"
@@ -130,31 +118,3 @@ categories:
         type: consumable
         quality: 5
         description: 传说中的神之诱饵，有50%概率钓到传说鱼！
-
-  # 增益道具分类
-  buffs:
-    name: "✨ 增益道具"
-    description: "获得临时增益效果"
-    handler: buff
-    items:
-      - id: buff_sakura_protection
-        name: 小叶的守护
-        price: 999999
-        type: buff
-        duration: 43200
-        effect:
-          type: sakuraProtection
-          value: true
-        description: 暂时不开放购买，使用了也没用哦~
-
-  # 特殊道具分类
-  special:
-    name: "💣 特殊道具"
-    description: "可以对鱼塘产生影响的特殊道具"
-    handler: fishing_special
-    items:
-      - id: torpedo
-        name: 鱼雷
-        price: 200
-        type: consumable
-        description: 可以投放到鱼塘中的危险物品。12小时后可引爆炸鱼，但也可能被其他钓鱼者钓到！
