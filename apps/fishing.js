@@ -262,7 +262,7 @@ export default class Fishing extends plugin {
     const luckyMsg = hasLucky ? "\n🍀 好运护符生效中！" : "";
 
     await e.reply(
-      `🎣 挥动【${rodConfig.name}】\n挂上【${baitConfig.name}】\n伴随着优美的抛物线，鱼钩落入水中...\n✨ 看看今天运气如何？耐心等待浮漂的动静吧...${luckyMsg}`
+      `🎣 挥动【${rodConfig.name}】挂上【${baitConfig.name}】伴随着优美的抛物线，鱼钩落入水中...耐心等待浮漂的动静吧...${luckyMsg}`
     );
 
     const stateKey = `${groupId}:${userId}`;
