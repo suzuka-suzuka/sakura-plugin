@@ -834,7 +834,7 @@ export default class Fishing extends plugin {
       if (addResult.success) {
         await e.reply([
           `🎉 钓到了！！\n`,
-          `👑 是一个【${fish.name}】！\n`,
+          `👑 是【${fish.name}】！\n`,
           segment.image(`file:///${fishImagePath}`),
           `📝 ${fish.description}\n`,
           `📊 稀有度：${rarity.color}${fish.rarity}\n`,
@@ -845,7 +845,7 @@ export default class Fishing extends plugin {
       } else {
         await e.reply([
           `🎉 钓到了！！\n`,
-          `👑 是一个【${fish.name}】！\n`,
+          `👑 是【${fish.name}】！\n`,
           segment.image(`file:///${fishImagePath}`),
           `📝 ${fish.description}\n`,
           `📊 稀有度：${rarity.color}${fish.rarity}\n`,
@@ -882,7 +882,7 @@ export default class Fishing extends plugin {
     
     const resultMsg = [
       `🎉 钓到了！！\n`,
-      `🐟 是一条【${fish.name}】！\n`,
+      `🐟 是【${fish.name}】！\n`,
       segment.image(`file:///${fishImagePath}`),
       `📝 ${fish.description}\n`,
       `📊 稀有度：${rarity.color}${fish.rarity}\n`,
