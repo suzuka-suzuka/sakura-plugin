@@ -407,7 +407,7 @@ export default class Fishing extends plugin {
 
       if (fish.isTorpedo) {
         const ownerId = fishingManager.triggerTorpedo(userId);
-        fishingManager.damageRod(userId, rodConfig.id, 10);
+        
         fishingManager.recordTorpedoHit(userId);
         
         await fishingManager.setFishPriceBoost();
@@ -417,15 +417,16 @@ export default class Fishing extends plugin {
         fishingManager.clearEquippedLine(userId);
         
         let rodDamageMsg = "";
-        if (fishingManager.getRodControl(userId, rodConfig.id) > 0) {
-          rodDamageMsg = getRodDamageInfo(fishingManager, userId, rodConfig, 10);
-        }
-        
         let breakMsg = "";
-        if (fishingManager.getRodControl(userId, rodConfig.id) <= 0) {
+
+        const currentControl = fishingManager.getRodControl(userId, rodConfig.id);
+        if (currentControl <= 20) {
           inventoryManager.removeItem(rodConfig.id, 1);
           fishingManager.clearEquippedRod(userId, rodConfig.id);
           breakMsg = `\n💥 鱼竿也断了！\n🎣 失去了【${rodConfig.name}】`;
+        } else {
+          fishingManager.damageRod(userId, rodConfig.id, 10);
+          rodDamageMsg = getRodDamageInfo(fishingManager, userId, rodConfig, 10);
         }
         
         await e.reply([
@@ -457,16 +458,21 @@ export default class Fishing extends plugin {
         if (fishWeight > lineCapacity * 2) {
           const inventoryManager = new InventoryManager(groupId, userId);
           inventoryManager.removeItem(lineConfig.id, 1);
-          fishingManager.damageRod(userId, rodConfig.id, 10);
           fishingManager.clearEquippedLine(userId);
           fishingManager.increaseRodMastery(userId, rodConfig.id);
           
           let rodDamageMsg = "";
-          if (fishingManager.getRodControl(userId, rodConfig.id) > 0) {
+          let breakMsg = "";
+          
+          const currentControl = fishingManager.getRodControl(userId, rodConfig.id);
+          if (currentControl <= 20) {
+            inventoryManager.removeItem(rodConfig.id, 1);
+            fishingManager.clearEquippedRod(userId, rodConfig.id);
+            breakMsg = `\n💥 鱼竿也断了！\n🎣 失去了【${rodConfig.name}】`;
+          } else {
+            fishingManager.damageRod(userId, rodConfig.id, 10);
             rodDamageMsg = getRodDamageInfo(fishingManager, userId, rodConfig, 10);
           }
-
-          const breakMsg = await this.checkRodBreak(e, fishingManager, userId, rodConfig);
           
           await e.reply([
             `🌊 巨大的力量传来！\n`,
@@ -487,17 +493,22 @@ export default class Fishing extends plugin {
         if (!isSuccess) {
           const inventoryManager = new InventoryManager(groupId, userId);
           inventoryManager.removeItem(lineConfig.id, 1);
-          fishingManager.damageRod(userId, rodConfig.id, 5);
           fishingManager.clearEquippedLine(userId);
           fishingManager.recordCatch(userId, 0, fish.id, false);
           fishingManager.increaseRodMastery(userId, rodConfig.id);
           
           let rodDamageMsg2 = "";
-          if (fishingManager.getRodControl(userId, rodConfig.id) > 0) {
+          let breakMsg = "";
+          
+          const currentControl = fishingManager.getRodControl(userId, rodConfig.id);
+          if (currentControl <= 20) {
+            inventoryManager.removeItem(rodConfig.id, 1);
+            fishingManager.clearEquippedRod(userId, rodConfig.id);
+            breakMsg = `\n💥 鱼竿也断了！\n🎣 失去了【${rodConfig.name}】`;
+          } else {
+            fishingManager.damageRod(userId, rodConfig.id, 5);
             rodDamageMsg2 = getRodDamageInfo(fishingManager, userId, rodConfig, 5);
           }
-
-          const breakMsg = await this.checkRodBreak(e, fishingManager, userId, rodConfig);
           
           await e.reply([
             `💥 崩！\n`,
@@ -512,10 +523,8 @@ export default class Fishing extends plugin {
           return;
         }
 
-        fishingManager.damageRod(userId, rodConfig.id, 5);
-        
         const currentCtrl = fishingManager.getRodControl(userId, rodConfig.id);
-        if (currentCtrl <= 0) {
+        if (currentCtrl <= 20) {
           await e.reply([
             `⚡ 鱼线竟然没断！但是...\n`,
             `💥 咔嚓一声！鱼竿承受不住压力折断了！\n`,
@@ -531,6 +540,7 @@ export default class Fishing extends plugin {
           return;
         }
         
+        fishingManager.damageRod(userId, rodConfig.id, 5);
         const rodDamageMsg4 = getRodDamageInfo(fishingManager, userId, rodConfig, 5);
         await e.reply(`⚡ 鱼线紧绷！勉强撑住了！${rodDamageMsg4}`);
       }
@@ -645,10 +655,8 @@ export default class Fishing extends plugin {
         state.tension += tensionChange;
 
         if (state.isOverweight) {
-          fishingManager.damageRod(userId, rodConfig.id, 1);
-          
           const currentCtrl = fishingManager.getRodControl(userId, rodConfig.id);
-          if (currentCtrl <= 0) {
+          if (currentCtrl <= 20) {
             await e.reply([
               `💥 鱼竿断了！\n`,
               `🎣 失去了【${rodConfig.name}】\n`,
@@ -664,6 +672,8 @@ export default class Fishing extends plugin {
             await this.setCooldownAndIncrement(groupId, userId);
             return;
           }
+          
+          fishingManager.damageRod(userId, rodConfig.id, 1);
         }
 
         if (state.tension > 100) {
@@ -786,7 +796,6 @@ export default class Fishing extends plugin {
     const fishImagePath = getFishImagePath(fish.id);
     
     if (fish.isMimic) {
-      fishingManager.damageRod(userId, rodConfig.id, 20);
       fishingManager.recordCatch(userId, 0, fish.id, true);
       fishingManager.increaseRodMastery(userId, rodConfig.id);
       
@@ -795,15 +804,17 @@ export default class Fishing extends plugin {
       fishingManager.clearEquippedLine(userId);
       
       let rodDamageMsg = "";
-      if (fishingManager.getRodControl(userId, rodConfig.id) > 0) {
-        rodDamageMsg = getRodDamageInfo(fishingManager, userId, rodConfig, 20);
-      }
-      
       let breakMsg = "";
-      if (fishingManager.getRodControl(userId, rodConfig.id) <= 0) {
+      
+      const currentControl = fishingManager.getRodControl(userId, rodConfig.id);
+      
+      if (currentControl <= 20) {
         inventoryManager.removeItem(rodConfig.id, 1);
         fishingManager.clearEquippedRod(userId, rodConfig.id);
         breakMsg = `\n💥 鱼竿也断了！\n🎣 失去了【${rodConfig.name}】`;
+      } else {
+        fishingManager.damageRod(userId, rodConfig.id, 20);
+        rodDamageMsg = getRodDamageInfo(fishingManager, userId, rodConfig, 20);
       }
       
       await e.reply([
@@ -909,17 +920,6 @@ export default class Fishing extends plugin {
     return multiplier;
   }
 
-  async checkRodBreak(e, fishingManager, userId, rodConfig) {
-    const currentControl = fishingManager.getRodControl(userId, rodConfig.id);
-    if (currentControl <= 0) {
-      const inventoryManager = new InventoryManager(e.group_id, userId);
-      inventoryManager.removeItem(rodConfig.id, 1);
-      fishingManager.clearEquippedRod(userId, rodConfig.id);
-      
-      return `\n💥 鱼竿也断了！\n🎣 失去了【${rodConfig.name}】`;
-    }
-    return "";
-  }
 
   equipRod = Command(/^#?装备鱼竿\s*(.+)$/, async (e) => {
     const rodName = e.msg.match(/^#?装备鱼竿\s*(.+)$/)[1].trim();
