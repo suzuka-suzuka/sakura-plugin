@@ -837,9 +837,9 @@ export default class Fishing extends plugin {
           segment.image(`file:///${fishImagePath}`),
           `📝 ${fish.description}\n`,
           `📊 稀有度：${rarity.color}${fish.rarity}\n`,
+          `📈 熟练度：${newMastery}\n`,
           `🎒 已自动放入背包！\n`,
-          `💡 发送「使用${fish.name}」来使用它！\n`,
-          `📈 熟练度：${newMastery}`
+          `💡 发送「使用${fish.name}」来使用它！`,
         ]);
       } else {
         await e.reply([
@@ -847,8 +847,8 @@ export default class Fishing extends plugin {
           segment.image(`file:///${fishImagePath}`),
           `📝 ${fish.description}\n`,
           `📊 稀有度：${rarity.color}${fish.rarity}\n`,
-          `❌ 背包已满，无法放入！宝藏丢失了...\n`,
-          `📈 熟练度：${newMastery}`
+          `📈 熟练度：${newMastery}\n`,
+          `❌ 背包已满，无法放入！宝藏丢失了...`,
         ]);
       }
       return;
@@ -884,10 +884,10 @@ export default class Fishing extends plugin {
       `📝 ${fish.description}\n`,
       `📊 稀有度：${rarity.color}${fish.rarity}\n`,
       `⚖️ 重量：${fishWeight}\n`,
+      `📈 熟练度：${newMastery}\n`,
       priceBoostMsg,
       buffMsg,
-      `💰 价值：${finalPrice} 樱花币\n`,
-      `📈 熟练度：${newMastery}`
+      `💰 价值：${finalPrice} 樱花币`,
     ];
     await e.reply(resultMsg);    
   }
