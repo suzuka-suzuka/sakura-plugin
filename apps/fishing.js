@@ -332,8 +332,7 @@ export default class Fishing extends plugin {
       else if (fishWeight > lineCapacity) {
         await e.reply([
           `🌊 浮漂猛地沉下去了！\n`,
-          `😨 手感沉甸甸的！这条鱼似乎是个大家伙！\n`,
-          `⚠️ 这么大的鱼，鱼线可能撑不住...要搏一搏吗？\n`,
+          `😨 这条鱼太大了！鱼线可能撑不住...\n`,
           `📝 回复「收竿」拼了，回复「放弃」保平安`,
         ], false, true);
         
