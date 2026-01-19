@@ -6,35 +6,35 @@ categories:
     items:
       - id: rod_bamboo
         name: 竹竿
-        price: 30
+        price: 50
         type: equipment
         control: 30
         description: 随处可见的普通竹竿，适合新手练习，只能钓小鱼。
 
       - id: rod_fiberglass
         name: 玻璃纤维竿
-        price: 240
+        price: 400
         type: equipment
         control: 60
         description: 轻便耐用的玻璃纤维鱼竿，控制力有所提升。
 
       - id: rod_carbon
         name: 碳素鱼竿
-        price: 500
+        price: 1100
         type: equipment
         control: 100
         description: 轻盈强韧的碳素纤维打造，能应对大多数普通鱼类。
 
       - id: rod_titanium
         name: 钛合金鱼竿
-        price: 1350
+        price: 2600
         type: equipment
         control: 150
         description: 泛着冷光的钛合金鱼竿，即使是凶猛的大鱼也能驾驭。
 
       - id: rod_legendary
         name: 传说之竿
-        price: 3200
+        price: 5000
         type: equipment
         control: 200
         description: 传说中的神器，拥有最强控制力，能征服任何鱼类！
@@ -46,38 +46,38 @@ categories:
     items:
       - id: line_basic
         name: 尼龙线
-        price: 10
+        price: 20
         type: equipment
-        capacity: 15
-        description: 最基础的尼龙鱼线，只能承受15斤以内的鱼。
+        capacity: 5
+        description: 最基础的尼龙鱼线，只能承受较小的拉力。
 
       - id: line_braided
         name: 编织线
-        price: 30
+        price: 50
         type: equipment
         capacity: 20
-        description: 多股编织的耐用鱼线，承重提升到20斤。
+        description: 多股编织的耐用鱼线，承重相较普通鱼线有所提升。
 
       - id: line_fluorocarbon
         name: 碳氟线
-        price: 60
+        price: 90
         type: equipment
         capacity: 50
-        description: 几乎隐形的碳氟材质鱼线，承重50斤。
+        description: 几乎隐形的碳氟材质鱼线，拥有不错的承重能力。
 
       - id: line_steel
         name: 钢丝线
-        price: 110
+        price: 140
         type: equipment
-        capacity: 150
-        description: 不锈钢打造的超强鱼线，承重150斤。
+        capacity: 100
+        description: 不锈钢打造的超强鱼线，坚固无比，能应对大部分体型巨大的鱼类。
 
       - id: line_mythril
         name: 秘银线
-        price: 160
+        price: 200
         type: equipment
-        capacity: 250
-        description: 传说中的秘银材质，承重高达250斤，几乎无法扯断！
+        capacity: 200
+        description: 传说中的秘银材质，不仅承重能力极强，且几乎无法被扯断！
 
   baits:
     name: "🪱 鱼饵"
@@ -86,35 +86,89 @@ categories:
     items:
       - id: bait_worm
         name: 蚯蚓
-        price: 4
+        price: 5
         type: consumable
         quality: 1
-        description: 刚挖出来的鲜活蚯蚓，只能钓到垃圾和普通鱼。
+        description: 刚挖出来的鲜活蚯蚓，新手钓鱼的入门之选。
 
       - id: bait_shrimp
         name: 鲜虾饵
-        price: 18
+        price: 25
         type: consumable
         quality: 2
-        description: 鲜嫩多汁的虾肉，有50%概率钓到精品鱼。
+        description: 鲜嫩多汁的虾肉，散发着诱人的气息。
 
       - id: bait_premium
         name: 秘制鱼饵
-        price: 58
+        price: 75
         type: consumable
         quality: 3
-        description: 秘方调制的鱼饵，有50%概率钓到稀有鱼。
+        description: 秘方调制的鱼饵，据说效果比普通鱼饵好得多。
 
       - id: bait_magic
         name: 魔法鱼饵
-        price: 105
+        price: 160
         type: consumable
         quality: 4
-        description: 注入了魔法的鱼饵，有50%概率钓到史诗鱼。
+        description: 注入了魔法的鱼饵，散发着神秘的魔力光芒。
 
       - id: bait_divine
         name: 神之诱饵
-        price: 158
+        price: 200
         type: consumable
         quality: 5
-        description: 传说中的神之诱饵，有50%概率钓到传说鱼！
+        description: 传说中的神之诱饵，没有鱼能抗拒它的诱惑！
+
+      - id: bait_treasure
+        name: 寻宝鱼饵
+        price: 300
+        type: consumable
+        quality: 6
+        description: 特殊的寻宝鱼饵，据说使用它钓鱼时有机会钓到宝藏！
+
+  torpedoes:
+    name: "💣 鱼雷"
+    description: "可投放到鱼塘的恶作剧道具"
+    handler: fishing_torpedo
+    items:
+      - id: torpedo
+        name: 鱼雷
+        price: 200
+        type: consumable
+        description: 一种恶作剧道具，投放到鱼塘后可能被其他钓鱼者钓到。钓到鱼雷会导致鱼竿受损并直接断线！爆炸后一段时间内鱼价会上涨。
+
+  special:
+    name: "🎁 特殊物品"
+    description: "钓鱼获得的特殊宝藏物品"
+    handler: fishing_special
+    items:
+      - id: item_card_double_coin
+        name: 双倍金币卡
+        price: 0
+        type: buff
+        duration: 3600
+        sellable: false
+        description: 使用后1小时钓鱼获可获得双倍收益。(非卖品)
+
+      - id: item_card_1_5_coin
+        name: 1.5倍金币卡
+        price: 0
+        type: buff
+        duration: 3600
+        sellable: false
+        description: 使用后1小时内出钓鱼可获得1.5倍收益。(非卖品)
+
+      - id: item_charm_lucky
+        name: 好运护符
+        price: 0
+        type: buff
+        duration: 3600
+        sellable: false
+        description: 使用后1小时内钓鱼必定能上钩。(非卖品)
+
+      - id: item_random_bait
+        name: 随机鱼饵包
+        price: 0
+        type: consumable
+        sellable: false
+        description: 使用后可开出一种随机鱼饵。(非卖品)

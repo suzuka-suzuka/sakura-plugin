@@ -299,10 +299,10 @@ export default class Economy extends plugin {
         
         let rodInfo = "";
         if (itemId.startsWith("rod_")) {
-          const capacityInfo = fishingManager.getRodCapacityInfo(e.user_id, itemId);
-          if (capacityInfo.loss > 0) {
-            const remainingHits = Math.floor((capacityInfo.currentCapacity - 30) / 10);
-            rodInfo = ` ⚠️${remainingHits}次`;
+          const durabilityInfo = fishingManager.getRodDurabilityInfo(e.user_id, itemId);
+          if (durabilityInfo.maxControl > 0) {
+            const durabilityPercent = Math.round((durabilityInfo.currentControl / durabilityInfo.maxControl) * 100);
+            rodInfo = ` 耐久: ${durabilityPercent}%`;
           }
         }
         
@@ -440,46 +440,137 @@ export default class Economy extends plugin {
     return true;
   });
 
-  sell = Command(/^#?出售\s*(\S+)\s*(\d*)$/, async (e) => {
+  sell = Command(/^#?出售\s*(\S+).*$/, async (e) => {
     const itemName = e.match[1].trim();
-    const count = parseInt(e.match[2]) || 1;
     const shopManager = new ShopManager();
     const inventoryManager = new InventoryManager(e);
 
     const item = shopManager.findItemByName(itemName) || shopManager.findItemById(itemName);
-    if (!item) {
-      await e.reply(`找不到【${itemName}】这个物品~`, 10);
-      return true;
-    }
-
-    // 只允许消耗品出售多个，装备类只能出售1个
-    if (item.type !== 'consumable' && count > 1) {
-      await e.reply(`【${item.name}】不能批量出售，只能出售1个~`, 10);
-      return true;
-    }
+    if (!item || item.type !== 'equipment') return false;
 
     const itemId = item.id || itemName;
-    const ownedCount = inventoryManager.getItemCount(itemId);
-    if (ownedCount < count) {
-      await e.reply(`你的背包里只有【${item.name}】${ownedCount}个，不足${count}个~`, 10);
+    if (inventoryManager.getItemCount(itemId) < 1) {
+      await e.reply(`你没有【${item.name}】，无法出售~`, 10);
       return true;
     }
 
-    const removeResult = inventoryManager.removeItem(itemId, count);
-    if (!removeResult) {
-      await e.reply(`出售失败，请稍后再试~`, 10);
+    let sellPrice = Math.floor(item.price * 0.8);
+    let durabilityMsg = "";
+    
+    const fishingManager = new FishingManager(e.group_id);
+    const rodConfig = fishingManager.getRodConfig(itemId);
+
+    if (rodConfig) {
+      const durabilityInfo = fishingManager.getRodDurabilityInfo(e.user_id, itemId);
+      if (durabilityInfo.maxControl > 0) {
+        const ratio = durabilityInfo.currentControl / durabilityInfo.maxControl;
+        sellPrice = Math.floor(sellPrice * ratio);
+        durabilityMsg = `(耐久:${Math.floor(ratio * 100)}%)`;
+      }
+    }
+
+    if (!inventoryManager.removeItem(itemId, 1)) {
+      await e.reply("出售失败，请稍后再试~", 10);
       return true;
     }
 
-    const totalSellPrice = Math.round(item.price * count);
+    if (rodConfig) {
+      fishingManager.clearEquippedRod(e.user_id, itemId);
+    }
 
-    const economyManager = new EconomyManager(e);
-    economyManager.addCoins(e, totalSellPrice);
+    new EconomyManager(e).addCoins(e, sellPrice);
 
-    const countText = count > 1 ? `${count}个` : '1个';
     await e.reply(
-      `💰 成功出售${countText}【${item.name}】！\n💵 获得 ${totalSellPrice} 樱花币`
+      `💰 成功出售【${item.name}】${durabilityMsg}！\n💵 获得 ${sellPrice} 樱花币`
     );
+    return true;
+  });
+
+  useItem = Command(/^#?使用\s*(\S+)$/, async (e) => {
+    const itemName = e.match[1].trim();
+    const shopManager = new ShopManager();
+    const item = shopManager.findItemByName(itemName);
+
+    if (!item) return false;
+
+    const inventoryManager = new InventoryManager(e);
+    const fishingManager = new FishingManager(e.group_id);
+    const groupId = e.group_id;
+    const userId = e.user_id;
+
+    const itemHandlers = {
+      "item_card_double_coin": {
+        buffKey: "double_coin",
+        message: "✨ 双倍金币卡已激活！\n💰 接下来1小时内钓鱼可获得双倍收益！"
+      },
+      "item_card_1_5_coin": {
+        buffKey: "1_5_coin",
+        message: "✨ 1.5倍金币卡已激活！\n💰 接下来1小时内钓鱼可获得1.5倍收益！"
+      },
+      "item_charm_lucky": {
+        buffKey: "lucky",
+        message: "🍀 好运护符已激活！\n🎣 接下来1小时内钓鱼必定上钩！"
+      },
+      "item_random_bait": {
+        isRandomBait: true
+      }
+    };
+
+    const handler = itemHandlers[item.id];
+    if (!handler) {
+      return false;
+    }
+
+    if (inventoryManager.getItemCount(item.id) < 1) {
+      await e.reply(`你没有【${itemName}】，无法使用~`, 10);
+      return true;
+    }
+
+    if (handler.isRandomBait) {
+      const allBaits = fishingManager.getAllBaits();
+      const userBaits = fishingManager.getUserBaits(userId);
+      
+      let missingBaits = allBaits.filter(b => !userBaits[b.id] || userBaits[b.id] <= 0);
+      
+      let selectedBait;
+      if (missingBaits.length > 0) {
+        selectedBait = missingBaits[_.random(0, missingBaits.length - 1)];
+      } else {
+        selectedBait = allBaits[_.random(0, allBaits.length - 1)];
+      }
+
+      inventoryManager.removeItem(item.id, 1);
+      
+      await inventoryManager.addItem(selectedBait.id, 1);
+      
+      await e.reply([
+        `🎁 打开了随机鱼饵包！\n`,
+        `✨ 获得了【${selectedBait.name}】！\n`,
+        `📝 ${selectedBait.description}`
+      ]);
+      return true;
+    }
+
+    const buffKey = `sakura:fishing:buff:${handler.buffKey}:${groupId}:${userId}`;
+    
+    if (handler.buffKey === "double_coin" || handler.buffKey === "1_5_coin") {
+      const otherBuffKey = handler.buffKey === "double_coin" 
+        ? `sakura:fishing:buff:1_5_coin:${groupId}:${userId}`
+        : `sakura:fishing:buff:double_coin:${groupId}:${userId}`;
+      await redis.del(otherBuffKey);
+    } else {
+      const existingBuff = await redis.get(buffKey);
+      if (existingBuff) {
+        await redis.del(buffKey);
+      }
+    }
+
+    inventoryManager.removeItem(item.id, 1);
+    
+    const duration = item.duration || 3600;
+    await redis.set(buffKey, String(Date.now()), "EX", duration);
+    
+    await e.reply(handler.message);
     return true;
   });
 

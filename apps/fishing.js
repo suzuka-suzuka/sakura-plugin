@@ -23,23 +23,33 @@ const RARITY_CONFIG = {
   "精品": { color: "🟢", level: 2 },
   "稀有": { color: "🔵", level: 3 },
   "史诗": { color: "🟣", level: 4 },
-  "传说": { color: "🟠", level: 5 }
+  "传说": { color: "🟠", level: 5 },
+  "宝藏": { color: "👑", level: 6 }
 };
 
+function getRodDamageInfo(fishingManager, userId, rodConfig, damageAmount) {
+  const currentControl = fishingManager.getRodControl(userId, rodConfig.id);
+  const maxControl = rodConfig.control;
+  const durabilityPercent = Math.round((currentControl / maxControl) * 100);
+  return `\n⚠️ 鱼竿受到了 ${damageAmount} 点损耗，当前耐久 ${durabilityPercent}%`;
+}
+
 function getRarityPoolByBaitQuality(quality) {
-  const allRarities = ["垃圾", "普通", "精品", "稀有", "史诗", "传说"];
+  const allRarities = ["垃圾", "普通", "精品", "稀有", "史诗", "传说", "宝藏"];
   
   switch (quality) {
     case 1:
-      return { pool: ["垃圾", "普通"], weights: [50, 50] };
+      return { pool: ["垃圾", "普通", "宝藏"], weights: [50, 49, 1] };
     case 2:
-      return { pool: ["垃圾", "普通", "精品"], weights: [25, 25, 50] };
+      return { pool: ["垃圾", "普通", "精品", "宝藏"], weights: [25, 25, 48, 2] };
     case 3:
-      return { pool: ["垃圾", "普通", "精品", "稀有"], weights: [12.5, 12.5, 25, 50] };
+      return { pool: ["垃圾", "普通", "精品", "稀有", "宝藏"], weights: [12.5, 12.5, 25, 47, 3] };
     case 4:
-      return { pool: ["垃圾", "普通", "精品", "稀有", "史诗"], weights: [6.25, 6.25, 12.5, 25, 50] };
+      return { pool: ["垃圾", "普通", "精品", "稀有", "史诗", "宝藏"], weights: [6.25, 6.25, 12.5, 25, 46, 4] };
     case 5:
-      return { pool: allRarities, weights: [3.125, 3.125, 6.25, 12.5, 25, 50] };
+      return { pool: allRarities, weights: [3.125, 3.125, 6.25, 12.5, 25, 45, 5] };
+    case 6:
+      return { pool: allRarities, weights: [8.33, 8.33, 8.33, 8.33, 8.33, 8.35, 50] };
     default:
       return { pool: ["垃圾", "普通"], weights: [50, 50] };
   }
@@ -77,11 +87,49 @@ function getFishByRarity(rarity) {
   });
 }
 
-function selectRandomFish(baitQuality) {
+function selectRandomFish(baitQuality, fishingManager = null, fisherId = null) {
+  if (fishingManager && fisherId) {
+    const torpedoCount = fishingManager.getAvailableTorpedoCount(fisherId);
+    if (torpedoCount > 0) {
+      const torpedoWeight = torpedoCount * 5;
+      const totalWeight = 100 + torpedoWeight;
+      const random = Math.random() * totalWeight;
+      
+      if (random < torpedoWeight) {
+        return {
+          id: "torpedo",
+          name: "鱼雷",
+          rarity: "危险",
+          isTorpedo: true,
+          actualWeight: 0,
+          weight: [0, 0],
+          base_price: 0,
+          description: "💥 轰！！！"
+        };
+      }
+    }
+  }
+  
   const { pool, weights } = getRarityPoolByBaitQuality(baitQuality);
   const selectedRarity = selectRarityByWeight(pool, weights);
   
   let availableFish = getFishByRarity(selectedRarity);
+  
+  if (selectedRarity === "宝藏" && availableFish.length > 0) {
+    const mimic = availableFish.find(f => f.id === "monster_mimic" || f.isMimic);
+    if (mimic) {
+      if (Math.random() < 0.2) {
+        const [minWeight, maxWeight] = mimic.weight;
+        const actualWeight = _.round(_.random(minWeight, maxWeight, true), 2);
+        return {
+          ...mimic,
+          actualWeight,
+          isMimic: true
+        };
+      }
+      availableFish = availableFish.filter(f => f.id !== "monster_mimic" && !f.isMimic);
+    }
+  }
   
   if (availableFish.length === 0) {
     const rarityIndex = pool.indexOf(selectedRarity);
@@ -100,14 +148,17 @@ function selectRandomFish(baitQuality) {
   const [minWeight, maxWeight] = fish.weight;
   const actualWeight = _.round(_.random(minWeight, maxWeight, true), 2);
   
+  const isTreasure = fish.rarity === "宝藏" && fish.id !== "monster_mimic";
+  
   return {
     ...fish,
-    actualWeight
+    actualWeight,
+    isTreasure
   };
 }
 
 
-function calculateFishPrice(fish) {
+async function calculateFishPrice(fish, fishingManager = null) {
   const basePrice = fish.base_price || 0;
   const weight = fish.actualWeight;
   const [minWeight, maxWeight] = fish.weight || [weight, weight];
@@ -120,7 +171,12 @@ function calculateFishPrice(fish) {
   
   const priceMultiplier = 1 + (weightRatio * 0.5);
   
-  return Math.round(basePrice * priceMultiplier);
+  let torpedoMultiplier = 1;
+  if (fishingManager) {
+    torpedoMultiplier = await fishingManager.getFishPriceMultiplier();
+  }
+  
+  return Math.round(basePrice * priceMultiplier * torpedoMultiplier);
 }
 
 function getFishImagePath(fishId) {
@@ -137,8 +193,6 @@ export default class Fishing extends plugin {
   }
 
   startFishing = Command(/^#?钓鱼$/, async (e) => {
-    await e.reply("⏳ 钓鱼功能维护中，请出售所有渔具并等待更新，谢谢！");
-    return true
     const groupId = e.group_id;
     const userId = e.user_id;
 
@@ -199,12 +253,16 @@ export default class Fishing extends plugin {
     fishingManager.consumeBait(userId);
 
     const baitQuality = baitConfig.quality || 1;
-    const selectedFish = selectRandomFish(baitQuality);
+    const selectedFish = selectRandomFish(baitQuality, fishingManager, userId);
 
+    const luckyKey = `sakura:fishing:buff:lucky:${groupId}:${userId}`;
+    const hasLucky = await redis.get(luckyKey);
     const waitTime = _.random(0, 3 * 60 * 1000);
+    
+    const luckyMsg = hasLucky ? "\n🍀 好运护符生效中！" : "";
 
     await e.reply(
-      `🎣 挥动【${rodConfig.name}】\n挂上【${baitConfig.name}】\n伴随着优美的抛物线，鱼钩落入水中...\n✨ 看看今天运气如何？耐心等待浮漂的动静吧...`
+      `🎣 挥动【${rodConfig.name}】\n挂上【${baitConfig.name}】\n伴随着优美的抛物线，鱼钩落入水中...\n✨ 看看今天运气如何？耐心等待浮漂的动静吧...${luckyMsg}`
     );
 
     const stateKey = `${groupId}:${userId}`;
@@ -227,6 +285,7 @@ export default class Fishing extends plugin {
       baitConfig,
       startTime: Date.now(),
       phase: "waiting",
+      hasLucky: !!hasLucky,
       cleanup: () => cleanupState(stateKey),
     };
 
@@ -252,7 +311,25 @@ export default class Fishing extends plugin {
       currentState.phase = "weight_check";
       currentState.biteTime = Date.now();
       
-      if (fishWeight > lineCapacity) {
+      if (fish.isTorpedo) {
+        await e.reply([
+          `🌊 浮漂动了！有鱼上钩啦！\n`,
+          `🤩 快！回复「收竿」把它拉上来！`,
+        ], false, true);
+        
+        currentState.isOverweight = false;
+        this.setContext("handleFishing", stateKey, 60);
+        
+        currentState.confirmTimer = setTimeout(() => {
+          const s = fishingState[stateKey];
+          if (s && s.phase === "weight_check") {
+            cleanupState(stateKey);
+            this.finish("handleFishing", stateKey);
+            e.reply(`⏰ 错过时机了... 鱼跑掉了！`, false, true);
+          }
+        }, 60 * 1000);
+      }
+      else if (fishWeight > lineCapacity) {
         await e.reply([
           `🌊 浮漂猛地沉下去了！\n`,
           `😨 手感沉甸甸的！这条鱼似乎是个大家伙！\n`,
@@ -309,6 +386,7 @@ export default class Fishing extends plugin {
 
     const { fish, rodConfig, lineConfig } = state;
     const fishingManager = new FishingManager(groupId);
+    const rodMastery = fishingManager.getRodMastery(userId, rodConfig.id);
     const fishDifficulty = fish.difficulty;
 
     if (state.phase === "weight_check") {
@@ -328,24 +406,75 @@ export default class Fishing extends plugin {
         state.confirmTimer = null;
       }
 
+      if (fish.isTorpedo) {
+        const ownerId = fishingManager.triggerTorpedo(userId);
+        fishingManager.damageRod(userId, rodConfig.id, 10);
+        fishingManager.recordTorpedoHit(userId);
+        
+        await fishingManager.setFishPriceBoost();
+        
+        const inventoryManager = new InventoryManager(groupId, userId);
+        inventoryManager.removeItem(lineConfig.id, 1);
+        fishingManager.clearEquippedLine(userId);
+        
+        let rodDamageMsg = "";
+        if (fishingManager.getRodControl(userId, rodConfig.id) > 0) {
+          rodDamageMsg = getRodDamageInfo(fishingManager, userId, rodConfig, 10);
+        }
+        
+        let breakMsg = "";
+        if (fishingManager.getRodControl(userId, rodConfig.id) <= 0) {
+          inventoryManager.removeItem(rodConfig.id, 1);
+          fishingManager.clearEquippedRod(userId, rodConfig.id);
+          breakMsg = `\n💥 鱼竿也断了！\n🎣 失去了【${rodConfig.name}】`;
+        }
+        
+        await e.reply([
+          `💥💥💥 轰！！！\n`,
+          `😱 钓到了`,
+          segment.at(ownerId),
+          `的鱼雷！\n`,
+          `🧵 鱼线被炸断了！`,
+          `${rodDamageMsg}${breakMsg}\n`,
+          `😱 鱼雷爆炸引发恐慌！接下来1小时内鱼价1.5倍！`
+        ]);
+        
+        this.finish("handleFishing", stateKey);
+        if (state.cleanup) state.cleanup();
+        await this.setCooldownAndIncrement(groupId, userId);
+        return;
+      }
+
+      if (state.hasLucky) {
+        await e.reply(`🍀 好运护符发挥了作用！轻松把鱼拉了上来！`);
+        await this.finishSuccess(e, state, fishingManager);
+        return;
+      }
+
       if (state.isOverweight) {
         const fishWeight = fish.actualWeight;
         const lineCapacity = lineConfig.capacity;
         
         if (fishWeight > lineCapacity * 2) {
-          await e.reply([
-            `🌊 巨大的力量传来！\n`,
-            `😱 这到底是个什么庞然大物！？(${fishWeight})\n`,
-            `💥 啪！鱼线瞬间崩断了！\n`,
-            `🧵 【${lineConfig.name}】牺牲了...`,
-          ]);
-          
           const inventoryManager = new InventoryManager(groupId, userId);
           inventoryManager.removeItem(lineConfig.id, 1);
           fishingManager.damageRod(userId, rodConfig.id, 10);
           fishingManager.clearEquippedLine(userId);
+          fishingManager.increaseRodMastery(userId, rodConfig.id);
           
-          await this.checkRodBreak(e, fishingManager, userId, rodConfig);
+          let rodDamageMsg = "";
+          if (fishingManager.getRodControl(userId, rodConfig.id) > 0) {
+            rodDamageMsg = getRodDamageInfo(fishingManager, userId, rodConfig, 10);
+          }
+
+          const breakMsg = await this.checkRodBreak(e, fishingManager, userId, rodConfig);
+          
+          await e.reply([
+            `🌊 巨大的力量传来！\n`,
+            `😱 这到底是个什么庞然大物！？(${fishWeight})\n`,
+            `💥 啪！鱼线瞬间崩断了！\n`,
+            `🧵 【${lineConfig.name}】牺牲了...${rodDamageMsg}${breakMsg}`,
+          ]);
           
           this.finish("handleFishing", stateKey);
           if (state.cleanup) state.cleanup();
@@ -357,21 +486,27 @@ export default class Fishing extends plugin {
         const isSuccess = Math.random() < successRate;
 
         if (!isSuccess) {
-          await e.reply([
-            `💥 崩！\n`,
-            `😫 还是没能坚持住，鱼线断了...\n`,
-            `👋 鱼大摇大摆地游走了(${fishWeight})\n`,
-            `🧵 失去了【${lineConfig.name}】`,
-          ]);
-
           const inventoryManager = new InventoryManager(groupId, userId);
           inventoryManager.removeItem(lineConfig.id, 1);
           fishingManager.damageRod(userId, rodConfig.id, 5);
           fishingManager.clearEquippedLine(userId);
           fishingManager.recordCatch(userId, 0, fish.id, false);
+          fishingManager.increaseRodMastery(userId, rodConfig.id);
           
-          await this.checkRodBreak(e, fishingManager, userId, rodConfig);
+          let rodDamageMsg2 = "";
+          if (fishingManager.getRodControl(userId, rodConfig.id) > 0) {
+            rodDamageMsg2 = getRodDamageInfo(fishingManager, userId, rodConfig, 5);
+          }
 
+          const breakMsg = await this.checkRodBreak(e, fishingManager, userId, rodConfig);
+          
+          await e.reply([
+            `💥 崩！\n`,
+            `😫 还是没能坚持住，鱼线断了...\n`,
+            `👋 鱼大摇大摆地游走了(${fishWeight})\n`,
+            `🧵 失去了【${lineConfig.name}】${rodDamageMsg2}${breakMsg}`,
+          ]);
+          
           this.finish("handleFishing", stateKey);
           if (state.cleanup) state.cleanup();
           await this.setCooldownAndIncrement(groupId, userId);
@@ -389,8 +524,7 @@ export default class Fishing extends plugin {
           ]);
           const inventoryManager = new InventoryManager(groupId, userId);
           inventoryManager.removeItem(rodConfig.id, 1);
-          fishingManager.clearEquippedRod(userId);
-          fishingManager.clearRodDamage(userId, rodConfig.id);
+          fishingManager.clearEquippedRod(userId, rodConfig.id);
           
           this.finish("handleFishing", stateKey);
           if (state.cleanup) state.cleanup();
@@ -398,11 +532,12 @@ export default class Fishing extends plugin {
           return;
         }
         
-        await e.reply(`⚡ 鱼线紧绷！勉强撑住了！`);
+        const rodDamageMsg4 = getRodDamageInfo(fishingManager, userId, rodConfig, 5);
+        await e.reply(`⚡ 鱼线紧绷！勉强撑住了！${rodDamageMsg4}`);
       }
 
       state.phase = "difficulty_check";
-      const updatedControl = fishingManager.getRodControl(userId, rodConfig.id);
+      const updatedControl = fishingManager.getRodControl(userId, rodConfig.id) + rodMastery;
       
       if (fishDifficulty > updatedControl) {
         await e.reply([
@@ -435,7 +570,7 @@ export default class Fishing extends plugin {
       }
 
       if (/^强拉$/.test(msg)) {
-        const updatedControl = fishingManager.getRodControl(userId, rodConfig.id);
+        const updatedControl = fishingManager.getRodControl(userId, rodConfig.id) + rodMastery;
         const successRate = Math.max(0, 1 - (fishDifficulty - updatedControl) / 100);
         const isSuccess = Math.random() < successRate;
 
@@ -450,6 +585,7 @@ export default class Fishing extends plugin {
           inventoryManager.removeItem(lineConfig.id, 1);
           fishingManager.clearEquippedLine(userId);
           fishingManager.recordCatch(userId, 0, fish.id, false);
+          fishingManager.increaseRodMastery(userId, rodConfig.id);
 
           this.finish("handleFishing", stateKey);
           if (state.cleanup) state.cleanup();
@@ -495,22 +631,22 @@ export default class Fishing extends plugin {
     }
 
     if (state.phase === "fighting") {
-      const updatedControl = fishingManager.getRodControl(userId, rodConfig.id);
+      const updatedControl = fishingManager.getRodControl(userId, rodConfig.id) + rodMastery;
       
       if (/^拉$/.test(msg)) {
         state.fightingRounds++;
         
-        const pullPower = Math.max(10, Math.floor(updatedControl / 5));
+        const pullPower = Math.max(8, Math.floor(updatedControl / 6));
         const fishResist = Math.max(3, Math.floor(fishDifficulty / 20));
         
         const distanceChange = -(pullPower - fishResist + _.random(0, 3));
-        const tensionChange = Math.floor(fishDifficulty / 15) + _.random(3, 8);
+        const tensionChange = Math.floor(fishDifficulty / 12) + _.random(4, 9);
         
         state.distance += distanceChange;
         state.tension += tensionChange;
 
         if (state.isOverweight) {
-          fishingManager.damageRod(userId, rodConfig.id, 5);
+          fishingManager.damageRod(userId, rodConfig.id, 1);
           
           const currentCtrl = fishingManager.getRodControl(userId, rodConfig.id);
           if (currentCtrl <= 0) {
@@ -521,8 +657,7 @@ export default class Fishing extends plugin {
             ]);
             const inventoryManager = new InventoryManager(groupId, userId);
             inventoryManager.removeItem(rodConfig.id, 1);
-            fishingManager.clearEquippedRod(userId);
-            fishingManager.clearRodDamage(userId, rodConfig.id);
+            fishingManager.clearEquippedRod(userId, rodConfig.id);
             fishingManager.recordCatch(userId, 0, fish.id, false);
             
             this.finish("handleFishing", stateKey);
@@ -544,6 +679,7 @@ export default class Fishing extends plugin {
           inventoryManager.removeItem(lineConfig.id, 1);
           fishingManager.clearEquippedLine(userId);
           fishingManager.recordCatch(userId, 0, fish.id, false);
+          fishingManager.increaseRodMastery(userId, rodConfig.id);
 
           this.finish("handleFishing", stateKey);
           if (state.cleanup) state.cleanup();
@@ -565,13 +701,14 @@ export default class Fishing extends plugin {
           ]);
 
           fishingManager.recordCatch(userId, 0, fish.id, false);
+          fishingManager.increaseRodMastery(userId, rodConfig.id);
           this.finish("handleFishing", stateKey);
           if (state.cleanup) state.cleanup();
           await this.setCooldownAndIncrement(groupId, userId);
           return;
         }
 
-        const damageHint = state.isOverweight ? "\n⚠️ 鱼竿受损" : "";
+        const damageHint = state.isOverweight ? getRodDamageInfo(fishingManager, userId, rodConfig, 1) : "";
         await e.reply([
           `💪 用力一拉！\n`,
           `📏 距离：${state.distance}\n`,
@@ -583,7 +720,7 @@ export default class Fishing extends plugin {
       if (/^溜$/.test(msg)) {
         state.fightingRounds++;
         
-        const tensionRelease = _.random(25, 45);
+        const tensionRelease = _.random(20, 35);
         const fishEscape = Math.max(2, Math.floor(fishDifficulty / 30)) + _.random(1, 4);
         
         state.tension = Math.max(0, state.tension - tensionRelease);
@@ -621,7 +758,7 @@ export default class Fishing extends plugin {
       cooldownKey,
       String(Math.floor(Date.now() / 1000)),
       "EX",
-      300
+      600
     );
 
     const groupFishingKey = `sakura:fishing:group_daily:${groupId}`;
@@ -646,17 +783,103 @@ export default class Fishing extends plugin {
 
     const rarity = RARITY_CONFIG[fish.rarity] || { color: "⚪", level: 0 };
     const fishWeight = fish.actualWeight;
-    const fishDifficulty = fish.difficulty;
     
-    const price = calculateFishPrice(fish);
+    const fishImagePath = getFishImagePath(fish.id);
+    
+    if (fish.isMimic) {
+      fishingManager.damageRod(userId, rodConfig.id, 20);
+      fishingManager.recordCatch(userId, 0, fish.id, true);
+      fishingManager.increaseRodMastery(userId, rodConfig.id);
+      
+      const inventoryManager = new InventoryManager(groupId, userId);
+      inventoryManager.removeItem(lineConfig.id, 1);
+      fishingManager.clearEquippedLine(userId);
+      
+      let rodDamageMsg = "";
+      if (fishingManager.getRodControl(userId, rodConfig.id) > 0) {
+        rodDamageMsg = getRodDamageInfo(fishingManager, userId, rodConfig, 20);
+      }
+      
+      let breakMsg = "";
+      if (fishingManager.getRodControl(userId, rodConfig.id) <= 0) {
+        inventoryManager.removeItem(rodConfig.id, 1);
+        fishingManager.clearEquippedRod(userId, rodConfig.id);
+        breakMsg = `\n💥 鱼竿也断了！\n🎣 失去了【${rodConfig.name}】`;
+      }
+      
+      await e.reply([
+        `🎉 成功拉上来了！\n`,
+        `📦 咦？是个宝箱！\n`,
+        `😱 等等...这个宝箱在动！\n`,
+        `👹 是宝箱怪！！！\n`,
+        segment.image(`file:///${fishImagePath}`),
+        `💥 宝箱怪咬断了你的鱼线！`,
+        `${rodDamageMsg}${breakMsg}`
+      ]);
+      
+      await this.setCooldownAndIncrement(groupId, userId);
+      return;
+    }
+    
+    if (fish.isTreasure || fish.rarity === "宝藏") {
+      const inventoryManager = new InventoryManager(groupId, userId);
+      const addResult = await inventoryManager.addItem(fish.id, 1);
+      
+      fishingManager.recordCatch(userId, 0, fish.id, true);
+      fishingManager.increaseRodMastery(userId, rodConfig.id);
+      const newMastery = fishingManager.getRodMastery(userId, rodConfig.id);
+      
+      await this.setCooldownAndIncrement(groupId, userId);
+      
+      if (addResult.success) {
+        await e.reply([
+          `🎉 钓到了！！\n`,
+          `👑 是一个【${fish.name}】！\n`,
+          segment.image(`file:///${fishImagePath}`),
+          `📝 ${fish.description}\n`,
+          `📊 稀有度：${rarity.color}${fish.rarity}\n`,
+          `🎒 已自动放入背包！\n`,
+          `💡 发送「使用${fish.name}」来使用它！\n`,
+          `📈 熟练度：${newMastery}`
+        ]);
+      } else {
+        await e.reply([
+          `🎉 钓到了！！\n`,
+          `👑 是一个【${fish.name}】！\n`,
+          segment.image(`file:///${fishImagePath}`),
+          `📝 ${fish.description}\n`,
+          `📊 稀有度：${rarity.color}${fish.rarity}\n`,
+          `❌ 背包已满，无法放入！宝藏丢失了...\n`,
+          `📈 熟练度：${newMastery}`
+        ]);
+      }
+      return;
+    }
+    
+    const price = await calculateFishPrice(fish, fishingManager);
+    
+    const buffMultiplier = await this.getFishSellBuffMultiplier(groupId, userId);
+    const finalPrice = Math.round(price * buffMultiplier);
     
     const economyManager = new EconomyManager(e);
-    economyManager.addCoins(e, price);
-    fishingManager.recordCatch(userId, price, fish.id, true);
+    economyManager.addCoins(e, finalPrice);
+    fishingManager.recordCatch(userId, finalPrice, fish.id, true);
+    
+    fishingManager.increaseRodMastery(userId, rodConfig.id);
+    const newMastery = fishingManager.getRodMastery(userId, rodConfig.id);
 
     await this.setCooldownAndIncrement(groupId, userId);
-
-    const fishImagePath = getFishImagePath(fish.id);
+    
+    let priceBoostMsg = "";
+    if (await fishingManager.isFishPriceBoostActive()) {
+      priceBoostMsg = `😱 鱼雷恐慌中，鱼价1.5倍！\n`;
+    }
+    
+    let buffMsg = "";
+    if (buffMultiplier > 1) {
+      buffMsg = `✨ 金币加成：×${buffMultiplier}！\n`;
+    }
+    
     const resultMsg = [
       `🎉 钓到了！！\n`,
       `🐟 是一条【${fish.name}】！\n`,
@@ -664,23 +887,42 @@ export default class Fishing extends plugin {
       `📝 ${fish.description}\n`,
       `📊 稀有度：${rarity.color}${fish.rarity}\n`,
       `⚖️ 重量：${fishWeight}\n`,
-      `💰 价值：${price} 樱花币`,
+      priceBoostMsg,
+      buffMsg,
+      `💰 价值：${finalPrice} 樱花币\n`,
+      `📈 熟练度：${newMastery}`
     ];
     await e.reply(resultMsg);    
+  }
+
+  async getFishSellBuffMultiplier(groupId, userId) {
+    let multiplier = 1;
+    
+    const doubleKey = `sakura:fishing:buff:double_coin:${groupId}:${userId}`;
+    const hasDouble = await redis.get(doubleKey);
+    if (hasDouble) {
+      return 2;
+    }
+    
+    const oneHalfKey = `sakura:fishing:buff:1_5_coin:${groupId}:${userId}`;
+    const hasOneHalf = await redis.get(oneHalfKey);
+    if (hasOneHalf) {
+      return 1.5;
+    }
+    
+    return multiplier;
   }
 
   async checkRodBreak(e, fishingManager, userId, rodConfig) {
     const currentControl = fishingManager.getRodControl(userId, rodConfig.id);
     if (currentControl <= 0) {
-      await e.reply([
-        `💥 鱼竿也断了！\n`,
-        `🎣 失去了【${rodConfig.name}】`,
-      ]);
       const inventoryManager = new InventoryManager(e.group_id, userId);
       inventoryManager.removeItem(rodConfig.id, 1);
-      fishingManager.clearEquippedRod(userId);
-      fishingManager.clearRodDamage(userId, rodConfig.id);
+      fishingManager.clearEquippedRod(userId, rodConfig.id);
+      
+      return `\n💥 鱼竿也断了！\n🎣 失去了【${rodConfig.name}】`;
     }
+    return "";
   }
 
   equipRod = Command(/^#?装备鱼竿\s*(.+)$/, async (e) => {
@@ -836,6 +1078,75 @@ export default class Fishing extends plugin {
       logger.error(`生成钓鱼记录图片失败: ${err}`);
     }
 
+    return true;
+  });
+
+  deployTorpedo = Command(/^#?(投放|放置)鱼雷$/, async (e) => {
+    const groupId = e.group_id;
+    const userId = e.user_id;
+    
+    const inventoryManager = new InventoryManager(groupId, userId);
+    const torpedoCount = inventoryManager.getItemCount("torpedo");
+    
+    if (torpedoCount <= 0) {
+      await e.reply("💣 你背包里没有鱼雷！\n快去「商店」购买吧~", 10);
+      return true;
+    }
+    
+    const fishingManager = new FishingManager(groupId);
+    
+    if (fishingManager.getUserTorpedoCount(userId) > 0) {
+      await e.reply("💣 你已经在鱼塘里投放了一个鱼雷！\n一个人最多只能投放一个鱼雷哦~", 10);
+      return true;
+    }
+    
+    inventoryManager.removeItem("torpedo", 1);
+    
+    const result = fishingManager.deployTorpedo(userId);
+    
+    if (result.success) {
+      const totalTorpedoes = fishingManager.getTotalTorpedoCount();
+      await e.reply([
+        `💣 嘿嘿嘿... 鱼雷已悄悄投放到鱼塘中！\n`,
+        `🎯 静待猎物上钩...\n`,
+        `📊 当前鱼塘共有 ${totalTorpedoes} 个鱼雷潜伏中~`
+      ]);
+    } else {
+      await inventoryManager.forceAddItem("torpedo", 1);
+      await e.reply(result.msg, 10);
+    }
+    
+    return true;
+  });
+
+  checkPondTorpedoes = Command(/^#?鱼雷状态$/, async (e) => {
+    const fishingManager = new FishingManager(e.group_id);
+    const dangerousTorpedoes = fishingManager.getAvailableTorpedoCount(e.user_id);
+    const priceBoostActive = await fishingManager.isFishPriceBoostActive();
+    
+    let msgs = [];
+    
+    if (dangerousTorpedoes > 0) {
+      msgs.push(`💣 对你有威胁的鱼雷：${dangerousTorpedoes} 个\n⚠️ 小心钓鱼！随时可能触雷！`);
+    } else {
+      msgs.push(`✨ 鱼塘安全，没有威胁你的鱼雷`);
+    }
+    
+    if (priceBoostActive) {
+      const remainingMinutes = await fishingManager.getFishPriceBoostRemainingMinutes();
+      msgs.push(`🎉 鱼雷效应生效中！\n💰 当前鱼价：×1.5\n⏰ 剩余时间：${remainingMinutes} 分钟`);
+    } else {
+      msgs.push(`💰 当前鱼价：正常`);
+    }
+    
+    await e.sendForwardMsg(msgs, {
+      prompt: "🎣 鱼塘状态",
+      news: [
+        { text: `💣 威胁鱼雷: ${dangerousTorpedoes}个` },
+        { text: priceBoostActive ? "💰 鱼价: ×1.5" : "💰 鱼价: 正常" }
+      ],
+      source: "钓鱼系统"
+    });
     return true;
   });
 

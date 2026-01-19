@@ -998,5 +998,56 @@
     "difficulty": 260,
     "weight": [260.0, 320.0],
     "active_hours": [[0, 24]]
+  },
+  {
+    "id": "item_card_double_coin",
+    "name": "双倍金币卡",
+    "rarity": "宝藏",
+    "description": "神奇的魔法卡片，使用后1小时内钓鱼可获得双倍收益。",
+    "base_price": 0,
+    "difficulty": 60,
+    "weight": [0.1, 0.1],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "item_card_1_5_coin",
+    "name": "1.5倍金币卡",
+    "rarity": "宝藏",
+    "description": "不错的魔法卡片，使用后1小时内钓鱼可获得1.5倍收益。",
+    "base_price": 0,
+    "difficulty": 40,
+    "weight": [0.1, 0.1],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "item_charm_lucky",
+    "name": "好运护符",
+    "rarity": "宝藏",
+    "description": "受到祝福的护符，使用后1小时内钓鱼必定能钓上鱼。",
+    "base_price": 0,
+    "difficulty": 50,
+    "weight": [0.2, 0.2],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "item_random_bait",
+    "name": "随机鱼饵包",
+    "rarity": "宝藏",
+    "description": "一包神秘的鱼饵，使用后可开出一种随机鱼饵。",
+    "base_price": 0,
+    "difficulty": 20,
+    "weight": [0.5, 1.0],
+    "active_hours": [[0, 24]]
+  },
+  {
+    "id": "monster_mimic",
+    "name": "宝箱怪",
+    "rarity": "宝藏",
+    "description": "伪装成宝箱的怪物！它咬断了你的鱼线并对鱼竿造成20点损坏！",
+    "base_price": 0,
+    "difficulty": 100,
+    "weight": [50.0, 100.0],
+    "active_hours": [[0, 24]],
+    "isMimic": true
   }
 ]
