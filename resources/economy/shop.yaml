@@ -1,7 +1,7 @@
 categories:
   rods:
     name: "🎣 鱼竿"
-    description: "钓鱼必备工具，控制力决定能否驾驭高难度的鱼"
+    description: "钓鱼必备工具，决定能否驾驭高难度的鱼"
     handler: fishing_rod
     items:
       - id: rod_bamboo
@@ -41,7 +41,7 @@ categories:
 
   lines:
     name: "🧵 鱼线"
-    description: "钓鱼必备工具，承重决定能钓多重的鱼"
+    description: "钓鱼必备工具，决定能钓多重的鱼"
     handler: fishing_line
     items:
       - id: line_basic
@@ -135,7 +135,7 @@ categories:
         name: 鱼雷
         price: 200
         type: consumable
-        description: 一种恶作剧道具，投放到鱼塘后可能被其他钓鱼者钓到。钓到鱼雷会导致鱼竿受损并直接断线！爆炸后一段时间内鱼价会上涨。
+        description: 一种恶作剧道具，投放到鱼塘后可能被其他钓鱼者钓到。
 
   special:
     name: "🎁 特殊物品"
