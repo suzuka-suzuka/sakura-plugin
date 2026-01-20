@@ -670,7 +670,7 @@ export default class Fishing extends plugin {
             await e.reply([
               `💥 鱼竿断了！\n`,
               `🎣 失去了【${rodConfig.name}】\n`,
-              `❌ 溜鱼失败... 鱼跑掉了\n`,
+              `❌ 溜鱼失败... 鱼跑掉了`,
             ]);
             const inventoryManager = new InventoryManager(groupId, userId);
             inventoryManager.removeItem(rodConfig.id, 1);
@@ -754,7 +754,7 @@ export default class Fishing extends plugin {
           await e.reply([
             `🌊 鱼跑得太远了！\n`,
             `📏 距离超过了100！\n`,
-            `❌ 溜鱼失败... 鱼逃走了\n`,
+            `❌ 溜鱼失败... 鱼逃走了`,
           ]);
 
           fishingManager.recordCatch(userId, 0, fish.id, false);
@@ -770,7 +770,7 @@ export default class Fishing extends plugin {
         await e.reply([
           `🌊 放松鱼线...\n`,
           `📏 距离：${distanceBar}\n`,
-          `⚡ 张力：${tensionBar}\n`,
+          `⚡ 张力：${tensionBar}`,
         ]);
         
         this.setContext("handleFishing", stateKey, 65, false);
