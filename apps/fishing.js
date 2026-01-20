@@ -642,7 +642,7 @@ export default class Fishing extends plugin {
           `\n⚠️ 只有 60 秒时间，速战速决！`,
         ]);
 
-        this.setContext("handleFishing", stateKey, 60);
+        this.setContext("handleFishing", stateKey, 65);
         return;
       }
 
@@ -737,7 +737,7 @@ export default class Fishing extends plugin {
           `⚡ 张力：${tensionBar} ${state.tension}/100${damageHint}`,
         ]);
         
-        this.setContext("handleFishing", stateKey, 60);
+        this.setContext("handleFishing", stateKey, 65, false);
         return;
       }
 
@@ -773,7 +773,7 @@ export default class Fishing extends plugin {
           `⚡ 张力：${tensionBar} ${state.tension}/100\n`,
         ]);
         
-        this.setContext("handleFishing", stateKey, 60);
+        this.setContext("handleFishing", stateKey, 65, false);
         return;
       }
 
