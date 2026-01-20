@@ -27,6 +27,13 @@ const RARITY_CONFIG = {
   "宝藏": { color: "👑", level: 6 }
 };
 
+function createProgressBar(current, max, length = 10, fillChar = '█', emptyChar = '░') {
+  const percentage = Math.max(0, Math.min(100, (current / max) * 100));
+  const filled = Math.round((percentage / 100) * length);
+  const empty = length - filled;
+  return fillChar.repeat(filled) + emptyChar.repeat(empty);
+}
+
 function getRodDamageInfo(fishingManager, userId, rodConfig, damageAmount) {
   const currentControl = fishingManager.getRodControl(userId, rodConfig.id);
   const maxControl = rodConfig.control;
@@ -622,10 +629,13 @@ export default class Fishing extends plugin {
           }
         }, 60 * 1000);
 
+        const distanceBar = createProgressBar(state.distance, 100, 10);
+        const tensionBar = createProgressBar(state.tension, 100, 10);
+        
         await e.reply([
           `🎮 开始溜鱼！这是一场耐力的较量！\n`,
-          `📏 鱼的距离：${state.distance}\n`,
-          `⚡ 鱼线张力：${state.tension}\n`,
+          `📏 距离：${distanceBar} ${state.distance}/100\n`,
+          `⚡ 张力：${tensionBar} ${state.tension}/100\n`,
           `\n📝 你的策略：\n`,
           `  「拉」- 拉近距离 (张力会升高)\n`,
           `  「溜」- 放松鱼线 (距离会变远)\n`,
@@ -718,11 +728,16 @@ export default class Fishing extends plugin {
         }
 
         const damageHint = state.isOverweight ? getRodDamageInfo(fishingManager, userId, rodConfig, 1) : "";
+        const distanceBar = createProgressBar(state.distance, 100, 10);
+        const tensionBar = createProgressBar(state.tension, 100, 10);
+        
         await e.reply([
           `💪 用力一拉！\n`,
-          `📏 距离：${state.distance}\n`,
-          `⚡ 张力：${state.tension}${damageHint}`,
+          `📏 距离：${distanceBar} ${state.distance}/100\n`,
+          `⚡ 张力：${tensionBar} ${state.tension}/100${damageHint}`,
         ]);
+        
+        this.setContext("handleFishing", stateKey, 60);
         return;
       }
 
@@ -749,11 +764,16 @@ export default class Fishing extends plugin {
           return;
         }
 
+        const distanceBar = createProgressBar(state.distance, 100, 10);
+        const tensionBar = createProgressBar(state.tension, 100, 10);
+        
         await e.reply([
           `🌊 放松鱼线...\n`,
-          `📏 距离：${state.distance}\n`,
-          `⚡ 张力：${state.tension}\n`,
+          `📏 距离：${distanceBar} ${state.distance}/100\n`,
+          `⚡ 张力：${tensionBar} ${state.tension}/100\n`,
         ]);
+        
+        this.setContext("handleFishing", stateKey, 60);
         return;
       }
 
