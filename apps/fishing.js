@@ -634,8 +634,8 @@ export default class Fishing extends plugin {
         
         await e.reply([
           `🎮 开始溜鱼！这是一场耐力的较量！\n`,
-          `📏 距离：${distanceBar} ${state.distance}/100\n`,
-          `⚡ 张力：${tensionBar} ${state.tension}/100\n`,
+          `📏 距离：${distanceBar}\n`,
+          `⚡ 张力：${tensionBar}\n`,
           `\n📝 你的策略：\n`,
           `  「拉」- 拉近距离 (张力会升高)\n`,
           `  「溜」- 放松鱼线 (距离会变远)\n`,
@@ -733,8 +733,8 @@ export default class Fishing extends plugin {
         
         await e.reply([
           `💪 用力一拉！\n`,
-          `📏 距离：${distanceBar} ${state.distance}/100\n`,
-          `⚡ 张力：${tensionBar} ${state.tension}/100${damageHint}`,
+          `📏 距离：${distanceBar}\n`,
+          `⚡ 张力：${tensionBar}${damageHint}`,
         ]);
         
         this.setContext("handleFishing", stateKey, 65, false);
@@ -769,8 +769,8 @@ export default class Fishing extends plugin {
         
         await e.reply([
           `🌊 放松鱼线...\n`,
-          `📏 距离：${distanceBar} ${state.distance}/100\n`,
-          `⚡ 张力：${tensionBar} ${state.tension}/100\n`,
+          `📏 距离：${distanceBar}\n`,
+          `⚡ 张力：${tensionBar}\n`,
         ]);
         
         this.setContext("handleFishing", stateKey, 65, false);
