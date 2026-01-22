@@ -432,8 +432,8 @@ export default class Fishing extends plugin {
           fishingManager.clearEquippedRod(userId, rodConfig.id);
           breakMsg = `\n💥 鱼竿也断了！\n🎣 失去了【${rodConfig.name}】`;
         } else {
-          fishingManager.damageRod(userId, rodConfig.id, 10);
-          rodDamageMsg = getRodDamageInfo(fishingManager, userId, rodConfig, 10);
+          fishingManager.damageRod(userId, rodConfig.id, 20);
+          rodDamageMsg = getRodDamageInfo(fishingManager, userId, rodConfig, 20);
         }
         
         await e.reply([
