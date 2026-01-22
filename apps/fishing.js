@@ -625,7 +625,7 @@ export default class Fishing extends plugin {
           if (fishingState[stateKey]) {
             if (state.cleanup) state.cleanup();
             this.finish("handleFishing", stateKey);
-            e.reply("⏰ 溜鱼超时了，鱼跑掉了...", false, true);
+            e.reply("🌊 僵持太久了！鱼儿趁你松懈的瞬间，猛地一甩尾逃回了深水区...", false, true);
           }
         }, 60 * 1000);
 
@@ -686,7 +686,7 @@ export default class Fishing extends plugin {
           fishingManager.damageRod(userId, rodConfig.id, 1);
         }
 
-        if (state.tension > 100) {
+        if (state.tension >= 100) {
           await e.reply([
             `💥 崩！\n`,
             `⚡ 线绷得太紧，断掉了！\n`,
@@ -706,17 +706,17 @@ export default class Fishing extends plugin {
           return;
         }
 
-        if (state.distance < 0) {
+        if (state.distance <= 0) {
           await e.reply(`🎉 成功把鱼拉上来了！溜了 ${state.fightingRounds} 回合！`);
           await this.finishSuccess(e, state, fishingManager);
           return;
         }
 
-        if (state.distance > 100) {
+        if (state.distance >= 100) {
           await e.reply([
-            `🌊 鱼游得太远了，追不回来啦！\n`,
+            `🌊 鱼跑得太远了！\n`,
             `👋 只能目送它离开了...\n`,
-            `❌ 溜鱼失败`,
+            `❌ 鱼逃走了`,
           ]);
 
           fishingManager.recordCatch(userId, 0, fish.id, false);
@@ -750,11 +750,11 @@ export default class Fishing extends plugin {
         state.tension = Math.max(0, state.tension - tensionRelease);
         state.distance += fishEscape;
 
-        if (state.distance > 100) {
+        if (state.distance >= 100) {
           await e.reply([
             `🌊 鱼跑得太远了！\n`,
-            `📏 距离超过了100！\n`,
-            `❌ 溜鱼失败... 鱼逃走了`,
+            `👋 只能目送它离开了...\n`,
+            `❌ 鱼逃走了`,
           ]);
 
           fishingManager.recordCatch(userId, 0, fish.id, false);
