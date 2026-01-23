@@ -221,12 +221,16 @@ export default class Fishing extends plugin {
       return true;
     }
 
-    const groupFishingKey = `sakura:fishing:group_daily:${groupId}`;
-    const groupFishingCount = await redis.get(groupFishingKey);
-    const currentCount = groupFishingCount ? parseInt(groupFishingCount) : 0;
-    
-    if (currentCount >= 30) {
-      await e.reply("😭 鱼塘里的鱼都被钓光啦！\n🐟 为了可持续发展，请等待凌晨4点鱼苗投放后再来吧~", 10);
+    const groupLockKey = `sakura:fishing:group_lock:${groupId}`;
+    const lockTtl = await redis.ttl(groupLockKey);
+
+    if (lockTtl > 0) {
+      const unlockTime = new Date(Date.now() + lockTtl * 1000);
+      const hours = String(unlockTime.getHours()).padStart(2, '0');
+      const minutes = String(unlockTime.getMinutes()).padStart(2, '0');
+      const timeStr = `${hours}:${minutes}`;
+      
+      await e.reply(`😭 鱼塘里的鱼都被钓光啦！\n🐟 鱼苗正在紧急投放中，预计 ${timeStr} 恢复开放`, 10);
       return true;
     }
 
@@ -790,16 +794,21 @@ export default class Fishing extends plugin {
       600
     );
 
-    const groupFishingKey = `sakura:fishing:group_daily:${groupId}`;
-    const now = new Date();
-    const nextReset = new Date(now);
-    if (now.getHours() >= 4) {
-      nextReset.setDate(nextReset.getDate() + 1);
+    const groupCountKey = `sakura:fishing:group_pool_count:${groupId}`;
+    const groupLockKey = `sakura:fishing:group_lock:${groupId}`;
+
+    const currentCount = await redis.incr(groupCountKey);
+
+    if (currentCount === 1) {
+      await redis.expire(groupCountKey, 48 * 60 * 60);
     }
-    nextReset.setHours(4, 0, 0, 0);
-    const secondsUntilReset = Math.floor((nextReset - now) / 1000);
-    await redis.incr(groupFishingKey);
-    await redis.expire(groupFishingKey, secondsUntilReset);
+
+    if (currentCount >= 30) {
+      await redis.set(groupLockKey, "locked", "EX", 10 * 60 * 60);
+      
+      await redis.del(groupCountKey);
+      
+    }
   }
 
   async finishSuccess(e, state, fishingManager) {
