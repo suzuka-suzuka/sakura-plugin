@@ -804,7 +804,7 @@ export default class Fishing extends plugin {
     }
 
     if (currentCount >= 30) {
-      await redis.set(groupLockKey, "locked", "EX", 10 * 60 * 60);
+      await redis.set(groupLockKey, "locked", "EX", 12 * 60 * 60);
       
       await redis.del(groupCountKey);
       
