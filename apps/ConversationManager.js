@@ -247,7 +247,7 @@ export class Conversationmanagement extends plugin {
       );
       const templateHtml = fs.readFileSync(templatePath, "utf8");
 
-      const CHUNK_SIZE = 20;
+      const CHUNK_SIZE = 10; // 每10条消息（5轮对话）一张图片
 
       const generateMessagesHtml = (historyChunk) => {
         let messagesHtml = "";
