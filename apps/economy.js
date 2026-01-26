@@ -527,6 +527,16 @@ export default class Economy extends plugin {
     }
 
     if (handler.isRandomBait) {
+      const economyManager = new EconomyManager(e);
+      const capacity = economyManager.getBagCapacity(e);
+      const currentSize = inventoryManager.getCurrentSize();
+      const remainingSpace = capacity - currentSize;
+
+      if (remainingSpace < 2) {
+        await e.reply(`背包空间不足！需要至少2~`, 10);
+        return true;
+      }
+
       const allBaits = fishingManager.getAllBaits();
       const userBaits = fishingManager.getUserBaits(userId);
       
@@ -541,11 +551,11 @@ export default class Economy extends plugin {
 
       inventoryManager.removeItem(item.id, 1);
       
-      await inventoryManager.addItem(selectedBait.id, 1);
+      await inventoryManager.addItem(selectedBait.id, 3);
       
       await e.reply([
         `🎁 打开了随机鱼饵包！\n`,
-        `✨ 获得了【${selectedBait.name}】！\n`,
+        `✨ 获得了【${selectedBait.name}】x3！\n`,
         `📝 ${selectedBait.description}`
       ]);
       return true;
