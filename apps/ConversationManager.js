@@ -78,25 +78,38 @@ export class Conversationmanagement extends plugin {
     const userName = e.sender.card || e.sender.nickname || e.user_id;
 
     const buildNode = (item) => {
+      const innerContent = [{
+        type: 'markdown',
+        data: {
+          content: item.parts[0].text
+        }
+      }];
+      
       if (item.role === "user") {
+        // 用户消息：再嵌套一层转发
         return {
           user_id: e.user_id,
           nickname: userName,
           content: [{
-            type: 'markdown',
+            type: 'node',
             data: {
-              content: item.parts[0].text
+              user_id: e.user_id,
+              nickname: userName,
+              content: innerContent
             }
           }],
         };
       } else if (item.role === "model") {
+        // 模型消息：再嵌套一层转发
         return {
           user_id: e.self_id,
           nickname: botName,
           content: [{
-            type: 'markdown',
+            type: 'node',
             data: {
-              content: item.parts[0].text
+              user_id: e.self_id,
+              nickname: botName,
+              content: innerContent
             }
           }],
         };
