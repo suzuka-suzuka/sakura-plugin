@@ -94,6 +94,45 @@ export class Conversationmanagement extends plugin {
 
     const CHUNK_SIZE = 40;
 
+    // 生成 txt 内容并上传群文件的辅助函数
+    const sendAsTxtFile = async () => {
+      let txtContent = `「${profileName}」对话历史记录\n`;
+      txtContent += `导出时间: ${new Date().toLocaleString()}\n`;
+      txtContent += `共 ${Math.ceil(history.length / 2)} 轮对话\n`;
+      txtContent += "=".repeat(50) + "\n\n";
+
+      for (let i = 0; i < history.length; i++) {
+        const item = history[i];
+        const role = item.role === "user" ? userName : botName;
+        txtContent += `【${role}】\n${item.parts[0].text}\n\n`;
+      }
+
+      const fileName = `对话记录_${profileName}_${Date.now()}.txt`;
+      const filePath = path.join(process.cwd(), "temp", fileName);
+      
+      // 确保 temp 目录存在
+      const tempDir = path.join(process.cwd(), "temp");
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+      
+      fs.writeFileSync(filePath, txtContent, "utf-8");
+
+      try {
+        if (e.group_id) {
+          await e.group.uploadFile(filePath, fileName);
+          await e.reply(`转发消息发送失败，已将对话记录上传为群文件：${fileName}`, 10);
+        } else {
+          await e.reply(`转发消息发送失败，私聊暂不支持上传文件，请在群聊中使用此功能。`, 10);
+        }
+      } finally {
+        // 清理临时文件
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
+    };
+
     if (history.length <= CHUNK_SIZE) {
       const nodes = [];
       for (const item of history) {
@@ -101,10 +140,14 @@ export class Conversationmanagement extends plugin {
         if (node) nodes.push(node);
       }
 
-      await e.sendForwardMsg(nodes, {
+      const result = await e.sendForwardMsg(nodes, {
         source: `「${profileName}」对话历史`,
         prompt: "查看对话详情",
       });
+
+      if (!result || !result.message_id) {
+        await sendAsTxtFile();
+      }
     } else {
       const chunks = _.chunk(history, CHUNK_SIZE);
       const outerNodes = [];
@@ -137,11 +180,15 @@ export class Conversationmanagement extends plugin {
         });
       }
 
-      await e.sendForwardMsg(outerNodes, {
+      const result = await e.sendForwardMsg(outerNodes, {
         source: `「${profileName}」对话历史`,
         prompt: `共 ${Math.ceil(history.length / 2)} 轮对话`,
         summary: `共 ${chunks.length} 个分组`,
       });
+
+      if (!result || !result.message_id) {
+        await sendAsTxtFile();
+      }
     }
 
     return true;
