@@ -110,6 +110,7 @@ class WebEditor {
         const groups = []
         // 动态获取 bot，因为启动时可能还未连接
         const bot = global.bot
+        console.log("[sakura] /api/groups 被调用, global.bot =", bot ? `存在 (self_id: ${bot.self_id})` : "null")
 
         if (!bot) {
           console.warn("[sakura] Bot 未连接，无法获取群列表")
@@ -117,6 +118,7 @@ class WebEditor {
         }
 
         if (bot.getGroupList) {
+          console.log("[sakura] 正在调用 bot.getGroupList()...")
           const groupList = await bot.getGroupList()
           console.log("[sakura] getGroupList 返回数据:", JSON.stringify(groupList)?.substring(0, 500))
           console.log("[sakura] 返回数据类型:", typeof groupList, "是否数组:", Array.isArray(groupList))
