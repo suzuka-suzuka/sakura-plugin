@@ -110,35 +110,57 @@ class WebEditor {
         const groups = []
         // 动态获取 bot，因为启动时可能还未连接
         const bot = global.bot
-        console.log("[sakura] /api/groups 被调用, global.bot =", bot ? `存在 (self_id: ${bot.self_id})` : "null")
+        const log = global.logger || console
+        log.info("[sakura] /api/groups 被调用, global.bot =", bot ? `存在 (self_id: ${bot.self_id})` : "null")
 
         if (!bot) {
-          console.warn("[sakura] Bot 未连接，无法获取群列表")
+          log.warn("[sakura] Bot 未连接，无法获取群列表")
           return res.json({ success: true, data: [], error: "Bot 未连接" })
         }
 
         if (bot.getGroupList) {
-          console.log("[sakura] 正在调用 bot.getGroupList()...")
-          const groupList = await bot.getGroupList()
-          console.log("[sakura] getGroupList 返回数据:", JSON.stringify(groupList)?.substring(0, 500))
-          console.log("[sakura] 返回数据类型:", typeof groupList, "是否数组:", Array.isArray(groupList))
-          if (Array.isArray(groupList)) {
-            for (const g of groupList) {
-              groups.push({
-                id: String(g.group_id),
-                name: g.group_name || `群${g.group_id}`,
-              })
+          log.info("[sakura] 正在调用 bot.getGroupList()...")
+          try {
+            const groupList = await bot.getGroupList()
+            log.info("[sakura] getGroupList 返回数据类型:", typeof groupList, "是否数组:", Array.isArray(groupList))
+            
+            if (Array.isArray(groupList)) {
+              for (const g of groupList) {
+                groups.push({
+                  id: String(g.group_id),
+                  name: g.group_name || `群${g.group_id}`,
+                })
+              }
+              log.info("[sakura] 成功解析群列表:", groups.length, "个群")
+            } else if (groupList && typeof groupList === 'object') {
+              // 某些实现可能返回 { data: [...] } 格式
+              const list = groupList.data || groupList
+              if (Array.isArray(list)) {
+                for (const g of list) {
+                  groups.push({
+                    id: String(g.group_id),
+                    name: g.group_name || `群${g.group_id}`,
+                  })
+                }
+                log.info("[sakura] 从 object.data 解析群列表:", groups.length, "个群")
+              } else {
+                log.warn("[sakura] getGroupList 返回了非数组数据:", JSON.stringify(groupList)?.substring(0, 200))
+              }
+            } else {
+              log.warn("[sakura] getGroupList 返回 null 或 undefined")
             }
+          } catch (err) {
+            log.error("[sakura] getGroupList 调用失败:", err.message)
           }
         } else {
-          console.warn("[sakura] bot.getGroupList 方法不存在")
+          log.warn("[sakura] bot.getGroupList 方法不存在")
         }
 
-        console.log("[sakura] 最终群列表数量:", groups.length)
         groups.sort((a, b) => Number(a.id) - Number(b.id))
         res.json({ success: true, data: groups })
       } catch (error) {
-        console.error("[sakura] 获取群列表失败:", error)
+        const log = global.logger || console
+        log.error("[sakura] 获取群列表失败:", error)
         res.json({ success: true, data: [], error: error.message })
       }
     })
