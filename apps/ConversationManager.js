@@ -3,6 +3,8 @@ import fs from "fs";
 import path from "path";
 import puppeteer from "puppeteer";
 import _ from "lodash";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
 import { pluginresources } from "../lib/path.js";
 import {
   loadConversationHistory,
@@ -94,39 +96,147 @@ export class Conversationmanagement extends plugin {
 
     const CHUNK_SIZE = 40;
 
-    // 生成 txt 内容并上传群文件的辅助函数
-    const sendAsTxtFile = async () => {
-      let txtContent = `「${profileName}」对话历史记录\n`;
-      txtContent += `导出时间: ${new Date().toLocaleString()}\n`;
-      txtContent += `共 ${Math.ceil(history.length / 2)} 轮对话\n`;
-      txtContent += "=".repeat(50) + "\n\n";
+    // 生成加密 PDF 并上传群文件的辅助函数
+    const sendAsEncryptedPdf = async () => {
+      const pdfDoc = await PDFDocument.create();
+      pdfDoc.registerFontkit(fontkit);
 
-      for (let i = 0; i < history.length; i++) {
-        const item = history[i];
-        const role = item.role === "user" ? userName : botName;
-        txtContent += `【${role}】\n${item.parts[0].text}\n\n`;
+      // 加载中文字体（优先使用系统字体，备选签到资源字体）
+      let font;
+      const fontPaths = [
+        // Ubuntu 服务器字体（优先 Noto Sans SC）
+        "/usr/share/fonts/NotoSansSC-Regular.ttf",
+        "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+        "/usr/share/fonts/NotoSerifSC-Regular.otf",
+        // 签到资源字体（备选）
+        path.join(pluginresources, "sign", "font", "FZFWZhuZiAYuanJWD.ttf"),
+        path.join(pluginresources, "sign", "font", "MotoyaMaruStd-W5.otf"),
+      ];
+
+      // 如果签到资源文件夹有字体，也加入候选
+      try {
+        const signFontPath = path.join(pluginresources, "sign", "font");
+        if (fs.existsSync(signFontPath)) {
+          const fontFiles = fs.readdirSync(signFontPath).filter(f => f.endsWith(".ttf") || f.endsWith(".otf"));
+          fontFiles.forEach(f => fontPaths.push(path.join(signFontPath, f)));
+        }
+      } catch {}
+
+      // 尝试加载第一个可用的字体
+      for (const fontPath of fontPaths) {
+        try {
+          if (fs.existsSync(fontPath)) {
+            const fontBytes = fs.readFileSync(fontPath);
+            font = await pdfDoc.embedFont(fontBytes, { subset: true });
+            break;
+          }
+        } catch {
+          continue;
+        }
       }
 
-      const fileName = `对话记录_${profileName}_${Date.now()}.txt`;
+      if (!font) {
+        font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      }
+
+      const fontSize = 11;
+      const lineHeight = fontSize * 1.5;
+      const margin = 50;
+      const pageWidth = 595;
+      const pageHeight = 842;
+      const maxWidth = pageWidth - margin * 2;
+
+      // 文本换行函数
+      const wrapText = (text, maxW) => {
+        const lines = [];
+        const paragraphs = text.split("\n");
+        for (const para of paragraphs) {
+          if (!para) {
+            lines.push("");
+            continue;
+          }
+          let current = "";
+          for (const char of para) {
+            const testLine = current + char;
+            const width = font.widthOfTextAtSize(testLine, fontSize);
+            if (width > maxW && current) {
+              lines.push(current);
+              current = char;
+            } else {
+              current = testLine;
+            }
+          }
+          if (current) lines.push(current);
+        }
+        return lines;
+      };
+
+      let page = pdfDoc.addPage([pageWidth, pageHeight]);
+      let y = pageHeight - margin;
+
+      // 标题
+      const title = `「${profileName}」对话历史记录`;
+      page.drawText(title, { x: margin, y, size: 16, font, color: rgb(0, 0, 0) });
+      y -= 25;
+      page.drawText(`导出时间: ${new Date().toLocaleString()}`, { x: margin, y, size: 10, font, color: rgb(0.4, 0.4, 0.4) });
+      y -= 15;
+      page.drawText(`共 ${Math.ceil(history.length / 2)} 轮对话`, { x: margin, y, size: 10, font, color: rgb(0.4, 0.4, 0.4) });
+      y -= 30;
+
+      // 对话内容
+      for (const item of history) {
+        const role = item.role === "user" ? userName : botName;
+        const roleColor = item.role === "user" ? rgb(0, 0.5, 0) : rgb(0, 0, 0.7);
+        const text = item.parts[0].text || "";
+
+        // 角色名
+        if (y < margin + lineHeight * 2) {
+          page = pdfDoc.addPage([pageWidth, pageHeight]);
+          y = pageHeight - margin;
+        }
+        page.drawText(`【${role}】`, { x: margin, y, size: fontSize, font, color: roleColor });
+        y -= lineHeight;
+
+        // 内容
+        const lines = wrapText(text, maxWidth);
+        for (const line of lines) {
+          if (y < margin) {
+            page = pdfDoc.addPage([pageWidth, pageHeight]);
+            y = pageHeight - margin;
+          }
+          if (line) {
+            page.drawText(line, { x: margin, y, size: fontSize, font, color: rgb(0, 0, 0) });
+          }
+          y -= lineHeight;
+        }
+        y -= lineHeight * 0.5;
+      }
+
+      // 加密 PDF（设置用户密码）
+      const password = "123456";
+      const pdfBytes = await pdfDoc.save({
+        userPassword: password,
+        ownerPassword: password,
+      });
+
+      const fileName = `对话记录_${profileName}_${Date.now()}.pdf`;
       const filePath = path.join(process.cwd(), "temp", fileName);
-      
-      // 确保 temp 目录存在
+
       const tempDir = path.join(process.cwd(), "temp");
       if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
       }
-      
-      fs.writeFileSync(filePath, txtContent, "utf-8");
+
+      fs.writeFileSync(filePath, pdfBytes);
 
       try {
         if (e.group_id) {
           await e.group.uploadFile(filePath, fileName);
-          await e.reply(`转发消息发送失败，已将对话记录上传为群文件：${fileName}`, 10);
+          await e.reply(`转发消息发送失败，已将对话记录上传为加密PDF群文件：${fileName}\nPDF密码：${password}`, 10);
         } else {
           await e.reply(`转发消息发送失败，私聊暂不支持上传文件，请在群聊中使用此功能。`, 10);
         }
       } finally {
-        // 清理临时文件
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
         }
@@ -146,7 +256,7 @@ export class Conversationmanagement extends plugin {
       });
 
       if (!result || !result.message_id) {
-        await sendAsTxtFile();
+        await sendAsEncryptedPdf();
       }
     } else {
       const chunks = _.chunk(history, CHUNK_SIZE);
@@ -187,7 +297,7 @@ export class Conversationmanagement extends plugin {
       });
 
       if (!result || !result.message_id) {
-        await sendAsTxtFile();
+        await sendAsEncryptedPdf();
       }
     }
 
