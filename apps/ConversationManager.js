@@ -352,6 +352,11 @@ export class Conversationmanagement extends plugin {
         await browser.close();
 
         if (imageNodes.length > 0) {
+          // 测试：先直接发送第一张图片
+          await e.reply(segment.image(imageNodes[0].content.data.file));
+          await e.reply("上面是直接发送的图片，下面是转发消息：");
+          
+          // 再发送转发消息
           await e.sendForwardMsg(imageNodes, {
             source: `「${profileName}」对话记录`,
             prompt: `共 ${Math.ceil(history.length / 2)} 轮对话`,
