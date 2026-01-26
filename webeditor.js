@@ -118,6 +118,8 @@ class WebEditor {
 
         if (bot.getGroupList) {
           const groupList = await bot.getGroupList()
+          console.log("[sakura] getGroupList 返回数据:", JSON.stringify(groupList)?.substring(0, 500))
+          console.log("[sakura] 返回数据类型:", typeof groupList, "是否数组:", Array.isArray(groupList))
           if (Array.isArray(groupList)) {
             for (const g of groupList) {
               groups.push({
@@ -126,8 +128,11 @@ class WebEditor {
               })
             }
           }
+        } else {
+          console.warn("[sakura] bot.getGroupList 方法不存在")
         }
 
+        console.log("[sakura] 最终群列表数量:", groups.length)
         groups.sort((a, b) => Number(a.id) - Number(b.id))
         res.json({ success: true, data: groups })
       } catch (error) {
