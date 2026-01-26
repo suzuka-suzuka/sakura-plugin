@@ -1,10 +1,10 @@
 import Setting from "../lib/setting.js";
 import fs from "fs";
 import path from "path";
-import puppeteer from "puppeteer";
 import _ from "lodash";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
+import muhammara from "muhammara";
 import { pluginresources } from "../lib/path.js";
 import {
   loadConversationHistory,
@@ -86,7 +86,6 @@ export class Conversationmanagement extends plugin {
       }];
       
       if (item.role === "user") {
-        // 用户消息：再嵌套一层转发
         return {
           user_id: e.user_id,
           nickname: userName,
@@ -100,7 +99,6 @@ export class Conversationmanagement extends plugin {
           }],
         };
       } else if (item.role === "model") {
-        // 模型消息：再嵌套一层转发
         return {
           user_id: e.self_id,
           nickname: botName,
@@ -117,26 +115,36 @@ export class Conversationmanagement extends plugin {
       return null;
     };
 
+    const buildSimpleNode = (item) => {
+      if (item.role === "user") {
+        return {
+          user_id: e.user_id,
+          nickname: userName,
+          content: [{ type: 'text', data: { text: item.parts[0].text } }],
+        };
+      } else if (item.role === "model") {
+        return {
+          user_id: e.self_id,
+          nickname: botName,
+          content: [{ type: 'text', data: { text: item.parts[0].text } }],
+        };
+      }
+      return null;
+    };
+
     const CHUNK_SIZE = 40;
 
-    // 生成加密 PDF 并上传群文件的辅助函数
     const sendAsEncryptedPdf = async () => {
       const pdfDoc = await PDFDocument.create();
       pdfDoc.registerFontkit(fontkit);
 
-      // 加载中文字体（优先使用系统字体，备选签到资源字体）
       let font;
       const fontPaths = [
-        // Ubuntu 服务器字体（优先 Noto Sans SC）
         "/usr/share/fonts/NotoSansSC-Regular.ttf",
         "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
         "/usr/share/fonts/NotoSerifSC-Regular.otf",
-        // 签到资源字体（备选）
-        path.join(pluginresources, "sign", "font", "FZFWZhuZiAYuanJWD.ttf"),
-        path.join(pluginresources, "sign", "font", "MotoyaMaruStd-W5.otf"),
       ];
 
-      // 如果签到资源文件夹有字体，也加入候选
       try {
         const signFontPath = path.join(pluginresources, "sign", "font");
         if (fs.existsSync(signFontPath)) {
@@ -145,7 +153,6 @@ export class Conversationmanagement extends plugin {
         }
       } catch {}
 
-      // 尝试加载第一个可用的字体
       for (const fontPath of fontPaths) {
         try {
           if (fs.existsSync(fontPath)) {
@@ -169,7 +176,6 @@ export class Conversationmanagement extends plugin {
       const pageHeight = 842;
       const maxWidth = pageWidth - margin * 2;
 
-      // 文本换行函数
       const wrapText = (text, maxW) => {
         const lines = [];
         const paragraphs = text.split("\n");
@@ -197,7 +203,6 @@ export class Conversationmanagement extends plugin {
       let page = pdfDoc.addPage([pageWidth, pageHeight]);
       let y = pageHeight - margin;
 
-      // 标题
       const title = `「${profileName}」对话历史记录`;
       page.drawText(title, { x: margin, y, size: 16, font, color: rgb(0, 0, 0) });
       y -= 25;
@@ -206,13 +211,11 @@ export class Conversationmanagement extends plugin {
       page.drawText(`共 ${Math.ceil(history.length / 2)} 轮对话`, { x: margin, y, size: 10, font, color: rgb(0.4, 0.4, 0.4) });
       y -= 30;
 
-      // 对话内容
       for (const item of history) {
         const role = item.role === "user" ? userName : botName;
         const roleColor = item.role === "user" ? rgb(0, 0.5, 0) : rgb(0, 0, 0.7);
         const text = item.parts[0].text || "";
 
-        // 角色名
         if (y < margin + lineHeight * 2) {
           page = pdfDoc.addPage([pageWidth, pageHeight]);
           y = pageHeight - margin;
@@ -220,7 +223,6 @@ export class Conversationmanagement extends plugin {
         page.drawText(`【${role}】`, { x: margin, y, size: fontSize, font, color: roleColor });
         y -= lineHeight;
 
-        // 内容
         const lines = wrapText(text, maxWidth);
         for (const line of lines) {
           if (y < margin) {
@@ -235,23 +237,42 @@ export class Conversationmanagement extends plugin {
         y -= lineHeight * 0.5;
       }
 
-      // 保存 PDF（注意：pdf-lib 不支持密码加密）
       const pdfBytes = await pdfDoc.save();
-
-      const fileName = `对话记录_${profileName}_${Date.now()}.pdf`;
-      const filePath = path.join(process.cwd(), "temp", fileName);
 
       const tempDir = path.join(process.cwd(), "temp");
       if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
       }
 
-      fs.writeFileSync(filePath, pdfBytes);
+      const tempUnencryptedPath = path.join(tempDir, `temp_unencrypted_${Date.now()}.pdf`);
+      const fileName = `对话记录_${profileName}_${Date.now()}.pdf`;
+      const filePath = path.join(tempDir, fileName);
+
+      fs.writeFileSync(tempUnencryptedPath, pdfBytes);
+
+      const pdfPassword = "1135";
+      try {
+        muhammara.recrypt(
+          tempUnencryptedPath,
+          filePath,
+          {
+            userPassword: pdfPassword,
+            ownerPassword: pdfPassword,
+            userProtectionFlag: 4
+          }
+        );
+        if (fs.existsSync(tempUnencryptedPath)) {
+          fs.unlinkSync(tempUnencryptedPath);
+        }
+      } catch (encryptError) {
+        logger.error("PDF 加密失败，将使用未加密版本:", encryptError);
+        fs.renameSync(tempUnencryptedPath, filePath);
+      }
 
       try {
         if (e.group_id) {
           await e.group.uploadFile(filePath, fileName);
-          await e.reply(`转发消息发送失败，已将对话记录上传为PDF群文件：${fileName}`, 10);
+          await e.reply(`转发消息发送失败，已将对话记录上传为PDF群文件：${fileName}\nPDF密码：1135`, 10);
         } else {
           await e.reply(`转发消息发送失败，私聊暂不支持上传文件，请在群聊中使用此功能。`, 10);
         }
@@ -265,7 +286,7 @@ export class Conversationmanagement extends plugin {
     if (history.length <= CHUNK_SIZE) {
       const nodes = [];
       for (const item of history) {
-        const node = buildNode(item);
+        const node = buildSimpleNode(item);
         if (node) nodes.push(node);
       }
 
@@ -286,7 +307,7 @@ export class Conversationmanagement extends plugin {
         const innerNodes = [];
 
         for (const item of chunk) {
-          const node = buildNode(item);
+          const node = buildSimpleNode(item);
           if (node) innerNodes.push(node);
         }
 
@@ -296,16 +317,15 @@ export class Conversationmanagement extends plugin {
 
         outerNodes.push({
           user_id: e.self_id,
-          nickname: botName,
+          nickname: `第 ${startRound}-${actualEndRound} 轮对话`,
           content: innerNodes.map((n) => ({
             type: "node",
             data: {
               user_id: n.user_id,
               nickname: n.nickname,
-              content: [{ type: "text", data: { text: n.content } }],
+              content: n.content,
             },
           })),
-          prompt: `第 ${startRound}-${actualEndRound} 轮对话`,
         });
       }
 
@@ -332,221 +352,6 @@ export class Conversationmanagement extends plugin {
   ClearAllUsers = Command(/^#?清空所有用户对话$/, "master", async (e) => {
     await clearAllConversationHistories();
     await e.reply("所有用户的全部对话历史已成功清空！喵~", 10);
-    return true;
-  });
-
-  ExportConversation = Command(/^#?导出对话\s*(.+)/, async (e) => {
-    const prefix = e.match[1].trim();
-
-    if (!prefix) {
-      return false;
-    }
-
-    const config = this.appconfig;
-
-    if (!config || !config.profiles.some((p) => p.prefix === prefix)) {
-      await e.reply(`未找到前缀为「${prefix}」的设定，请检查输入。`, 10);
-      return true;
-    }
-
-    const profileName = this.getProfileName(prefix);
-    const history = await loadConversationHistory(e, prefix);
-
-    if (history.length === 0) {
-      await e.reply(
-        `目前没有与「${profileName}」的对话历史记录，无法导出。`,
-        10
-      );
-      return true;
-    }
-
-    await e.react(124);
-
-    try {
-      let leftBubbleBase64, rightBubbleBase64;
-      try {
-        const leftBubblePath = path.join(
-          pluginresources,
-          "AI",
-          "left_bubble.png"
-        );
-        const rightBubblePath = path.join(
-          pluginresources,
-          "AI",
-          "right_bubble.png"
-        );
-
-        const leftBubbleBuffer = fs.readFileSync(leftBubblePath);
-        const rightBubbleBuffer = fs.readFileSync(rightBubblePath);
-
-        leftBubbleBase64 = `data:image/png;base64,${leftBubbleBuffer.toString(
-          "base64"
-        )}`;
-        rightBubbleBase64 = `data:image/png;base64,${rightBubbleBuffer.toString(
-          "base64"
-        )}`;
-      } catch (fileError) {
-        logger.error("读取气泡图片失败! ", fileError);
-      }
-
-      let backgroundImageBase64 = "";
-      try {
-        const backgroundImagePath = path.join(
-          pluginresources,
-          "background",
-          "sakura.jpg"
-        );
-        const imageBuffer = await fs.promises.readFile(backgroundImagePath);
-        backgroundImageBase64 = `data:image/jpeg;base64,${imageBuffer.toString(
-          "base64"
-        )}`;
-      } catch (err) {
-        logger.error("读取背景图片失败:", err);
-      }
-
-      const user = {
-        name: e.sender.card || e.sender.nickname || e.user_id,
-        avatar: `http://q1.qlogo.cn/g?b=qq&nk=${e.user_id}&s=640`,
-      };
-
-      const info = await e.getInfo(e.self_id);
-      const name = info?.card || info?.nickname || e.self_id;
-      const bot = {
-        name: name,
-        avatar: `http://q1.qlogo.cn/g?b=qq&nk=${e.self_id}&s=640`,
-      };
-
-      const templatePath = path.join(
-        pluginresources,
-        "AI",
-        "chat_history.html"
-      );
-      const templateHtml = fs.readFileSync(templatePath, "utf8");
-
-      const CHUNK_SIZE = 10; // 每10条消息（5轮对话）一张图片
-
-      const generateMessagesHtml = (historyChunk) => {
-        let messagesHtml = "";
-        for (const item of historyChunk) {
-          const textContent = `<pre>${item.parts[0].text
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")}</pre>`;
-
-          if (item.role === "user") {
-            messagesHtml += `
-              <div class="message-row right">
-                <div class="message-content">
-                  <div class="nickname right-align">${user.name}</div>
-                  <div class="bubble user-bubble">${textContent}</div>
-                </div>
-                <img src="${user.avatar}" class="avatar" alt="User Avatar" />
-              </div>
-            `;
-          } else if (item.role === "model") {
-            messagesHtml += `
-              <div class="message-row left">
-                <img src="${bot.avatar}" class="avatar" alt="Bot Avatar" />
-                <div class="message-content">
-                  <div class="nickname">${bot.name}</div>
-                  <div class="bubble model-bubble">${textContent}</div>
-                </div>
-              </div>
-            `;
-          }
-        }
-        return messagesHtml;
-      };
-
-      const generateImage = async (browser, messagesHtml, title) => {
-        const finalHtml = templateHtml
-          .replace(/{{title}}/g, title)
-          .replace(/{{messages}}/g, messagesHtml)
-          .replace(/{{left_bubble_base64}}/g, leftBubbleBase64)
-          .replace(/{{right_bubble_base64}}/g, rightBubbleBase64)
-          .replace(/{{background_image_base64}}/g, backgroundImageBase64);
-
-        const page = await browser.newPage();
-        await page.setViewport({ width: 800, height: 600, deviceScaleFactor: 2 });
-        await page.setContent(finalHtml, { waitUntil: "networkidle0" });
-
-        const bodyHeight = await page.evaluate(() => document.body.scrollHeight);
-        await page.setViewport({
-          width: 800,
-          height: bodyHeight || 600,
-          deviceScaleFactor: 2,
-        });
-
-        const imageBuffer = await page.screenshot({ fullPage: true });
-        await page.close();
-        return imageBuffer;
-      };
-
-      const browser = await puppeteer.launch({
-        headless: "new",
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      });
-
-      if (history.length <= CHUNK_SIZE) {
-        const messagesHtml = generateMessagesHtml(history);
-        const imageBuffer = await generateImage(
-          browser,
-          messagesHtml,
-          `与「${profileName}」的对话记录`
-        );
-        await browser.close();
-
-        if (imageBuffer) {
-          await e.reply(segment.image(imageBuffer));
-        } else {
-          await e.reply("对话记录图片生成失败。", 10, true);
-        }
-      } else {
-        const chunks = _.chunk(history, CHUNK_SIZE);
-        const imageNodes = [];
-
-        for (let i = 0; i < chunks.length; i++) {
-          const chunk = chunks[i];
-          const startRound = Math.floor((i * CHUNK_SIZE) / 2) + 1;
-          const endRound = Math.min(
-            Math.floor(((i + 1) * CHUNK_SIZE - 1) / 2) + 1,
-            Math.ceil(history.length / 2)
-          );
-
-          const title = `与「${profileName}」的对话记录 (第 ${startRound}-${endRound} 轮)`;
-          const messagesHtml = generateMessagesHtml(chunk);
-          const imageBuffer = await generateImage(browser, messagesHtml, title);
-
-          if (imageBuffer) {
-            imageNodes.push({
-              user_id: e.self_id,
-              nickname: bot.name,
-              content: segment.image(imageBuffer),
-            });
-          }
-        }
-
-        await browser.close();
-
-        if (imageNodes.length > 0) {
-          // 测试：先直接发送第一张图片
-          await e.reply(segment.image(imageNodes[0].content.data.file));
-          await e.reply("上面是直接发送的图片，下面是转发消息：");
-          
-          // 再发送转发消息
-          await e.sendForwardMsg(imageNodes, {
-            source: `「${profileName}」对话记录`,
-            prompt: `共 ${Math.ceil(history.length / 2)} 轮对话`,
-            summary: `共 ${imageNodes.length} 张图片`,
-          });
-        } else {
-          await e.reply("对话记录图片生成失败。", 10, true);
-        }
-      }
-    } catch (error) {
-      logger.error("导出对话失败:", error);
-      await e.reply("导出对话时遇到错误，请查看后台日志。", 10, true);
-    }
-
     return true;
   });
 }

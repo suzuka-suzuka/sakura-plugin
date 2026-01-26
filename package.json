@@ -10,6 +10,7 @@
     "axios": "^1.13.2",
     "express": "^5.1.0",
     "marked": "^17.0.1",
+    "muhammara": "^6.0.2",
     "openai": "^6.9.1",
     "pdf-lib": "^1.17.1",
     "puppeteer-real-browser": "^1.4.4",
