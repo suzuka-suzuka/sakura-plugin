@@ -6,6 +6,7 @@ profiles:
     History: true
     Tool: true
 groupContextLength: 20
+chatHistoryLength: 20
 enableUserLock: false
 requirePermission: false
 toolschannel: "default"

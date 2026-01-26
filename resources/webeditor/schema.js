@@ -398,6 +398,7 @@ const configSchema = {
       },
     },
     groupContextLength: { label: "群聊上下文长度", type: "number", min: 1 },
+    chatHistoryLength: { label: "聊天历史记录长度", type: "number", min: 1, help: "保存的对话轮数" },
     enableUserLock: { label: "启用用户锁", type: "boolean", help: "防止用户消息并发处理" },
 
     "mimic.Groups": { label: "启用群", type: "groupSelect" },
