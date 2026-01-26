@@ -119,11 +119,8 @@ class WebEditor {
         }
 
         if (bot.getGroupList) {
-          log.info("[sakura] 正在调用 bot.getGroupList()...")
           try {
             const groupList = await bot.getGroupList()
-            log.info("[sakura] getGroupList 返回数据类型:", typeof groupList, "是否数组:", Array.isArray(groupList))
-            
             if (Array.isArray(groupList)) {
               for (const g of groupList) {
                 groups.push({
@@ -131,29 +128,10 @@ class WebEditor {
                   name: g.group_name || `群${g.group_id}`,
                 })
               }
-              log.info("[sakura] 成功解析群列表:", groups.length, "个群")
-            } else if (groupList && typeof groupList === 'object') {
-              // 某些实现可能返回 { data: [...] } 格式
-              const list = groupList.data || groupList
-              if (Array.isArray(list)) {
-                for (const g of list) {
-                  groups.push({
-                    id: String(g.group_id),
-                    name: g.group_name || `群${g.group_id}`,
-                  })
-                }
-                log.info("[sakura] 从 object.data 解析群列表:", groups.length, "个群")
-              } else {
-                log.warn("[sakura] getGroupList 返回了非数组数据:", JSON.stringify(groupList)?.substring(0, 200))
-              }
-            } else {
-              log.warn("[sakura] getGroupList 返回 null 或 undefined")
             }
           } catch (err) {
             log.error("[sakura] getGroupList 调用失败:", err.message)
           }
-        } else {
-          log.warn("[sakura] bot.getGroupList 方法不存在")
         }
 
         groups.sort((a, b) => Number(a.id) - Number(b.id))
