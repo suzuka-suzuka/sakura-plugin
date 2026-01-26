@@ -75,7 +75,6 @@ export class Conversationmanagement extends plugin {
     const botName = info?.card || info?.nickname || e.self_id;
     const userName = e.sender.card || e.sender.nickname || e.user_id;
 
-    // 构造单条消息的 node
     const buildNode = (item) => {
       if (item.role === "user") {
         return {
@@ -93,10 +92,9 @@ export class Conversationmanagement extends plugin {
       return null;
     };
 
-    const CHUNK_SIZE = 40; // 每40条消息（20轮对话）一个分组
+    const CHUNK_SIZE = 40;
 
     if (history.length <= CHUNK_SIZE) {
-      // 消息数量不多，直接发送一级转发
       const nodes = [];
       for (const item of history) {
         const node = buildNode(item);
@@ -108,7 +106,6 @@ export class Conversationmanagement extends plugin {
         prompt: "查看对话详情",
       });
     } else {
-      // 消息数量较多，使用二级转发
       const chunks = _.chunk(history, CHUNK_SIZE);
       const outerNodes = [];
 
@@ -121,7 +118,6 @@ export class Conversationmanagement extends plugin {
           if (node) innerNodes.push(node);
         }
 
-        // 构造二级转发节点
         const startRound = Math.floor((i * CHUNK_SIZE) / 2) + 1;
         const endRound = Math.floor(((i + 1) * CHUNK_SIZE - 1) / 2) + 1;
         const actualEndRound = Math.min(endRound, Math.ceil(history.length / 2));
@@ -251,9 +247,8 @@ export class Conversationmanagement extends plugin {
       );
       const templateHtml = fs.readFileSync(templatePath, "utf8");
 
-      const CHUNK_SIZE = 20; // 每20条消息（10轮对话）一张图片
+      const CHUNK_SIZE = 20;
 
-      // 生成单个分片的 HTML
       const generateMessagesHtml = (historyChunk) => {
         let messagesHtml = "";
         for (const item of historyChunk) {
@@ -286,7 +281,6 @@ export class Conversationmanagement extends plugin {
         return messagesHtml;
       };
 
-      // 生成单张图片
       const generateImage = async (browser, messagesHtml, title) => {
         const finalHtml = templateHtml
           .replace(/{{title}}/g, title)
@@ -317,7 +311,6 @@ export class Conversationmanagement extends plugin {
       });
 
       if (history.length <= CHUNK_SIZE) {
-        // 消息数量不多，直接生成一张图片发送
         const messagesHtml = generateMessagesHtml(history);
         const imageBuffer = await generateImage(
           browser,
@@ -332,7 +325,6 @@ export class Conversationmanagement extends plugin {
           await e.reply("对话记录图片生成失败。", 10, true);
         }
       } else {
-        // 消息数量较多，分片生成图片并构造转发消息
         const chunks = _.chunk(history, CHUNK_SIZE);
         const imageNodes = [];
 
@@ -349,12 +341,10 @@ export class Conversationmanagement extends plugin {
           const imageBuffer = await generateImage(browser, messagesHtml, title);
 
           if (imageBuffer) {
-            // 转发消息中需要使用 base64 格式的图片
-            const base64Image = `base64://${imageBuffer.toString("base64")}`;
             imageNodes.push({
               user_id: e.self_id,
               nickname: bot.name,
-              content: segment.image(base64Image),
+              content: segment.image(imageBuffer),
             });
           }
         }
