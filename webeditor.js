@@ -108,9 +108,15 @@ class WebEditor {
     this.app.get("/api/groups", async (req, res) => {
       try {
         const groups = []
-        const bot = this.bot || global.bot
+        // 动态获取 bot，因为启动时可能还未连接
+        const bot = global.bot
 
-        if (bot?.getGroupList) {
+        if (!bot) {
+          console.warn("[sakura] Bot 未连接，无法获取群列表")
+          return res.json({ success: true, data: [], error: "Bot 未连接" })
+        }
+
+        if (bot.getGroupList) {
           const groupList = await bot.getGroupList()
           if (Array.isArray(groupList)) {
             for (const g of groupList) {
