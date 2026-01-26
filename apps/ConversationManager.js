@@ -349,10 +349,12 @@ export class Conversationmanagement extends plugin {
           const imageBuffer = await generateImage(browser, messagesHtml, title);
 
           if (imageBuffer) {
+            // 转发消息中需要使用 base64 格式的图片
+            const base64Image = `base64://${imageBuffer.toString("base64")}`;
             imageNodes.push({
               user_id: e.self_id,
               nickname: bot.name,
-              content: segment.image(imageBuffer),
+              content: segment.image(base64Image),
             });
           }
         }
