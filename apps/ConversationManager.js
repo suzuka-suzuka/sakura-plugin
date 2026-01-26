@@ -82,13 +82,23 @@ export class Conversationmanagement extends plugin {
         return {
           user_id: e.user_id,
           nickname: userName,
-          content: `${item.parts[0].text}`,
+          content: [{
+            type: 'markdown',
+            data: {
+              content: item.parts[0].text
+            }
+          }],
         };
       } else if (item.role === "model") {
         return {
           user_id: e.self_id,
           nickname: botName,
-          content: `${item.parts[0].text}`,
+          content: [{
+            type: 'markdown',
+            data: {
+              content: item.parts[0].text
+            }
+          }],
         };
       }
       return null;
@@ -139,7 +149,7 @@ export class Conversationmanagement extends plugin {
         font = await pdfDoc.embedFont(StandardFonts.Helvetica);
       }
 
-      const fontSize = 11;
+      const fontSize = 14;
       const lineHeight = fontSize * 1.5;
       const margin = 50;
       const pageWidth = 595;
@@ -212,12 +222,8 @@ export class Conversationmanagement extends plugin {
         y -= lineHeight * 0.5;
       }
 
-      // 加密 PDF（设置用户密码）
-      const password = "123456";
-      const pdfBytes = await pdfDoc.save({
-        userPassword: password,
-        ownerPassword: password,
-      });
+      // 保存 PDF（注意：pdf-lib 不支持密码加密）
+      const pdfBytes = await pdfDoc.save();
 
       const fileName = `对话记录_${profileName}_${Date.now()}.pdf`;
       const filePath = path.join(process.cwd(), "temp", fileName);
@@ -232,7 +238,7 @@ export class Conversationmanagement extends plugin {
       try {
         if (e.group_id) {
           await e.group.uploadFile(filePath, fileName);
-          await e.reply(`转发消息发送失败，已将对话记录上传为加密PDF群文件：${fileName}\nPDF密码：${password}`, 10);
+          await e.reply(`转发消息发送失败，已将对话记录上传为PDF群文件：${fileName}`, 10);
         } else {
           await e.reply(`转发消息发送失败，私聊暂不支持上传文件，请在群聊中使用此功能。`, 10);
         }
