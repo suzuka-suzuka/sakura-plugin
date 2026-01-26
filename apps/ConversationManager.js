@@ -71,29 +71,82 @@ export class Conversationmanagement extends plugin {
       return true;
     }
 
-    const nodes = [];
-    for (const item of history) {
+    const info = await e.getInfo(e.self_id);
+    const botName = info?.card || info?.nickname || e.self_id;
+    const userName = e.sender.card || e.sender.nickname || e.user_id;
+
+    // 构造单条消息的 node
+    const buildNode = (item) => {
       if (item.role === "user") {
-        nodes.push({
+        return {
           user_id: e.user_id,
-          nickname: e.sender.card || e.sender.nickname || e.user_id,
+          nickname: userName,
           content: `${item.parts[0].text}`,
-        });
+        };
       } else if (item.role === "model") {
-        const info = await e.getInfo(e.self_id);
-        const name = info?.card || info?.nickname || e.self_id;
-        nodes.push({
+        return {
           user_id: e.self_id,
-          nickname: name,
+          nickname: botName,
           content: `${item.parts[0].text}`,
+        };
+      }
+      return null;
+    };
+
+    const CHUNK_SIZE = 40; // 每40条消息（20轮对话）一个分组
+
+    if (history.length <= CHUNK_SIZE) {
+      // 消息数量不多，直接发送一级转发
+      const nodes = [];
+      for (const item of history) {
+        const node = buildNode(item);
+        if (node) nodes.push(node);
+      }
+
+      await e.sendForwardMsg(nodes, {
+        source: `「${profileName}」对话历史`,
+        prompt: "查看对话详情",
+      });
+    } else {
+      // 消息数量较多，使用二级转发
+      const chunks = _.chunk(history, CHUNK_SIZE);
+      const outerNodes = [];
+
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const innerNodes = [];
+
+        for (const item of chunk) {
+          const node = buildNode(item);
+          if (node) innerNodes.push(node);
+        }
+
+        // 构造二级转发节点
+        const startRound = Math.floor((i * CHUNK_SIZE) / 2) + 1;
+        const endRound = Math.floor(((i + 1) * CHUNK_SIZE - 1) / 2) + 1;
+        const actualEndRound = Math.min(endRound, Math.ceil(history.length / 2));
+
+        outerNodes.push({
+          user_id: e.self_id,
+          nickname: botName,
+          content: innerNodes.map((n) => ({
+            type: "node",
+            data: {
+              user_id: n.user_id,
+              nickname: n.nickname,
+              content: [{ type: "text", data: { text: n.content } }],
+            },
+          })),
+          prompt: `第 ${startRound}-${actualEndRound} 轮对话`,
         });
       }
-    }
 
-    await e.sendForwardMsg(nodes, {
-      source: `「${profileName}」对话历史`,
-      prompt: "查看对话详情",
-    });
+      await e.sendForwardMsg(outerNodes, {
+        source: `「${profileName}」对话历史`,
+        prompt: `共 ${Math.ceil(history.length / 2)} 轮对话`,
+        summary: `共 ${chunks.length} 个分组`,
+      });
+    }
 
     return true;
   });
@@ -198,64 +251,123 @@ export class Conversationmanagement extends plugin {
       );
       const templateHtml = fs.readFileSync(templatePath, "utf8");
 
-      let messagesHtml = "";
-      for (const item of history) {
-        const textContent = `<pre>${item.parts[0].text
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")}</pre>`;
+      const CHUNK_SIZE = 20; // 每20条消息（10轮对话）一张图片
 
-        if (item.role === "user") {
-          messagesHtml += `
-            <div class="message-row right">
-              <div class="message-content">
-                <div class="nickname right-align">${user.name}</div>
-                <div class="bubble user-bubble">${textContent}</div>
+      // 生成单个分片的 HTML
+      const generateMessagesHtml = (historyChunk) => {
+        let messagesHtml = "";
+        for (const item of historyChunk) {
+          const textContent = `<pre>${item.parts[0].text
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")}</pre>`;
+
+          if (item.role === "user") {
+            messagesHtml += `
+              <div class="message-row right">
+                <div class="message-content">
+                  <div class="nickname right-align">${user.name}</div>
+                  <div class="bubble user-bubble">${textContent}</div>
+                </div>
+                <img src="${user.avatar}" class="avatar" alt="User Avatar" />
               </div>
-              <img src="${user.avatar}" class="avatar" alt="User Avatar" />
-            </div>
-          `;
-        } else if (item.role === "model") {
-          messagesHtml += `
-            <div class="message-row left">
-              <img src="${bot.avatar}" class="avatar" alt="Bot Avatar" />
-              <div class="message-content">
-                <div class="nickname">${bot.name}</div>
-                <div class="bubble model-bubble">${textContent}</div>
+            `;
+          } else if (item.role === "model") {
+            messagesHtml += `
+              <div class="message-row left">
+                <img src="${bot.avatar}" class="avatar" alt="Bot Avatar" />
+                <div class="message-content">
+                  <div class="nickname">${bot.name}</div>
+                  <div class="bubble model-bubble">${textContent}</div>
+                </div>
               </div>
-            </div>
-          `;
+            `;
+          }
         }
-      }
+        return messagesHtml;
+      };
 
-      const finalHtml = templateHtml
-        .replace(/{{title}}/g, `与「${profileName}」的对话记录`)
-        .replace(/{{messages}}/g, messagesHtml)
-        .replace(/{{left_bubble_base64}}/g, leftBubbleBase64)
-        .replace(/{{right_bubble_base64}}/g, rightBubbleBase64)
-        .replace(/{{background_image_base64}}/g, backgroundImageBase64);
+      // 生成单张图片
+      const generateImage = async (browser, messagesHtml, title) => {
+        const finalHtml = templateHtml
+          .replace(/{{title}}/g, title)
+          .replace(/{{messages}}/g, messagesHtml)
+          .replace(/{{left_bubble_base64}}/g, leftBubbleBase64)
+          .replace(/{{right_bubble_base64}}/g, rightBubbleBase64)
+          .replace(/{{background_image_base64}}/g, backgroundImageBase64);
+
+        const page = await browser.newPage();
+        await page.setViewport({ width: 800, height: 600, deviceScaleFactor: 2 });
+        await page.setContent(finalHtml, { waitUntil: "networkidle0" });
+
+        const bodyHeight = await page.evaluate(() => document.body.scrollHeight);
+        await page.setViewport({
+          width: 800,
+          height: bodyHeight || 600,
+          deviceScaleFactor: 2,
+        });
+
+        const imageBuffer = await page.screenshot({ fullPage: true });
+        await page.close();
+        return imageBuffer;
+      };
 
       const browser = await puppeteer.launch({
         headless: "new",
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
       });
-      const page = await browser.newPage();
-      await page.setViewport({ width: 800, height: 600, deviceScaleFactor: 2 });
-      await page.setContent(finalHtml, { waitUntil: "networkidle0" });
 
-      const bodyHeight = await page.evaluate(() => document.body.scrollHeight);
-      await page.setViewport({
-        width: 800,
-        height: bodyHeight || 600,
-        deviceScaleFactor: 2,
-      });
+      if (history.length <= CHUNK_SIZE) {
+        // 消息数量不多，直接生成一张图片发送
+        const messagesHtml = generateMessagesHtml(history);
+        const imageBuffer = await generateImage(
+          browser,
+          messagesHtml,
+          `与「${profileName}」的对话记录`
+        );
+        await browser.close();
 
-      const imageBuffer = await page.screenshot({ fullPage: true });
-      await browser.close();
-
-      if (imageBuffer) {
-        await e.reply(segment.image(imageBuffer));
+        if (imageBuffer) {
+          await e.reply(segment.image(imageBuffer));
+        } else {
+          await e.reply("对话记录图片生成失败。", 10, true);
+        }
       } else {
-        await e.reply("对话记录图片生成失败。", 10, true);
+        // 消息数量较多，分片生成图片并构造转发消息
+        const chunks = _.chunk(history, CHUNK_SIZE);
+        const imageNodes = [];
+
+        for (let i = 0; i < chunks.length; i++) {
+          const chunk = chunks[i];
+          const startRound = Math.floor((i * CHUNK_SIZE) / 2) + 1;
+          const endRound = Math.min(
+            Math.floor(((i + 1) * CHUNK_SIZE - 1) / 2) + 1,
+            Math.ceil(history.length / 2)
+          );
+
+          const title = `与「${profileName}」的对话记录 (第 ${startRound}-${endRound} 轮)`;
+          const messagesHtml = generateMessagesHtml(chunk);
+          const imageBuffer = await generateImage(browser, messagesHtml, title);
+
+          if (imageBuffer) {
+            imageNodes.push({
+              user_id: e.self_id,
+              nickname: bot.name,
+              content: segment.image(imageBuffer),
+            });
+          }
+        }
+
+        await browser.close();
+
+        if (imageNodes.length > 0) {
+          await e.sendForwardMsg(imageNodes, {
+            source: `「${profileName}」对话记录`,
+            prompt: `共 ${Math.ceil(history.length / 2)} 轮对话`,
+            summary: `共 ${imageNodes.length} 张图片`,
+          });
+        } else {
+          await e.reply("对话记录图片生成失败。", 10, true);
+        }
       }
     } catch (error) {
       logger.error("导出对话失败:", error);
