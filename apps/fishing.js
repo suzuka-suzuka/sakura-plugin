@@ -46,19 +46,19 @@ function getRarityPoolByBaitQuality(quality) {
   
   switch (quality) {
     case 1:
-      return { pool: ["垃圾", "普通", "宝藏"], weights: [50, 49, 1] };
+      return { pool: ["垃圾", "普通", "精品", "宝藏"], weights: [48, 50, 1, 1] };
     case 2:
-      return { pool: ["垃圾", "普通", "精品", "宝藏"], weights: [25, 25, 48, 2] };
+      return { pool: ["垃圾", "普通", "精品", "稀有", "宝藏"], weights: [23, 24, 50, 1, 2] };
     case 3:
-      return { pool: ["垃圾", "普通", "精品", "稀有", "宝藏"], weights: [12.5, 12.5, 25, 47, 3] };
+      return { pool: ["垃圾", "普通", "精品", "稀有", "宝藏"], weights: [12, 13, 25, 50, 3] };
     case 4:
-      return { pool: ["垃圾", "普通", "精品", "稀有", "史诗", "宝藏"], weights: [6.25, 6.25, 12.5, 25, 46, 4] };
+      return { pool: allRarities, weights: [5, 5, 12, 23, 50, 1, 4] };
     case 5:
-      return { pool: allRarities, weights: [3.125, 3.125, 6.25, 12.5, 25, 45, 5] };
+      return { pool: allRarities, weights: [2, 3, 5, 12, 23, 50, 5] };
     case 6:
-      return { pool: allRarities, weights: [8.33, 8.33, 8.33, 8.33, 8.33, 8.35, 50] };
+      return { pool: allRarities, weights: [1, 1, 3, 7, 13, 25, 50] };
     default:
-      return { pool: ["垃圾", "普通"], weights: [50, 50] };
+      return { pool: ["垃圾", "普通", "精品", "宝藏"], weights: [48, 50, 1, 1] };
   }
 }
 
