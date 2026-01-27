@@ -50,7 +50,7 @@ function getRarityPoolByBaitQuality(quality) {
     case 2:
       return { pool: ["垃圾", "普通", "精品", "稀有", "宝藏"], weights: [23, 24, 50, 1, 2] };
     case 3:
-      return { pool: ["垃圾", "普通", "精品", "稀有", "宝藏"], weights: [12, 13, 25, 50, 3] };
+      return { pool: ["垃圾", "普通", "精品", "稀有", "史诗", "宝藏"], weights: [11, 12, 23, 50, 1, 3] };
     case 4:
       return { pool: allRarities, weights: [5, 5, 12, 23, 50, 1, 4] };
     case 5:
