@@ -114,7 +114,7 @@ categories:
 
       - id: bait_divine
         name: 神之诱饵
-        price: 200
+        price: 265
         type: consumable
         quality: 5
         description: 传说中的神之诱饵，没有鱼能抗拒它的诱惑！
