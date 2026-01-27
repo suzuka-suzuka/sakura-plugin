@@ -1013,19 +1013,16 @@ export default class Fishing extends plugin {
     return true;
   });
 
-  fishingRecord = Command(/^#?钓鱼记录(\s*.*)?$/, async (e) => {
+  fishingRecord = Command(/^#?钓鱼记录(\s*\d+)?$/, async (e) => {
     let msg = e.msg.replace(/^#?钓鱼记录/, "").trim();
 
     let targetId = e.user_id;
     let page = 1;
 
-    const args = msg.split(/\s+/).filter(arg => arg);
-
-    for (const arg of args) {
-      if (/^\d+$/.test(arg)) {
-        if (arg.length < 5) {
-          page = Math.max(1, parseInt(arg));
-        }
+    if (msg) {
+      const pageNum = parseInt(msg);
+      if (!isNaN(pageNum)) {
+        page = Math.max(1, pageNum);
       }
     }
 
