@@ -487,7 +487,7 @@
     "base_price": 35,
     "difficulty": 50,
     "weight": [1.0, 8.0],
-    "active_hours": [[0, 24]]
+    "active_hours": [[18, 24], [0, 6]]
   },
   {
     "id": "fish_red_snapper",
@@ -876,7 +876,7 @@
     "description": "巨大的双翼在海中滑翔，如同一张巨大的飞毯。",
     "base_price": 220,
     "difficulty": 175,
-    "weight": [150.0, 280.0],
+    "weight": [150.0, 275.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -906,7 +906,7 @@
     "description": "背甲由璀璨的水晶簇构成，非常沉重。",
     "base_price": 270,
     "difficulty": 150,
-    "weight": [180.0, 300.0],
+    "weight": [160.0, 280.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -935,7 +935,7 @@
     "rarity": "史诗",
     "description": "背鳍总是伴随着微型的雷云，游动时发出轰鸣。",
     "base_price": 260,
-    "difficulty": 210,
+    "difficulty": 200,
     "weight": [80.0, 180.0],
     "active_hours": [[0, 24]]
   },
@@ -956,7 +956,7 @@
     "description": "远古海怪的幼体，虽然还小，但力量已经足以在大海掀起波澜。",
     "base_price": 380,
     "difficulty": 240,
-    "weight": [250.0, 310.0],
+    "weight": [220.0, 280.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -965,8 +965,8 @@
     "rarity": "传说",
     "description": "大嘴里仿佛有一个黑洞，吞噬一切光线，极其沉重。",
     "base_price": 390,
-    "difficulty": 255,
-    "weight": [280.0, 320.0],
+    "difficulty": 240,
+    "weight": [230.0, 280.0],
     "active_hours": [[22, 24], [0, 4]]
   },
   {
@@ -995,8 +995,8 @@
     "rarity": "传说",
     "description": "来自最深海沟的孤独歌者，身体承载着深海的高压。",
     "base_price": 375,
-    "difficulty": 260,
-    "weight": [260.0, 320.0],
+    "difficulty": 240,
+    "weight": [230.0, 280.0],
     "active_hours": [[0, 24]]
   },
   {
