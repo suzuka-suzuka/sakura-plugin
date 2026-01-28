@@ -935,7 +935,7 @@
     "rarity": "史诗",
     "description": "背鳍总是伴随着微型的雷云，游动时发出轰鸣。",
     "base_price": 260,
-    "difficulty": 200,
+    "difficulty": 210,
     "weight": [80.0, 180.0],
     "active_hours": [[0, 24]]
   },
@@ -965,7 +965,7 @@
     "rarity": "传说",
     "description": "大嘴里仿佛有一个黑洞，吞噬一切光线，极其沉重。",
     "base_price": 390,
-    "difficulty": 240,
+    "difficulty": 255,
     "weight": [230.0, 280.0],
     "active_hours": [[22, 24], [0, 4]]
   },
@@ -995,7 +995,7 @@
     "rarity": "传说",
     "description": "来自最深海沟的孤独歌者，身体承载着深海的高压。",
     "base_price": 375,
-    "difficulty": 240,
+    "difficulty": 260,
     "weight": [230.0, 280.0],
     "active_hours": [[0, 24]]
   },
