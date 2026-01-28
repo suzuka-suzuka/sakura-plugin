@@ -11,6 +11,7 @@ import {
   clearConversationHistory,
   clearAllPrefixesForUser,
   clearAllConversationHistories,
+  saveConversationHistory,
 } from "../lib/AIUtils/ConversationHistory.js";
 export class Conversationmanagement extends plugin {
   constructor() {
@@ -51,7 +52,59 @@ export class Conversationmanagement extends plugin {
     await e.reply(`您与「${profileName}」的对话历史已清空！喵~`, 10);
     return true;
   });
+  RollbackSingle = Command(/^#?(?:撤销|回滚)对话\s*(.+)/, async (e) => {
+    let input = e.match[1].trim();
+    
+    let rounds = 1;
+    let prefix = input;
+    
+    const match = input.match(/^(.+?)\s+(\d+)$/);
+    if (match) {
+      prefix = match[1];
+      rounds = parseInt(match[2], 10);
+    }
 
+    if (!prefix) return false;
+
+    const config = this.appconfig;
+    if (!config || !config.profiles.some((p) => p.prefix === prefix)) {
+      if (config.profiles.some((p) => p.prefix === input)) {
+         prefix = input;
+         rounds = 1;
+      } else {
+         await e.reply(`未找到前缀为「${prefix}」的设定，请检查输入。`, 10);
+         return true;
+      }
+    }
+
+    const profileName = this.getProfileName(prefix);
+    const history = await loadConversationHistory(e, prefix);
+    
+    if (history.length === 0) {
+      await e.reply(`目前没有与「${profileName}」的对话历史记录。`, 10);
+      return true;
+    }
+
+    const itemsToRemove = rounds * 2;
+    
+    if (itemsToRemove <= 0) {
+        await e.reply("撤销轮数必须大于 0 喵~", 10);
+        return true;
+    }
+
+    if (itemsToRemove >= history.length) {
+        await clearConversationHistory(e, prefix);
+        await e.reply(`已撤销所有与「${profileName}」的对话历史（共 ${Math.ceil(history.length/2)} 轮）。`, 10);
+        return true;
+    }
+    
+    history.splice(-itemsToRemove);
+    
+    await saveConversationHistory(e, history, prefix);
+    
+    await e.reply(`已撤销与「${profileName}」的最后 ${rounds} 轮对话。当前剩余 ${Math.ceil(history.length/2)} 轮。`, 10);
+    return true;
+  });
   ListSingle = Command(/^#?列出对话\s*(.+)/, async (e) => {
     const prefix = e.match[1].trim();
 
