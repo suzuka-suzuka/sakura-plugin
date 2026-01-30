@@ -323,7 +323,18 @@ export class poke extends plugin {
         await this.setShouldReply(e.user_id, ignoreDuration + 600000);
 
         return false;
-
+      case 15:
+        const types = _.random(1, 2);
+        if (types === 1) {
+          await e.reply(this.sendImage(this.getPokeImagePath("13.gif")));
+        } else {
+          await e.reply(this.sendImage(this.getPokeImagePath("14.gif")));
+        }
+        await common.sleep(500);
+        await this.checkAndMute(e, 60 * usercount);
+        await common.sleep(1000);
+        await e.reply("这是爱的惩罚口球哦~");
+        return false;
       case 20:
         const muteSuccess = await this.checkAndMute(e, 60 * usercount);
         if (muteSuccess) {
@@ -640,14 +651,6 @@ export class poke extends plugin {
           await e.poke(e.user_id);
           await common.sleep(500);
         }
-        break;
-      case 11:
-        const coinAmount = _.random(20, 200);
-        const economyManager = new EconomyManager(e);
-        economyManager.addCoins(e, coinAmount);
-        await e.reply(`✨ 哇！戳中了隐藏宝箱！`);
-        await common.sleep(500);
-        await e.reply(`🌸 恭喜获得 ${coinAmount} 个樱花币！`);
         break;
     }
   }

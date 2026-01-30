@@ -6,6 +6,7 @@ import _ from "lodash";
 import fs from "node:fs";
 import path from "node:path";
 import { pluginresources } from "../lib/path.js";
+import Setting from "../lib/setting.js";
 
 const fishingState = {};
 
@@ -94,7 +95,7 @@ function getFishByRarity(rarity) {
   });
 }
 
-function selectRandomFish(baitQuality, fishingManager = null, fisherId = null, currentPoolCount = -1) {
+function selectRandomFish(baitQuality, fishingManager = null, fisherId = null) {
   if (fishingManager && fisherId) {
     const torpedoCount = fishingManager.getAvailableTorpedoCount(fisherId);
     if (torpedoCount > 0) {
@@ -119,12 +120,8 @@ function selectRandomFish(baitQuality, fishingManager = null, fisherId = null, c
   
   let selectedRarity;
   
-  if (currentPoolCount === 0 || currentPoolCount === 29) {
-    selectedRarity = "宝藏";
-  } else {
-    const { pool, weights } = getRarityPoolByBaitQuality(baitQuality);
-    selectedRarity = selectRarityByWeight(pool, weights);
-  }
+  const { pool, weights } = getRarityPoolByBaitQuality(baitQuality);
+  selectedRarity = selectRarityByWeight(pool, weights);
   
   let availableFish = getFishByRarity(selectedRarity);
   
@@ -194,7 +191,20 @@ export default class Fishing extends plugin {
     });
   }
 
+  get appconfig() {
+    return Setting.getConfig("economy");
+  }
+
+  checkWhitelist(e) {
+    const config = this.appconfig;
+    if (!config) return false;
+    const groups = config.gamegroups || [];
+    if (groups.length === 0) return false;
+    return groups.some(g => String(g) === String(e.group_id));
+  }
+
   startFishing = Command(/^#?钓鱼$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
     const groupId = e.group_id;
     const userId = e.user_id;
 
@@ -213,19 +223,6 @@ export default class Fishing extends plugin {
     const equippedBait = fishingManager.getEquippedBait(userId);
     if (!equippedBait) {
       await e.reply("🪱 鱼饵用光啦！\n没饵可钓不到鱼，去「商店」看看吧~", 10);
-      return true;
-    }
-
-    const groupLockKey = `sakura:fishing:group_lock:${groupId}`;
-    const lockTtl = await redis.ttl(groupLockKey);
-
-    if (lockTtl > 0) {
-      const unlockTime = new Date(Date.now() + lockTtl * 1000);
-      const hours = String(unlockTime.getHours()).padStart(2, '0');
-      const minutes = String(unlockTime.getMinutes()).padStart(2, '0');
-      const timeStr = `${hours}:${minutes}`;
-      
-      await e.reply(`😭 鱼塘里的鱼都被钓光啦！\n🐟 鱼苗正在紧急投放中，预计 ${timeStr} 恢复开放`, 10);
       return true;
     }
 
@@ -260,11 +257,7 @@ export default class Fishing extends plugin {
 
     const baitQuality = baitConfig.quality || 1;
 
-    const groupCountKey = `sakura:fishing:group_pool_count:${groupId}`;
-    let currentPoolCount = await redis.get(groupCountKey);
-    currentPoolCount = currentPoolCount ? parseInt(currentPoolCount) : 0;
-
-    const selectedFish = selectRandomFish(baitQuality, fishingManager, userId, currentPoolCount);
+    const selectedFish = selectRandomFish(baitQuality, fishingManager, userId);
 
     const luckyKey = `sakura:fishing:buff:lucky:${groupId}:${userId}`;
     const hasLucky = await redis.get(luckyKey);
@@ -793,22 +786,6 @@ export default class Fishing extends plugin {
       "EX",
       600
     );
-
-    const groupCountKey = `sakura:fishing:group_pool_count:${groupId}`;
-    const groupLockKey = `sakura:fishing:group_lock:${groupId}`;
-
-    const currentCount = await redis.incr(groupCountKey);
-
-    if (currentCount === 1) {
-      await redis.expire(groupCountKey, 48 * 60 * 60);
-    }
-
-    if (currentCount >= 30) {
-      await redis.set(groupLockKey, "locked", "EX", 12 * 60 * 60);
-      
-      await redis.del(groupCountKey);
-      
-    }
   }
 
   async finishSuccess(e, state, fishingManager) {
@@ -951,6 +928,7 @@ export default class Fishing extends plugin {
 
 
   equipRod = Command(/^#?装备鱼竿\s*(.+)$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
     const rodName = e.msg.match(/^#?装备鱼竿\s*(.+)$/)[1].trim();
     const fishingManager = new FishingManager(e.group_id);
 
@@ -971,6 +949,7 @@ export default class Fishing extends plugin {
   });
 
   equipBait = Command(/^#?装备鱼饵\s*(.+)$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
     const baitName = e.msg.match(/^#?装备鱼饵\s*(.+)$/)[1].trim();
     const fishingManager = new FishingManager(e.group_id);
 
@@ -994,6 +973,7 @@ export default class Fishing extends plugin {
   });
 
   equipLine = Command(/^#?装备鱼线\s*(.+)$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
     const lineName = e.msg.match(/^#?装备鱼线\s*(.+)$/)[1].trim();
     const fishingManager = new FishingManager(e.group_id);
 
@@ -1014,6 +994,7 @@ export default class Fishing extends plugin {
   });
 
   fishingRecord = Command(/^#?钓鱼记录(\s*\d+)?$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
     let msg = e.msg.replace(/^#?钓鱼记录/, "").trim();
 
     let targetId = e.user_id;
@@ -1104,6 +1085,7 @@ export default class Fishing extends plugin {
   });
 
   deployTorpedo = Command(/^#?(投放|放置)鱼雷$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
     const groupId = e.group_id;
     const userId = e.user_id;
     
@@ -1142,6 +1124,7 @@ export default class Fishing extends plugin {
   });
 
   checkPondTorpedoes = Command(/^#?鱼雷状态$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
     const fishingManager = new FishingManager(e.group_id);
     const dangerousTorpedoes = fishingManager.getAvailableTorpedoCount(e.user_id);
     const priceBoostActive = await fishingManager.isFishPriceBoostActive();
@@ -1173,6 +1156,7 @@ export default class Fishing extends plugin {
   });
 
   fishingRanking = Command(/^#?钓鱼(排行|榜)$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
     const fishingManager = new FishingManager(e.group_id);
     const rankingList = fishingManager.getFishingRanking(10);
 

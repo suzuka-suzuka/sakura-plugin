@@ -4,6 +4,7 @@ import ShopManager from "../lib/economy/ShopManager.js";
 import InventoryManager from "../lib/economy/InventoryManager.js";
 import FishingManager from "../lib/economy/FishingManager.js";
 import _ from "lodash";
+import Setting from "../lib/setting.js";
 
 export default class Economy extends plugin {
   constructor() {
@@ -14,7 +15,20 @@ export default class Economy extends plugin {
     });
   }
 
+  get appconfig() {
+    return Setting.getConfig("economy");
+  }
+
+  checkWhitelist(e) {
+    const config = this.appconfig;
+    if (!config) return false;
+    const groups = config.gamegroups || [];
+    if (groups.length === 0) return false;
+    return groups.some((g) => String(g) === String(e.group_id));
+  }
+
   rob = Command(/^#?(打劫|抢[劫夺钱])\s*.*$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
     const targetId = e.at;
     if (!targetId) {
       return false;
@@ -45,7 +59,6 @@ export default class Economy extends plugin {
     const attackerCoins = economyManager.getCoins(e);
 
     if (Math.abs(attackerCoins - targetCoins) > 1000) {
-
       await this.handleRobberyPenalty(
         e,
         economyManager,
@@ -134,7 +147,13 @@ export default class Economy extends plugin {
     return true;
   });
 
-  async handleRobberyPenalty(e, economyManager, cooldownKey, attackerCoins, reasonPrefix) {
+  async handleRobberyPenalty(
+    e,
+    economyManager,
+    cooldownKey,
+    attackerCoins,
+    reasonPrefix
+  ) {
     const attackerName = e.sender.card || e.sender.nickname || e.user_id;
 
     if (attackerCoins < 50) {
@@ -180,6 +199,7 @@ export default class Economy extends plugin {
   }
 
   counter = Command(/^#?(反击|复仇|神罚)\s*.*$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
     const targetId = e.at;
     if (!targetId) {
       return false;
@@ -248,6 +268,7 @@ export default class Economy extends plugin {
   });
 
   shopList = Command(/^#?(商店|商城|樱神社商店|神社商店)$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
     const shopManager = new ShopManager();
     const forwardMsg = shopManager.generateShopMessage(e);
     const items = shopManager.getAllItems();
@@ -261,6 +282,7 @@ export default class Economy extends plugin {
   });
 
   buyItem = Command(/^#?(购买|兑换)\s*(\S+)\s*(\d*)$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
     const shopManager = new ShopManager();
     const itemName = e.match[2].trim();
     const count = parseInt(e.match[3]) || 1;
@@ -273,6 +295,7 @@ export default class Economy extends plugin {
   });
 
   myBag = Command(/^#?(我的)?背包$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
     const inventoryManager = new InventoryManager(e);
     const inventory = inventoryManager.getInventory();
     const economyManager = new EconomyManager(e);
@@ -296,7 +319,7 @@ export default class Economy extends plugin {
         if (item) {
           name = item.name;
         }
-        
+
         let rodInfo = "";
         if (itemId.startsWith("rod_")) {
           const durabilityInfo = fishingManager.getRodDurabilityInfo(e.user_id, itemId);
@@ -305,7 +328,7 @@ export default class Economy extends plugin {
             rodInfo = ` 耐久: ${durabilityPercent}%`;
           }
         }
-        
+
         bagMsg += `📦 ${name} x ${count}${rodInfo}\n`;
       }
     } else {
@@ -327,6 +350,7 @@ export default class Economy extends plugin {
   });
 
   upgradeBag = Command(/^#?升级背包$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
     const economyManager = new EconomyManager(e);
     const result = economyManager.upgradeBag(e);
     await e.reply(result.msg);
@@ -358,8 +382,8 @@ export default class Economy extends plugin {
     }
     return true;
   });
-
   transfer = Command(/^#?(转账|投喂|给钱)\s*(\d+).*$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
     const amount = parseInt(e.match[2]);
     if (isNaN(amount) || amount <= 0) {
       return false;
@@ -441,6 +465,7 @@ export default class Economy extends plugin {
   });
 
   sell = Command(/^#?出售\s*(\S+).*$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
     const itemName = e.match[1].trim();
     const shopManager = new ShopManager();
     const inventoryManager = new InventoryManager(e);
@@ -487,6 +512,7 @@ export default class Economy extends plugin {
   });
 
   useItem = Command(/^#?使用\s*(\S+)$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
     const itemName = e.match[1].trim();
     const shopManager = new ShopManager();
     const item = shopManager.findItemByName(itemName);
@@ -501,19 +527,19 @@ export default class Economy extends plugin {
     const itemHandlers = {
       "item_card_double_coin": {
         buffKey: "double_coin",
-        message: "✨ 双倍金币卡已激活！\n💰 接下来1小时内钓鱼可获得双倍收益！"
+        message: "✨ 双倍金币卡已激活！\n💰 接下来1小时内钓鱼可获得双倍收益！",
       },
       "item_card_1_5_coin": {
         buffKey: "1_5_coin",
-        message: "✨ 1.5倍金币卡已激活！\n💰 接下来1小时内钓鱼可获得1.5倍收益！"
+        message: "✨ 1.5倍金币卡已激活！\n💰 接下来1小时内钓鱼可获得1.5倍收益！",
       },
       "item_charm_lucky": {
         buffKey: "lucky",
-        message: "🍀 好运护符已激活！\n🎣 接下来1小时内钓鱼必定上钩！"
+        message: "🍀 好运护符已激活！\n🎣 接下来1小时内钓鱼必定上钩！",
       },
       "item_random_bait": {
-        isRandomBait: true
-      }
+        isRandomBait: true,
+      },
     };
 
     const handler = itemHandlers[item.id];
@@ -585,10 +611,11 @@ export default class Economy extends plugin {
   });
 
   coinRanking = Command(/^#?(金币|樱花币|富豪|财富)(排行|榜)$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
     return await this.generateRanking(e, "coins", "樱花币排行榜");
   });
-
   levelRanking = Command(/^#?(等级|经验|精英)(排行|榜)$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
     return await this.generateRanking(e, "level", "等级排行榜");
   });
 

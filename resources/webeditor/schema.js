@@ -74,6 +74,7 @@ const configSchema = {
 
   fields: {
     Groups: { label: "启用群", type: "groupSelect", help: "选择启用此功能的群聊" },
+    "economy.gamegroups": { label: "游戏功能启用群", type: "groupSelect", help: "选择启用经济游戏功能的群聊" },
     groups: { label: "启用群", type: "groupSelect", help: "选择启用此功能的群聊" },
     name: { label: "名称", type: "text" },
     description: { label: "描述", type: "textarea" },
