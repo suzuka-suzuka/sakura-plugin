@@ -610,6 +610,38 @@ export default class Economy extends plugin {
     return true;
   });
 
+  reviveCoin = Command(/^#?领取复活币$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
+
+    const key = `sakura:economy:daily_revive:${e.group_id}:${e.user_id}`;
+    const hasReceived = await redis.get(key);
+
+    if (hasReceived) {
+      await e.reply("你今天已经领取过复活币了，请明天再来吧~", 10);
+      return true;
+    }
+
+    const economyManager = new EconomyManager(e);
+    const coins = economyManager.getCoins(e);
+
+    if (coins >= 100) {
+      return false;
+    }
+
+    economyManager.addCoins(e, 100);
+
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    const ttl = Math.floor((tomorrow.getTime() - now.getTime()) / 1000);
+
+    await redis.set(key, "1", "EX", ttl);
+
+    await e.reply("领取成功！获得了 100 樱花币，希望能助你一臂之力~");
+    return true;
+  });
+
   coinRanking = Command(/^#?(金币|樱花币|富豪|财富)(排行|榜)$/, async (e) => {
     if (!this.checkWhitelist(e)) return false;
     return await this.generateRanking(e, "coins", "樱花币排行榜");
