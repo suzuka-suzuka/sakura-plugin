@@ -6,7 +6,6 @@ import Setting from "../lib/setting.js";
 import _ from "lodash";
 import { getAI } from "../lib/AIUtils/getAI.js";
 import common from "../../../src/utils/common.js";
-import EconomyManager from "../lib/economy/EconomyManager.js";
 import { imageEmbeddingManager } from "../lib/AIUtils/ImageEmbedding.js";
 
 export class poke extends plugin {
