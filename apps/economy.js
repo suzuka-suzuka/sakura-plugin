@@ -556,7 +556,7 @@ export default class Economy extends plugin {
 
     await redis.set(key, "1", "EX", ttl);
 
-    await e.reply("领取成功！获得了 100 樱花币，希望能助你一臂之力~");
+    await e.reply("看你囊中羞涩，偷偷塞给了你 100 樱花币，希望能助你东山再起~");
     return true;
   });
 
