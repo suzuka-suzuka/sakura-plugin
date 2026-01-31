@@ -26,7 +26,7 @@
     "description": "一大团黏糊糊的绿色植物，散发着腥味。",
     "base_price": 1,
     "difficulty": 10,
-    "weight": [0.5, 5.0],
+    "weight": [0.5, 2.5],
     "active_hours": [[0, 24]]
   },
   {
@@ -36,7 +36,7 @@
     "description": "一块沉重的木头，表面已经被水流冲刷得非常光滑。",
     "base_price": 2,
     "difficulty": 15,
-    "weight": [5.0, 15.0],
+    "weight": [2.0, 5.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -45,8 +45,8 @@
     "rarity": "垃圾",
     "description": "不知道是谁把它扔进水里的，非常沉重，毫无价值。",
     "base_price": 0,
-    "difficulty": 30,
-    "weight": [25.0, 45.0],
+    "difficulty": 15,
+    "weight": [3.0, 5.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -56,7 +56,7 @@
     "description": "看起来像是某种大型哺乳动物的骨骼碎片，有点吓人。",
     "base_price": 3,
     "difficulty": 5,
-    "weight": [1.0, 4.0],
+    "weight": [1.0, 3.0],
     "active_hours": [[18, 24], [0, 6]]
   },
   {
@@ -95,8 +95,8 @@
     "rarity": "垃圾",
     "description": "极其沉重的废铁，虽然是垃圾，但卖给废品站或许能值点钱。",
     "base_price": 15,
-    "difficulty": 50,
-    "weight": [60.0, 100.0],
+    "difficulty": 25,
+    "weight": [4.0, 6.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -116,7 +116,7 @@
     "description": "体型较宽，鳞片较大，喜欢在水底拱泥觅食。",
     "base_price": 10,
     "difficulty": 25,
-    "weight": [1.5, 8.0],
+    "weight": [1.5, 6.0],
     "active_hours": [[6, 18]]
   },
   {
@@ -126,7 +126,7 @@
     "description": "身体修长，游动迅速，以水草为食。",
     "base_price": 12,
     "difficulty": 30,
-    "weight": [2.0, 10.0],
+    "weight": [2.0, 6.5],
     "active_hours": [[5, 19]]
   },
   {
@@ -146,7 +146,7 @@
     "description": "性情急躁，受到惊吓时会跃出水面。",
     "base_price": 9,
     "difficulty": 20,
-    "weight": [1.0, 5.0],
+    "weight": [1.0, 4.0],
     "active_hours": [[6, 18]]
   },
   {
@@ -235,8 +235,8 @@
     "rarity": "普通",
     "description": "长着长长的胡须，皮肤光滑无鳞，喜欢浑浊的水域。",
     "base_price": 15,
-    "difficulty": 45,
-    "weight": [2.0, 15.0],
+    "difficulty": 30,
+    "weight": [2.0, 7.0],
     "active_hours": [[18, 24], [0, 6]]
   },
   {
@@ -336,7 +336,7 @@
     "description": "下巴上有一根明显的触须，肉质雪白。",
     "base_price": 20,
     "difficulty": 35,
-    "weight": [2.0, 10.0],
+    "weight": [2.0, 6.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -346,7 +346,7 @@
     "description": "体侧有一条黑色的侧线，胸鳍上方有黑斑。",
     "base_price": 18,
     "difficulty": 30,
-    "weight": [1.0, 5.0],
+    "weight": [1.0, 4.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -396,7 +396,7 @@
     "description": "鳞片非常细小，体表覆盖着厚厚的粘液。",
     "base_price": 16,
     "difficulty": 30,
-    "weight": [1.5, 5.0],
+    "weight": [1.5, 4.5],
     "active_hours": [[18, 24], [0, 6]]
   },
   {
@@ -576,7 +576,7 @@
     "description": "比目鱼中的巨无霸，力量很大。",
     "base_price": 60,
     "difficulty": 75,
-    "weight": [10.0, 40.0],
+    "weight": [10.0, 25.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -586,7 +586,7 @@
     "description": "体型像鲨鱼，力量极大，耐力持久。",
     "base_price": 58,
     "difficulty": 78,
-    "weight": [5.0, 25.0],
+    "weight": [5.0, 20.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -655,8 +655,8 @@
     "rarity": "稀有",
     "description": "海洋中的鱼雷，游速极快，肉质顶级。",
     "base_price": 120,
-    "difficulty": 110,
-    "weight": [50.0, 120.0],
+    "difficulty": 95,
+    "weight": [25.0, 55.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -665,8 +665,8 @@
     "rarity": "稀有",
     "description": "上颌延长如剑，发怒时甚至会攻击船只。",
     "base_price": 110,
-    "difficulty": 125,
-    "weight": [40.0, 100.0],
+    "difficulty": 110,
+    "weight": [30.0, 60.0],
     "active_hours": [[18, 24], [0, 6]]
   },
   {
@@ -685,8 +685,8 @@
     "rarity": "稀有",
     "description": "活化石鱼类，体表有五行硬鳞，体型巨大。",
     "base_price": 130,
-    "difficulty": 130,
-    "weight": [30.0, 150.0],
+    "difficulty": 120,
+    "weight": [25.0, 65.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -695,8 +695,8 @@
     "rarity": "稀有",
     "description": "淡水中的巨怪，鳞片坚硬如盔甲，力大无穷。",
     "base_price": 125,
-    "difficulty": 135,
-    "weight": [40.0, 160.0],
+    "difficulty": 125,
+    "weight": [30.0, 65.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -706,7 +706,7 @@
     "description": "长着像鳄鱼一样的嘴，牙齿锋利，鳞片坚硬。",
     "base_price": 105,
     "difficulty": 115,
-    "weight": [20.0, 80.0],
+    "weight": [20.0, 60.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -716,7 +716,7 @@
     "description": "被认为已经灭绝了亿万年的深海活化石。",
     "base_price": 140,
     "difficulty": 85,
-    "weight": [30.0, 70.0],
+    "weight": [25.0, 55.0],
     "active_hours": [[20, 24], [0, 4]]
   },
   {
@@ -736,7 +736,7 @@
     "description": "头部呈锤状，视野360度，极其敏锐的猎手。",
     "base_price": 115,
     "difficulty": 120,
-    "weight": [40.0, 110.0],
+    "weight": [35.0, 65.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -746,7 +746,7 @@
     "description": "体型巨大，额头突起，色彩纹路非常复杂。",
     "base_price": 128,
     "difficulty": 100,
-    "weight": [20.0, 80.0],
+    "weight": [20.0, 60.0],
     "active_hours": [[6, 18]]
   },
   {
@@ -755,7 +755,7 @@
     "rarity": "稀有",
     "description": "能释放高压电流，靠近它非常危险。",
     "base_price": 110,
-    "difficulty": 140,
+    "difficulty": 125,
     "weight": [5.0, 20.0],
     "active_hours": [[0, 24]]
   },
@@ -765,7 +765,7 @@
     "rarity": "稀有",
     "description": "珊瑚礁的霸主，冲击力极强，甚至能捕食飞鸟。",
     "base_price": 118,
-    "difficulty": 145,
+    "difficulty": 128,
     "weight": [15.0, 50.0],
     "active_hours": [[0, 24]]
   },
@@ -776,7 +776,7 @@
     "description": "吻部延长呈锯齿状，挥动起来是致命的武器。",
     "base_price": 122,
     "difficulty": 120,
-    "weight": [30.0, 90.0],
+    "weight": [25.0, 65.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -785,7 +785,7 @@
     "rarity": "稀有",
     "description": "牙齿像匕首一样交错，性格极其凶暴。",
     "base_price": 112,
-    "difficulty": 135,
+    "difficulty": 120,
     "weight": [10.0, 40.0],
     "active_hours": [[0, 24]]
   },
@@ -795,8 +795,8 @@
     "rarity": "稀有",
     "description": "欧洲淡水霸主，大嘴能吞下一切。",
     "base_price": 108,
-    "difficulty": 140,
-    "weight": [30.0, 120.0],
+    "difficulty": 125,
+    "weight": [30.0, 65.0],
     "active_hours": [[18, 24], [0, 6]]
   },
   {
@@ -855,8 +855,8 @@
     "rarity": "史诗",
     "description": "海洋顶级掠食者，拥有令人绝望的咬合力和体型。",
     "base_price": 240,
-    "difficulty": 190,
-    "weight": [120.0, 250.0],
+    "difficulty": 160,
+    "weight": [60.0, 120.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -865,8 +865,8 @@
     "rarity": "史诗",
     "description": "深海梦魇，触手上长满钩爪，眼球大如篮球。",
     "base_price": 230,
-    "difficulty": 185,
-    "weight": [100.0, 220.0],
+    "difficulty": 155,
+    "weight": [50.0, 110.0],
     "active_hours": [[20, 24], [0, 4]]
   },
   {
@@ -876,7 +876,7 @@
     "description": "巨大的双翼在海中滑翔，如同一张巨大的飞毯。",
     "base_price": 220,
     "difficulty": 175,
-    "weight": [150.0, 275.0],
+    "weight": [70.0, 130.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -885,8 +885,8 @@
     "rarity": "史诗",
     "description": "海钓者的终极梦想之一，力量、速度与美的完美结合。",
     "base_price": 250,
-    "difficulty": 200,
-    "weight": [100.0, 240.0],
+    "difficulty": 170,
+    "weight": [60.0, 120.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -906,7 +906,7 @@
     "description": "背甲由璀璨的水晶簇构成，非常沉重。",
     "base_price": 270,
     "difficulty": 150,
-    "weight": [160.0, 280.0],
+    "weight": [80.0, 130.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -925,7 +925,7 @@
     "rarity": "史诗",
     "description": "一种散发着悲伤光芒的小鱼，据说会引诱渔人迷失。",
     "base_price": 275,
-    "difficulty": 195,
+    "difficulty": 175,
     "weight": [1.0, 3.0],
     "active_hours": [[23, 24], [0, 2]]
   },
@@ -935,8 +935,8 @@
     "rarity": "史诗",
     "description": "背鳍总是伴随着微型的雷云，游动时发出轰鸣。",
     "base_price": 260,
-    "difficulty": 210,
-    "weight": [80.0, 180.0],
+    "difficulty": 175,
+    "weight": [50.0, 120.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -955,8 +955,8 @@
     "rarity": "传说",
     "description": "远古海怪的幼体，虽然还小，但力量已经足以在大海掀起波澜。",
     "base_price": 380,
-    "difficulty": 240,
-    "weight": [220.0, 280.0],
+    "difficulty": 220,
+    "weight": [150.0, 240.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -965,8 +965,8 @@
     "rarity": "传说",
     "description": "大嘴里仿佛有一个黑洞，吞噬一切光线，极其沉重。",
     "base_price": 390,
-    "difficulty": 255,
-    "weight": [230.0, 280.0],
+    "difficulty": 230,
+    "weight": [160.0, 250.0],
     "active_hours": [[22, 24], [0, 4]]
   },
   {
@@ -975,8 +975,8 @@
     "rarity": "传说",
     "description": "虽然只是一条巨大的触手，但它拥有独立的意识和怪力。",
     "base_price": 350,
-    "difficulty": 230,
-    "weight": [200.0, 280.0],
+    "difficulty": 215,
+    "weight": [140.0, 230.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -995,8 +995,8 @@
     "rarity": "传说",
     "description": "来自最深海沟的孤独歌者，身体承载着深海的高压。",
     "base_price": 375,
-    "difficulty": 260,
-    "weight": [230.0, 280.0],
+    "difficulty": 235,
+    "weight": [170.0, 250.0],
     "active_hours": [[0, 24]]
   },
   {
@@ -1045,8 +1045,8 @@
     "rarity": "宝藏",
     "description": "伪装成宝箱的怪物！它咬断了你的鱼线并对鱼竿造成20点损坏！",
     "base_price": 0,
-    "difficulty": 100,
-    "weight": [50.0, 100.0],
+    "difficulty": 80,
+    "weight": [20.0, 50.0],
     "active_hours": [[0, 24]],
     "isMimic": true
   }
