@@ -137,38 +137,3 @@ categories:
         type: consumable
         description: 一种恶作剧道具，投放到鱼塘后可能被其他钓鱼者钓到。
 
-  special:
-    name: "🎁 特殊物品"
-    description: "钓鱼获得的特殊宝藏物品"
-    handler: fishing_special
-    items:
-      - id: item_card_double_coin
-        name: 双倍金币卡
-        price: 0
-        type: buff
-        duration: 3600
-        sellable: false
-        description: 使用后1小时钓鱼获可获得双倍收益。(非卖品)
-
-      - id: item_card_1_5_coin
-        name: 1.5倍金币卡
-        price: 0
-        type: buff
-        duration: 3600
-        sellable: false
-        description: 使用后1小时内出钓鱼可获得1.5倍收益。(非卖品)
-
-      - id: item_charm_lucky
-        name: 好运护符
-        price: 0
-        type: buff
-        duration: 3600
-        sellable: false
-        description: 使用后1小时内钓鱼必定能上钩。(非卖品)
-
-      - id: item_random_bait
-        name: 随机鱼饵包
-        price: 0
-        type: consumable
-        sellable: false
-        description: 使用后可开出一种随机鱼饵。(非卖品)

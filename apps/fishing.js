@@ -259,7 +259,7 @@ export default class Fishing extends plugin {
 
     const selectedFish = selectRandomFish(baitQuality, fishingManager, userId);
 
-    const luckyKey = `sakura:fishing:buff:lucky:${groupId}:${userId}`;
+    const luckyKey = `sakura:fishing:buff:item_charm_lucky:${groupId}:${userId}`;
     const hasLucky = await redis.get(luckyKey);
     const waitTime = _.random(0, 3 * 60 * 1000);
     
@@ -911,13 +911,13 @@ export default class Fishing extends plugin {
   async getFishSellBuffMultiplier(groupId, userId) {
     let multiplier = 1;
     
-    const doubleKey = `sakura:fishing:buff:double_coin:${groupId}:${userId}`;
+    const doubleKey = `sakura:fishing:buff:item_card_double_coin:${groupId}:${userId}`;
     const hasDouble = await redis.get(doubleKey);
     if (hasDouble) {
       return 2;
     }
     
-    const oneHalfKey = `sakura:fishing:buff:1_5_coin:${groupId}:${userId}`;
+    const oneHalfKey = `sakura:fishing:buff:item_card_1_5_coin:${groupId}:${userId}`;
     const hasOneHalf = await redis.get(oneHalfKey);
     if (hasOneHalf) {
       return 1.5;

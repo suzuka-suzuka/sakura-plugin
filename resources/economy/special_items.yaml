@@ -1,0 +1,28 @@
+categories:
+  special:
+    name: "🎁 特殊物品"
+    description: "钓鱼获得的特殊宝藏物品"
+    handler: fishing_special
+    items:
+      - id: item_card_double_coin
+        name: 双倍金币卡
+        type: buff
+        duration: 3600
+        activation_message: "✨ 双倍金币卡已激活！\n💰 接下来1小时内钓鱼可获得双倍收益！"
+
+      - id: item_card_1_5_coin
+        name: 1.5倍金币卡
+        type: buff
+        duration: 3600
+        activation_message: "✨ 1.5倍金币卡已激活！\n💰 接下来1小时内钓鱼可获得1.5倍收益！"
+
+      - id: item_charm_lucky
+        name: 好运护符
+        type: buff
+        duration: 3600
+        activation_message: "🍀 好运护符已激活！\n🎣 接下来1小时内钓鱼必定上钩！"
+
+      - id: item_random_bait
+        name: 随机鱼饵包
+        type: consumable
+        isRandomBait: true

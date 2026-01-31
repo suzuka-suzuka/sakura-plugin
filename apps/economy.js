@@ -128,9 +128,6 @@ export default class Economy extends plugin {
       });
       await redis.set(counterKey, counterData, "EX", 120);
 
-      const transferLockKey = `sakura:economy:transfer:lock:${e.group_id}:${e.user_id}`;
-      await redis.set(transferLockKey, String(Date.now()), "EX", 120);
-
       await e.reply(
         `🌸 抢夺成功！\n${attackerName} 从 ${targetName} 那里抢走了 ${robAmount} 樱花币！`
       );
@@ -382,85 +379,24 @@ export default class Economy extends plugin {
     }
     return true;
   });
-  transfer = Command(/^#?(转账|投喂|给钱)\s*(\d+).*$/, async (e) => {
+  gift = Command(/^#?(赠送|送礼)\s*(\S+).*$/, async (e) => {
     if (!this.checkWhitelist(e)) return false;
-    const amount = parseInt(e.match[2]);
-    if (isNaN(amount) || amount <= 0) {
-      return false;
-    }
-
+    const itemName = e.match[2].trim();
     const targetId = e.at;
 
     if (!targetId) {
-      return false;
-    }
-
-    if (targetId == e.user_id) {
-      return false;
-    }
-
-    const transferLockKey = `sakura:economy:transfer:lock:${e.group_id}:${e.user_id}`;
-    const lockTime = await redis.get(transferLockKey);
-    if (lockTime) {
-      const remainingTime = Math.ceil(
-        (120 - (Date.now() / 1000 - Number(lockTime) / 1000)) / 60
-      );
-      await e.reply(
-        `你刚打劫完，赃款还烫手呢！${remainingTime} 分钟后才能转账~`,
-        10
-      );
+      await e.reply("请艾特你要赠送的对象哦~", 10);
       return true;
     }
 
-    const economyManager = new EconomyManager(e);
-    const result = economyManager.transfer(e, targetId, amount);
+    const shopManager = new ShopManager();
+    const result = await shopManager.buyItem(e, itemName, 1, targetId);
 
-    if (!result.success) {
-      await e.reply("你的樱花币不足，无法投喂哦~", 10);
-      return true;
+    if (!result.success && !shopManager.findShopItemByName(itemName)) {
+      return false;
     }
 
-    const senderCoins = economyManager.getCoins(e);
-    const receiverCoins = economyManager.getCoins({
-      user_id: targetId,
-      group_id: e.group_id,
-    });
-
-    const senderNickname = e.sender.card || e.sender.nickname || e.user_id;
-    let receiverNickname = targetId;
-    try {
-      const info = await e.getInfo(targetId);
-      if (info) {
-        receiverNickname = info.card || info.nickname || targetId;
-      }
-    } catch (err) {}
-
-    const data = {
-      sender: {
-        nickname: String(senderNickname),
-        avatarUrl: `https://q1.qlogo.cn/g?b=qq&nk=${e.user_id}&s=640`,
-        coins: senderCoins,
-      },
-      receiver: {
-        nickname: String(receiverNickname),
-        avatarUrl: `https://q1.qlogo.cn/g?b=qq&nk=${targetId}&s=640`,
-        coins: receiverCoins,
-      },
-      amount: result.actualAmount,
-      totalAmount: amount,
-      fee: result.fee,
-    };
-
-    try {
-      const generator = new EconomyImageGenerator();
-      const image = await generator.generateTransferImage(data);
-      await e.reply(segment.image(image));
-    } catch (err) {
-      logger.error(`生成转账图片失败: ${err}`);
-      await e.reply(
-        `投喂成功！你失去了 ${amount} 樱花币，对方获得了 ${result.actualAmount} 樱花币（手续费 ${result.fee}）。`
-      );
-    }
+    await e.reply(result.msg);
     return true;
   });
 
@@ -470,7 +406,7 @@ export default class Economy extends plugin {
     const shopManager = new ShopManager();
     const inventoryManager = new InventoryManager(e);
 
-    const item = shopManager.findItemByName(itemName) || shopManager.findItemById(itemName);
+    const item = shopManager.findShopItemByName(itemName) || shopManager.findShopItemById(itemName);
     if (!item || item.type !== 'equipment') return false;
 
     const itemId = item.id || itemName;
@@ -524,26 +460,7 @@ export default class Economy extends plugin {
     const groupId = e.group_id;
     const userId = e.user_id;
 
-    const itemHandlers = {
-      "item_card_double_coin": {
-        buffKey: "double_coin",
-        message: "✨ 双倍金币卡已激活！\n💰 接下来1小时内钓鱼可获得双倍收益！",
-      },
-      "item_card_1_5_coin": {
-        buffKey: "1_5_coin",
-        message: "✨ 1.5倍金币卡已激活！\n💰 接下来1小时内钓鱼可获得1.5倍收益！",
-      },
-      "item_charm_lucky": {
-        buffKey: "lucky",
-        message: "🍀 好运护符已激活！\n🎣 接下来1小时内钓鱼必定上钩！",
-      },
-      "item_random_bait": {
-        isRandomBait: true,
-      },
-    };
-
-    const handler = itemHandlers[item.id];
-    if (!handler) {
+    if (!item.activation_message && !item.isRandomBait) {
       return false;
     }
 
@@ -552,7 +469,7 @@ export default class Economy extends plugin {
       return true;
     }
 
-    if (handler.isRandomBait) {
+    if (item.isRandomBait) {
       const economyManager = new EconomyManager(e);
       const capacity = economyManager.getBagCapacity(e);
       const currentSize = inventoryManager.getCurrentSize();
@@ -587,12 +504,13 @@ export default class Economy extends plugin {
       return true;
     }
 
-    const buffKey = `sakura:fishing:buff:${handler.buffKey}:${groupId}:${userId}`;
+    const buffKey = `sakura:fishing:buff:${item.id}:${groupId}:${userId}`;
     
-    if (handler.buffKey === "double_coin" || handler.buffKey === "1_5_coin") {
-      const otherBuffKey = handler.buffKey === "double_coin" 
-        ? `sakura:fishing:buff:1_5_coin:${groupId}:${userId}`
-        : `sakura:fishing:buff:double_coin:${groupId}:${userId}`;
+    if (item.id === "item_card_double_coin" || item.id === "item_card_1_5_coin") {
+      const otherBuffId = item.id === "item_card_double_coin" 
+        ? "item_card_1_5_coin"
+        : "item_card_double_coin";
+      const otherBuffKey = `sakura:fishing:buff:${otherBuffId}:${groupId}:${userId}`;
       await redis.del(otherBuffKey);
     } else {
       const existingBuff = await redis.get(buffKey);
@@ -606,7 +524,7 @@ export default class Economy extends plugin {
     const duration = item.duration || 3600;
     await redis.set(buffKey, String(Date.now()), "EX", duration);
     
-    await e.reply(handler.message);
+    await e.reply(item.activation_message);
     return true;
   });
 
