@@ -667,6 +667,7 @@ export default class Fishing extends plugin {
         state.tension += tensionChange;
 
         if (state.isOverweight) {
+          const inventoryManager = new InventoryManager(groupId, userId);
           const damageResult = applyRodDamage(fishingManager, inventoryManager, userId, rodConfig, 1);
           
           if (damageResult.isBroken) {
