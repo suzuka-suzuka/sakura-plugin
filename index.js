@@ -1,5 +1,16 @@
 import fs from "node:fs"
 
+// 运行迁移脚本
+import("./lib/migrations/migrateGoldCard.js")
+  .then(module => {
+    if (module.runMigration) {
+      module.runMigration();
+    }
+  })
+  .catch(err => {
+    logger.error("[sakura-plugin] 迁移脚本执行失败:", err);
+  });
+
 const files = fs.readdirSync("./plugins/sakura-plugin/apps").filter(file => file.endsWith(".js"))
 
 let ret = []

@@ -379,24 +379,85 @@ export default class Economy extends plugin {
     }
     return true;
   });
-  gift = Command(/^#?(赠送|送礼)\s*(\S+).*$/, async (e) => {
+
+  transfer = Command(/^#?(转账|投喂)\s*(\d+).*$/, async (e) => {
     if (!this.checkWhitelist(e)) return false;
-    const itemName = e.match[2].trim();
+    const amount = parseInt(e.match[2]);
     const targetId = e.at;
 
     if (!targetId) {
-      await e.reply("请艾特你要赠送的对象哦~", 10);
-      return true;
-    }
-
-    const shopManager = new ShopManager();
-    const result = await shopManager.buyItem(e, itemName, 1, targetId);
-
-    if (!result.success && !shopManager.findShopItemByName(itemName)) {
       return false;
     }
 
-    await e.reply(result.msg);
+    if (targetId === e.user_id) {
+      return false;
+    }
+
+    if (amount <= 0) {
+      return false;
+    }
+
+    const economyManager = new EconomyManager(e);
+    const fromCoins = economyManager.getCoins(e);
+
+    if (fromCoins < amount) {
+      await e.reply(`余额不足！无法投喂~`, 10);
+      return true;
+    }
+
+    const feePercent = _.random(0, 10);
+    const totalFee = 10 + Math.round(amount * (feePercent / 100));
+    
+    let actualTransfer = amount - totalFee;
+    let actualFee = totalFee;
+    
+    if (totalFee >= amount) {
+      actualTransfer = 0;
+      actualFee = amount;
+    }
+
+    economyManager.reduceCoins(e, amount);
+    if (actualTransfer > 0) {
+      economyManager.addCoins({ user_id: targetId, group_id: e.group_id }, actualTransfer);
+    }
+    
+    if (actualFee > 0) {
+      economyManager.addCoins({ user_id: e.self_id, group_id: e.group_id }, actualFee);
+    }
+
+    let fromNickname = e.sender.card || e.sender.nickname || e.user_id;
+    let toNickname = targetId;
+    try {
+      const info = await e.getInfo(targetId);
+      if (info) {
+        toNickname = info.card || info.nickname || targetId;
+      }
+    } catch (err) {}
+
+    const data = {
+      from: {
+        id: e.user_id,
+        nickname: String(fromNickname),
+        avatarUrl: `https://q1.qlogo.cn/g?b=qq&nk=${e.user_id}&s=640`
+      },
+      to: {
+        id: targetId,
+        nickname: String(toNickname),
+        avatarUrl: `https://q1.qlogo.cn/g?b=qq&nk=${targetId}&s=640`
+      },
+      amount: actualTransfer,
+      fee: actualFee,
+      time: new Date().toISOString()
+    };
+
+    try {
+      const generator = new EconomyImageGenerator();
+      const image = await generator.generateTransferImage(data);
+      await e.reply(segment.image(image));
+    } catch (err) {
+      logger.error(`生成转账图片失败: ${err}`);
+      await e.reply(`💰 转账${actualTransfer > 0 ? '成功' : '失败'}！\n实际转账：${actualTransfer} 樱花币\n手续费：${actualFee} 樱花币`);
+    }
     return true;
   });
 
@@ -506,17 +567,9 @@ export default class Economy extends plugin {
 
     const buffKey = `sakura:fishing:buff:${item.id}:${groupId}:${userId}`;
     
-    if (item.id === "item_card_double_coin" || item.id === "item_card_1_5_coin") {
-      const otherBuffId = item.id === "item_card_double_coin" 
-        ? "item_card_1_5_coin"
-        : "item_card_double_coin";
-      const otherBuffKey = `sakura:fishing:buff:${otherBuffId}:${groupId}:${userId}`;
-      await redis.del(otherBuffKey);
-    } else {
-      const existingBuff = await redis.get(buffKey);
-      if (existingBuff) {
-        await redis.del(buffKey);
-      }
+    const existingBuff = await redis.get(buffKey);
+    if (existingBuff) {
+      await redis.del(buffKey);
     }
 
     inventoryManager.removeItem(item.id, 1);
@@ -530,6 +583,13 @@ export default class Economy extends plugin {
 
   reviveCoin = Command(/^#?领取复活币$/, async (e) => {
     if (!this.checkWhitelist(e)) return false;
+
+    const fishingKey = `sakura:economy:daily_fishing_count:${e.group_id}:${e.user_id}`;
+    const fishingCount = await redis.get(fishingKey);
+
+    if (!fishingCount || parseInt(fishingCount) < 5) {
+      return false;
+    }
 
     const key = `sakura:economy:daily_revive:${e.group_id}:${e.user_id}`;
     const hasReceived = await redis.get(key);

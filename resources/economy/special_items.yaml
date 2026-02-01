@@ -10,12 +10,6 @@ categories:
         duration: 3600
         activation_message: "✨ 双倍金币卡已激活！\n💰 接下来1小时内钓鱼可获得双倍收益！"
 
-      - id: item_card_1_5_coin
-        name: 1.5倍金币卡
-        type: buff
-        duration: 3600
-        activation_message: "✨ 1.5倍金币卡已激活！\n💰 接下来1小时内钓鱼可获得1.5倍收益！"
-
       - id: item_charm_lucky
         name: 好运护符
         type: buff
