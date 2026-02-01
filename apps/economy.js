@@ -592,7 +592,7 @@ export default class Economy extends plugin {
     const fishingKey = `sakura:economy:daily_fishing_count:${e.group_id}:${e.user_id}`;
     const fishingCount = await redis.get(fishingKey);
 
-    if (!fishingCount || parseInt(fishingCount) < 5) {
+    if (!fishingCount || parseInt(fishingCount) < 3) {
       return false;
     }
 
