@@ -179,10 +179,6 @@ async function selectRandomFish(baitQuality, fishingManager = null, userId = nul
   
   const availableFish = getFishByRarity(selectedRarity);
   
-  if (availableFish.length === 0) {
-    return selectRandomFish(baitQuality, fishingManager, fisherId, groupId);
-  }
-  
   const fish = availableFish[_.random(0, availableFish.length - 1)];
   
   const [minWeight, maxWeight] = fish.weight;
