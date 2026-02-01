@@ -425,6 +425,9 @@ export default class Economy extends plugin {
       economyManager.addCoins({ user_id: e.self_id, group_id: e.group_id }, actualFee);
     }
 
+    const senderCoins = economyManager.getCoins(e);
+    const receiverCoins = economyManager.getCoins({ user_id: targetId, group_id: e.group_id });
+
     let fromNickname = e.sender.card || e.sender.nickname || e.user_id;
     let toNickname = targetId;
     try {
@@ -435,15 +438,17 @@ export default class Economy extends plugin {
     } catch (err) {}
 
     const data = {
-      from: {
+      sender: {
         id: e.user_id,
         nickname: String(fromNickname),
-        avatarUrl: `https://q1.qlogo.cn/g?b=qq&nk=${e.user_id}&s=640`
+        avatarUrl: `https://q1.qlogo.cn/g?b=qq&nk=${e.user_id}&s=640`,
+        coins: senderCoins
       },
-      to: {
+      receiver: {
         id: targetId,
         nickname: String(toNickname),
-        avatarUrl: `https://q1.qlogo.cn/g?b=qq&nk=${targetId}&s=640`
+        avatarUrl: `https://q1.qlogo.cn/g?b=qq&nk=${targetId}&s=640`,
+        coins: receiverCoins
       },
       amount: actualTransfer,
       fee: actualFee,
