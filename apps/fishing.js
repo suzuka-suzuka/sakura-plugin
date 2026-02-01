@@ -512,9 +512,10 @@ export default class Fishing extends plugin {
         
         const successRate = 1 - (fishWeight - lineCapacity) / lineCapacity;
         const isSuccess = Math.random() < successRate;
+        
+        const inventoryManager = new InventoryManager(groupId, userId);
 
         if (!isSuccess) {
-          const inventoryManager = new InventoryManager(groupId, userId);
           inventoryManager.removeItem(lineConfig.id, 1);
           fishingManager.clearEquippedLine(userId);
           fishingManager.recordCatch(userId, 0, fish.id, false);
