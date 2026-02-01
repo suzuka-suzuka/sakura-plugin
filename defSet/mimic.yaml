@@ -10,6 +10,7 @@ Channel: "2.5"
 enableGroupLock: false
 enableLevelLimit: false
 splitMessage: true
+enableTools: true
 Groups: []
 GroupConfigs:
   - group: 1065791746
@@ -23,3 +24,4 @@ GroupConfigs:
     Channel: "2.5"
     enableGroupLock: false
     splitMessage: true
+    enableTools: true

@@ -424,6 +424,11 @@ const configSchema = {
       type: "boolean",
       help: "启用后,当伪人回复过长时会进行分割发送",
     },
+    "mimic.enableTools": {
+      label: "启用工具调用",
+      type: "boolean",
+      help: "启用后,伪人可以调用各种工具功能",
+    },
     "mimic.recalltime": {
       label: "撤回时间(秒)",
       type: "number",
@@ -472,6 +477,11 @@ const configSchema = {
           label: "启用消息分割",
           type: "boolean",
           help: "启用后,当伪人回复过长时会进行分割发送",
+        },
+        enableTools: {
+          label: "启用工具调用",
+          type: "boolean",
+          help: "启用后,伪人可以调用各种工具功能",
         },
         recalltime: {
           label: "撤回时间(秒)",

@@ -255,7 +255,7 @@ export class Mimic extends plugin {
         queryParts,
         selectedPresetPrompt,
         true,
-        true,
+        config.enableTools,
         currentFullHistory,
       )
 
@@ -312,7 +312,7 @@ export class Mimic extends plugin {
             e,
             "",
             selectedPresetPrompt,
-            true,
+            config.enableTools,
             true,
             currentFullHistory,
           )
