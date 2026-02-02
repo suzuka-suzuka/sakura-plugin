@@ -956,7 +956,7 @@ export default class Fishing extends plugin {
           segment.image(`file:///${fishImagePath}`),
           `📝 ${fish.description}\n`,
           `📊 稀有度：${rarity.color}${fish.rarity}\n`,
-          `📈 熟练度：${newMastery}\n`,
+          `📈 熟练度：${newMastery}`,
         ]);
       } else {
         await e.reply([
