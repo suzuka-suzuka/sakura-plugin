@@ -1,0 +1,54 @@
+# 钓鱼职业配置
+# 解锁条件: 钓鱼次数 >= 60 可选择1级职业
+# 进阶条件: 钓鱼次数 >= 120 可进阶到2级
+# 注意: 每人只能选择一个职业，选择后不可更换
+
+unlock_requirements:
+  level_1: 60    # 解锁1级职业所需钓鱼次数
+  level_2: 120   # 进阶2级职业所需钓鱼次数
+
+professions:
+  treasure_hunter:
+    name: "宝藏猎人"
+    icon: "💎"
+    description: "提升钓到宝藏的概率"
+    effect_type: "treasure_bonus"  # 效果类型
+    levels:
+      1:
+        title: "寻宝新手"
+        treasure_bonus: 10
+        description: "宝藏概率权重+10"
+      2:
+        title: "寻宝大师"
+        treasure_bonus: 20
+        description: "宝藏概率权重+20"
+
+  fishing_master:
+    name: "钓鱼大师"
+    icon: "🎣"
+    description: "鱼竿熟练度可为鱼线提供承重加成"
+    effect_type: "line_bonus"  # 效果类型
+    levels:
+      1:
+        title: "老练钓手"
+        mastery_multiplier: 0.5
+        description: "鱼线承重+0.5×熟练度"
+      2:
+        title: "垂钓宗师"
+        mastery_multiplier: 1.0
+        description: "鱼线承重+1.0×熟练度"
+
+  merchant:
+    name: "精明商人"
+    icon: "💰"
+    description: "增加钓鱼金币收益"
+    effect_type: "coin_bonus"  # 效果类型
+    levels:
+      1:
+        title: "小贩"
+        coin_bonus: 0.15
+        description: "金币收益+15%"
+      2:
+        title: "富商巨贾"
+        coin_bonus: 0.30
+        description: "金币收益+30%"

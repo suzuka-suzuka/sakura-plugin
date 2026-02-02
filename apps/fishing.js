@@ -60,7 +60,7 @@ function applyRodDamage(fishingManager, inventoryManager, userId, rodConfig, dam
   return { msg, isBroken };
 }
 
-function getRarityPoolByBaitQuality(quality, hasDebuff = false) {
+function getRarityPoolByBaitQuality(quality, hasDebuff = false, treasureBonus = 0) {
   const allRarities = ["垃圾", "普通", "精品", "稀有", "史诗", "传说", "宝藏", "噩梦"];
   
   let pool = [];
@@ -94,6 +94,13 @@ function getRarityPoolByBaitQuality(quality, hasDebuff = false) {
     default:
       pool = ["垃圾", "普通", "精品", "宝藏", "噩梦"];
       weights = [40, 45, 5, 5, 5];
+  }
+
+  if (treasureBonus > 0) {
+    const treasureIdx = pool.indexOf("宝藏");
+    if (treasureIdx !== -1) {
+      weights[treasureIdx] += treasureBonus;
+    }
   }
 
   if (hasDebuff) {
@@ -174,7 +181,12 @@ async function selectRandomFish(baitQuality, fishingManager = null, userId = nul
     }
   }
   
-  const { pool, weights } = getRarityPoolByBaitQuality(baitQuality, hasDebuff);
+  let treasureBonus = 0;
+  if (fishingManager && userId) {
+    treasureBonus = fishingManager.getTreasureBonus(userId);
+  }
+  
+  const { pool, weights } = getRarityPoolByBaitQuality(baitQuality, hasDebuff, treasureBonus);
   const selectedRarity = selectRarityByWeight(pool, weights);
   
   const availableFish = getFishByRarity(selectedRarity);
@@ -347,7 +359,8 @@ export default class Fishing extends plugin {
 
       const fish = currentState.fish;
       const fishWeight = fish.actualWeight;
-      const lineCapacity = lineConfig.capacity;
+      const lineBonus = fishingManager.getLineBonusFromMastery(userId, rodConfig.id);
+      const lineCapacity = lineConfig.capacity + lineBonus;
       
       currentState.phase = "weight_check";
       currentState.biteTime = Date.now();
@@ -483,7 +496,8 @@ export default class Fishing extends plugin {
 
       if (state.isOverweight) {
         const fishWeight = fish.actualWeight;
-        const lineCapacity = lineConfig.capacity;
+        const lineBonus = fishingManager.getLineBonusFromMastery(userId, rodConfig.id);
+        const lineCapacity = lineConfig.capacity + lineBonus;
         
         if (fishWeight > lineCapacity * 2) {
           const inventoryManager = new InventoryManager(groupId, userId);
@@ -960,7 +974,8 @@ export default class Fishing extends plugin {
     const price = await calculateFishPrice(fish, fishingManager);
     
     const buffMultiplier = await this.getFishSellBuffMultiplier(groupId, userId);
-    const finalPrice = Math.round(price * buffMultiplier);
+    const merchantMultiplier = fishingManager.getMerchantCoinMultiplier(userId);
+    const finalPrice = Math.round(price * buffMultiplier * merchantMultiplier);
     
     economyManager.addCoins(e, finalPrice);
     fishingManager.recordCatch(userId, finalPrice, fish.id, true);
@@ -980,6 +995,12 @@ export default class Fishing extends plugin {
       buffMsg = `✨ 金币加成：×${buffMultiplier}！\n`;
     }
     
+    let merchantMsg = "";
+    if (merchantMultiplier > 1) {
+      const bonusPercent = Math.round((merchantMultiplier - 1) * 100);
+      merchantMsg = `💰 商人加成：+${bonusPercent}%！\n`;
+    }
+    
     const resultMsg = [
       `🎉 钓到了【${fish.name}】！\n`,
       segment.image(`file:///${fishImagePath}`),
@@ -989,6 +1010,7 @@ export default class Fishing extends plugin {
       `📈 熟练度：${newMastery}\n`,
       priceBoostMsg,
       buffMsg,
+      merchantMsg,
       `💰 价值：${finalPrice} 樱花币`,
     ];
     await e.reply(resultMsg);    
@@ -1275,6 +1297,187 @@ export default class Fishing extends plugin {
       await e.reply(segment.image(image));
     } catch (err) {
       logger.error(`生成钓鱼排行榜图片失败: ${err}`);
+    }
+    return true;
+  });
+
+
+  viewProfession = Command(/^#?(钓鱼)?职业(列表|一览)?$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
+    const fishingManager = new FishingManager(e.group_id);
+    const userData = fishingManager.getUserData(e.user_id);
+    const professionInfo = fishingManager.getUserProfession(e.user_id);
+    const requirements = FishingManager.getUnlockRequirements();
+    const professions = FishingManager.getAllProfessions();
+    
+    const msgs = [];
+    
+    if (!professionInfo.profession) {
+      const canChoose = fishingManager.canChooseProfession(e.user_id);
+      const catchCount = userData.totalCatch || 0;
+      
+      if (canChoose) {
+        msgs.push([
+          `🎓 你还没有选择职业！\n`,
+          `📊 钓鱼次数: ${catchCount} (已满足解锁条件)\n\n`,
+          `📝 发送「#选择职业 职业名」来选择\n`,
+          `   例如: #选择职业 宝藏猎人`
+        ].join(''));
+      } else {
+        const remaining = requirements.level_1 - catchCount;
+        msgs.push([
+          `🎓 你还没有职业\n`,
+          `📊 钓鱼次数: ${catchCount}/${requirements.level_1}\n`,
+          `🔒 还需要钓${remaining}次鱼才能解锁职业选择！`
+        ].join(''));
+      }
+    } else {
+      const professionConfig = FishingManager.getProfessionConfig(professionInfo.profession);
+      const currentLevel = professionInfo.level;
+      const levelConfig = professionConfig.levels[currentLevel];
+      const canAdvance = fishingManager.canAdvanceProfession(e.user_id);
+      
+      let advanceInfo = "";
+      if (currentLevel < 2) {
+        if (canAdvance) {
+          const nextLevelConfig = professionConfig.levels[2];
+          advanceInfo = `\n\n🆙 可以进阶到「${nextLevelConfig.title}」！发送「#进阶职业」`;
+        } else {
+          const remaining = requirements.level_2 - userData.totalCatch;
+          advanceInfo = `\n\n📊 进阶需要: 钓鱼${requirements.level_2}次 (还差${remaining}次)`;
+        }
+      } else {
+        advanceInfo = `\n\n🏆 已达到最高等级！`;
+      }
+      
+      let bonusInfo = "";
+      switch (professionInfo.profession) {
+        case 'treasure_hunter':
+          const treasureBonus = fishingManager.getTreasureBonus(e.user_id);
+          bonusInfo = `\n💎 当前宝藏概率加成: +${treasureBonus}权重`;
+          break;
+        case 'fishing_master':
+          const equippedRod = fishingManager.getEquippedRod(e.user_id);
+          if (equippedRod) {
+            const lineBonus = fishingManager.getLineBonusFromMastery(e.user_id, equippedRod);
+            const mastery = fishingManager.getRodMastery(e.user_id, equippedRod);
+            bonusInfo = `\n🧵 当前鱼线承重加成: +${lineBonus} (熟练度${mastery})`;
+          } else {
+            bonusInfo = `\n🧵 装备鱼竿后可查看承重加成`;
+          }
+          break;
+        case 'merchant':
+          const coinMultiplier = fishingManager.getMerchantCoinMultiplier(e.user_id);
+          const bonusPercent = Math.round((coinMultiplier - 1) * 100);
+          bonusInfo = `\n💰 当前金币收益加成: +${bonusPercent}%`;
+          break;
+      }
+      
+      msgs.push([
+        `🎓 我的职业\n\n`,
+        `${professionConfig.icon}【${professionConfig.name}】\n`,
+        `🏅 称号: ${levelConfig.title}\n`,
+        `📝 ${professionConfig.description}\n`,
+        `⭐ 当前效果: ${levelConfig.description}`,
+        bonusInfo,
+        advanceInfo
+      ].join(''));
+    }
+    
+    for (const p of professions) {
+      const level1 = p.levels[1];
+      const level2 = p.levels[2];
+      const isCurrentProfession = professionInfo.profession === p.id;
+      const currentMark = isCurrentProfession ? ' ✅ 当前职业' : '';
+      
+      msgs.push([
+        `${p.icon}【${p.name}】${currentMark}\n`,
+        `📝 ${p.description}\n\n`,
+        `⭐ 1级「${level1.title}」\n`,
+        `   效果: ${level1.description}\n\n`,
+        `⭐ 2级「${level2.title}」\n`,
+        `   效果: ${level2.description}`
+      ].join(''));
+    }
+    
+    msgs.push([
+      `📌 解锁条件\n\n`,
+      `🔓 钓鱼${requirements.level_1}次 → 可选择1级职业\n`,
+      `🆙 钓鱼${requirements.level_2}次 → 可进阶到2级\n\n`,
+      `⚠️ 每人只能选择一个职业，选择后不可更换！`
+    ].join(''));
+    
+    let statusText = "未选择职业";
+    if (professionInfo.profession) {
+      const config = FishingManager.getProfessionConfig(professionInfo.profession);
+      const levelConfig = config.levels[professionInfo.level];
+      statusText = `${config.icon}${levelConfig.title}`;
+    }
+    
+    await e.sendForwardMsg(msgs, {
+      prompt: "🎣 钓鱼职业系统",
+      source: "钓鱼系统",
+      news: [
+        { text: `当前职业: ${statusText}` },
+        { text: `可选职业: ${professions.length}个` }
+      ]
+    });
+    
+    return true;
+  });
+
+  chooseProfession = Command(/^#?选择职业\s*(.+)$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
+    const professionName = e.msg.match(/^#?选择职业\s*(.+)$/)[1].trim();
+    const fishingManager = new FishingManager(e.group_id);
+    
+    const professions = FishingManager.getAllProfessions();
+    const targetProfession = professions.find(p => p.name === professionName);
+    
+    if (!targetProfession) {
+      const validNames = professions.map(p => p.name).join('、');
+      await e.reply(`❌ 找不到职业【${professionName}】\n可选职业: ${validNames}`, 10);
+      return true;
+    }
+    
+    const result = fishingManager.chooseProfession(e.user_id, targetProfession.id);
+    
+    if (result.success) {
+      const levelConfig = targetProfession.levels[1];
+      const requirements = FishingManager.getUnlockRequirements();
+      await e.reply([
+        `🎉 ${result.msg}\n\n`,
+        `${targetProfession.icon}【${targetProfession.name}】\n`,
+        `🏅 称号: ${levelConfig.title}\n`,
+        `📝 ${targetProfession.description}\n`,
+        `⭐ 效果: ${levelConfig.description}\n\n`,
+        `💡 钓鱼满${requirements.level_2}次后可以进阶！`
+      ]);
+    } else {
+      await e.reply(`❌ ${result.msg}`, 10);
+    }
+    return true;
+  });
+
+  advanceProfession = Command(/^#?进阶职业$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
+    const fishingManager = new FishingManager(e.group_id);
+    
+    const result = fishingManager.advanceProfession(e.user_id);
+    
+    if (result.success) {
+      const professionConfig = result.profession;
+      const levelConfig = professionConfig.levels[2];
+      await e.reply([
+        `🎉 ${result.msg}\n\n`,
+        `${professionConfig.icon}【${professionConfig.name}】\n`,
+        `🏅 称号: ${levelConfig.title}\n`,
+        `📝 ${professionConfig.description}\n`,
+        `⭐ 效果: ${levelConfig.description}\n\n`,
+        `🏆 已达到最高等级！`
+      ]);
+    } else {
+      await e.reply(`❌ ${result.msg}`, 10);
     }
     return true;
   });
