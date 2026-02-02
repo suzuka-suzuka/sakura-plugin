@@ -1378,7 +1378,6 @@ export default class Fishing extends plugin {
         `${professionConfig.icon}【${professionConfig.name}】\n`,
         `🏅 称号: ${levelConfig.title}\n`,
         `📝 ${professionConfig.description}\n`,
-        `⭐ 当前效果: ${levelConfig.description}`,
         bonusInfo,
         advanceInfo
       ].join(''));
