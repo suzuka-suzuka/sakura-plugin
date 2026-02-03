@@ -593,7 +593,9 @@ export default class Economy extends plugin {
     const fishingCount = await redis.get(fishingKey);
 
     if (!fishingCount || parseInt(fishingCount) < 3) {
-      return false;
+      const count = fishingCount ? parseInt(fishingCount) : 0;
+      await e.reply(`你今天钓了 ${count} 条鱼，还需再钓 ${3 - count} 条才能领取复活币~`, 10);
+      return true;
     }
 
     const key = `sakura:economy:daily_revive:${e.group_id}:${e.user_id}`;
