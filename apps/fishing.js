@@ -667,7 +667,7 @@ export default class Fishing extends plugin {
       if (/^拉$/.test(msg)) {
         state.fightingRounds++;
         
-        const pullPower = Math.max(8, Math.floor(updatedControl / 6));
+        const pullPower = Math.max(8, Math.floor(updatedControl / 7));
         const fishResist = Math.max(3, Math.floor(fishDifficulty / 20));
         
         const distanceChange = -(pullPower - fishResist + _.random(0, 3));
