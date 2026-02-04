@@ -93,35 +93,35 @@ categories:
 
       - id: bait_shrimp
         name: 鲜虾饵
-        price: 30
+        price: 25
         type: consumable
         quality: 2
         description: 鲜嫩多汁的虾肉，散发着诱人的气息。
 
       - id: bait_premium
         name: 秘制鱼饵
-        price: 80
+        price: 75
         type: consumable
         quality: 3
         description: 秘方调制的鱼饵，据说效果比普通鱼饵好得多。
 
       - id: bait_magic
         name: 魔法鱼饵
-        price: 175
+        price: 155
         type: consumable
         quality: 4
         description: 注入了魔法的鱼饵，散发着神秘的魔力光芒。
 
       - id: bait_divine
         name: 神之诱饵
-        price: 280
+        price: 255
         type: consumable
         quality: 5
         description: 传说中的神之诱饵，没有鱼能抗拒它的诱惑！
 
       - id: bait_treasure
         name: 寻宝鱼饵
-        price: 350
+        price: 300
         type: consumable
         quality: 6
         description: 特殊的寻宝鱼饵，据说使用它钓鱼时有机会钓到宝藏！
