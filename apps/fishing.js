@@ -69,19 +69,19 @@ function getRarityPoolByBaitQuality(quality, hasDebuff = false, treasureBonus = 
   switch (quality) {
     case 1:
       pool = ["垃圾", "普通", "精品", "宝藏", "噩梦"];
-      weights = [40, 45, 5, 5, 5];
+      weights = [39, 50, 1, 5, 5];
       break;
     case 2:
       pool = ["垃圾", "普通", "精品", "稀有", "宝藏", "噩梦"];
-      weights = [20, 20, 45, 5, 5, 5];
+      weights = [19, 20, 50, 1, 5, 5];
       break;
     case 3:
       pool = ["垃圾", "普通", "精品", "稀有", "史诗", "宝藏", "噩梦"];
-      weights = [10, 10, 19, 50, 1, 5, 5];
+      weights = [9, 10, 20, 50, 1, 5, 5];
       break;
     case 4:
       pool = [...allRarities];
-      weights = [5, 5, 10, 21, 47, 2, 5, 5];
+      weights = [4, 5, 10, 20, 50, 1, 5, 5];
       break;
     case 5:
       pool = [...allRarities];
@@ -93,7 +93,7 @@ function getRarityPoolByBaitQuality(quality, hasDebuff = false, treasureBonus = 
       break;
     default:
       pool = ["垃圾", "普通", "精品", "宝藏", "噩梦"];
-      weights = [40, 45, 5, 5, 5];
+      weights = [39, 50, 1, 5, 5];
   }
 
   if (treasureBonus > 0) {
