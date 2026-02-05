@@ -233,7 +233,7 @@ export class EditImage extends plugin {
 
         const config = {
           tools: [{ googleSearch: {} }],
-          responseModalities: ["IMAGE", "TEXT"],
+          responseModalities: ["IMAGE"],
           imageConfig: {
             imageSize: imageSize,
           },
@@ -293,20 +293,11 @@ export class EditImage extends plugin {
         throw result.error;
       }
 
-      const response = result.response;
       const imagePart = result.imagePart;
 
       if (imagePart) {
         const imageData = imagePart.inlineData.data;
         await e.reply(segment.image(`base64://${imageData}`));
-      } else {
-        const textPart = response.candidates?.[0]?.content?.parts?.find(
-          (part) => part.text
-        );
-        const textResponse = textPart
-          ? textPart.text
-          : "请求被拦截，请更换提示词或图片";
-        await e.reply(`${textResponse}`, 10, true);
       }
     } catch (error) {
       logger.error(`调用 Gemini API 失败:`, error);
