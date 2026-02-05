@@ -298,6 +298,8 @@ export class EditImage extends plugin {
       if (imagePart) {
         const imageData = imagePart.inlineData.data;
         await e.reply(segment.image(`base64://${imageData}`));
+      } else {
+        await e.reply("未能生成图片，可能被安全策略拦截。", 10, true);
       }
     } catch (error) {
       logger.error(`调用 Gemini API 失败:`, error);
