@@ -124,7 +124,7 @@ categories:
         price: 300
         type: consumable
         quality: 6
-        description: 特殊的寻宝鱼饵，据说使用它钓鱼时有机会钓到宝藏！
+        description: 特殊的寻宝鱼饵，据说使用它钓鱼宝藏宝藏会被吸引过来！
 
   torpedoes:
     name: "💣 鱼雷"
