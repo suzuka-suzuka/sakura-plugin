@@ -8,6 +8,7 @@ gemini:
   - name: vertex
     model: gemini-1.5-pro-preview-0409
     api: "请在这里填写你的 Vertex API Key"
+    baseURL: 'https://your-proxy.com/'
     vertex: true
 openai:
   - name: v3
