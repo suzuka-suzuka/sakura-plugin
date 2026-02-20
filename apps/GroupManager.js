@@ -1,10 +1,6 @@
 import { Command } from "../../../src/core/plugin.js";
 import { getImg } from "../lib/utils.js";
 
-const conversationStateNeverSpoken = {};
-const conversationStateInactive = {};
-const conversationStateLevel = {};
-
 export class GroupManager extends plugin {
   constructor() {
     super({
@@ -27,9 +23,8 @@ export class GroupManager extends plugin {
       if (bot.role === "member") {
         return false;
       }
-      if (conversationStateNeverSpoken[e.user_id]) {
-        delete conversationStateNeverSpoken[e.user_id];
-        this.finish("confirmCleanupNeverSpoken", true);
+      if (this.getContext("confirmCleanupNeverSpoken", !!e.group_id)) {
+        this.finish("confirmCleanupNeverSpoken", !!e.group_id);
       }
 
       const memberMap = await e.group.getMemberList(true);
@@ -90,8 +85,7 @@ export class GroupManager extends plugin {
         }
       );
 
-      conversationStateNeverSpoken[e.user_id] = { inactiveMembers };
-      this.setContext("confirmCleanupNeverSpoken", true, 30);
+      this.setContext("confirmCleanupNeverSpoken", !!e.group_id, 30, true, { inactiveMembers });
 
       await e.reply(
         `以上是所有从未发言的成员列表共${inactiveMembers.length}人。\n发送【取消】或【确认清理】来取消或确认清理这些成员。`
@@ -102,23 +96,21 @@ export class GroupManager extends plugin {
   async confirmCleanupNeverSpoken() {
     const e = this.e;
     const userInput = e.raw_message?.trim();
-    const state = conversationStateNeverSpoken[e.user_id];
+    const context = this.getContext("confirmCleanupNeverSpoken", !!e.group_id);
 
-    if (!state) return;
+    if (!context || !context.data) return;
 
     if (userInput === "取消") {
-      delete conversationStateNeverSpoken[e.user_id];
-      this.finish("confirmCleanupNeverSpoken", true);
+      this.finish("confirmCleanupNeverSpoken", !!e.group_id);
       await e.reply("操作已取消。", 10);
       return;
     }
 
     if (userInput !== "确认清理") return;
 
-    const { inactiveMembers } = state;
+    const { inactiveMembers } = context.data;
 
-    delete conversationStateNeverSpoken[e.user_id];
-    this.finish("confirmCleanupNeverSpoken", true);
+    this.finish("confirmCleanupNeverSpoken", !!e.group_id);
 
     await e.reply(
       `正在开始清理 ${inactiveMembers.length} 位从未发言的成员...`,
@@ -160,9 +152,8 @@ export class GroupManager extends plugin {
         return await e.reply("请输入有效的时间！", 10);
       }
 
-      if (conversationStateInactive[e.user_id]) {
-        delete conversationStateInactive[e.user_id];
-        this.finish("confirmCleanupInactive", true);
+      if (this.getContext("confirmCleanupInactive", !!e.group_id)) {
+        this.finish("confirmCleanupInactive", !!e.group_id);
       }
 
       const memberMap = await e.group.getMemberList(true);
@@ -235,8 +226,7 @@ export class GroupManager extends plugin {
         }
       );
 
-      conversationStateInactive[e.user_id] = { inactiveMembers };
-      this.setContext("confirmCleanupInactive", true, 30);
+      this.setContext("confirmCleanupInactive", !!e.group_id, 30, true, { inactiveMembers });
 
       await e.reply(
         `以上是超过 ${value}${unit} 未发言的成员列表共${inactiveMembers.length}人。\n发送【取消】或【确认清理】来取消或确认清理这些成员。`
@@ -247,23 +237,21 @@ export class GroupManager extends plugin {
   async confirmCleanupInactive() {
     const e = this.e;
     const userInput = e.raw_message?.trim();
-    const state = conversationStateInactive[e.user_id];
+    const context = this.getContext("confirmCleanupInactive", !!e.group_id);
 
-    if (!state) return;
+    if (!context || !context.data) return;
 
     if (userInput === "取消") {
-      delete conversationStateInactive[e.user_id];
-      this.finish("confirmCleanupInactive", true);
+      this.finish("confirmCleanupInactive", !!e.group_id);
       await e.reply("操作已取消。", 10);
       return;
     }
 
     if (userInput !== "确认清理") return;
 
-    const { inactiveMembers } = state;
+    const { inactiveMembers } = context.data;
 
-    delete conversationStateInactive[e.user_id];
-    this.finish("confirmCleanupInactive", true);
+    this.finish("confirmCleanupInactive", !!e.group_id);
 
     await e.reply(
       `正在开始清理 ${inactiveMembers.length} 位长时间未发言的成员...`,
@@ -297,9 +285,8 @@ export class GroupManager extends plugin {
         return await e.reply("请输入有效的等级！", 10);
       }
 
-      if (conversationStateLevel[e.user_id]) {
-        delete conversationStateLevel[e.user_id];
-        this.finish("confirmCleanupByLevel", true);
+      if (this.getContext("confirmCleanupByLevel", !!e.group_id)) {
+        this.finish("confirmCleanupByLevel", !!e.group_id);
       }
 
       const memberMap = await e.group.getMemberList(true);
@@ -362,8 +349,7 @@ export class GroupManager extends plugin {
         }
       );
 
-      conversationStateLevel[e.user_id] = { lowLevelMembers };
-      this.setContext("confirmCleanupByLevel", true, 30);
+      this.setContext("confirmCleanupByLevel", !!e.group_id, 30, true, { lowLevelMembers });
 
       await e.reply(
         `以上是群等级低于 ${level} 级的成员列表共${lowLevelMembers.length}人。\n发送【取消】或【确认清理】来取消或确认清理这些成员。`
@@ -374,23 +360,21 @@ export class GroupManager extends plugin {
   async confirmCleanupByLevel() {
     const e = this.e;
     const userInput = e.raw_message?.trim();
-    const state = conversationStateLevel[e.user_id];
+    const context = this.getContext("confirmCleanupByLevel", !!e.group_id);
 
-    if (!state) return;
+    if (!context || !context.data) return;
 
     if (userInput === "取消") {
-      delete conversationStateLevel[e.user_id];
-      this.finish("confirmCleanupByLevel", true);
+      this.finish("confirmCleanupByLevel", !!e.group_id);
       await e.reply("操作已取消。", 10);
       return;
     }
 
     if (userInput !== "确认清理") return;
 
-    const { lowLevelMembers } = state;
+    const { lowLevelMembers } = context.data;
 
-    delete conversationStateLevel[e.user_id];
-    this.finish("confirmCleanupByLevel", true);
+    this.finish("confirmCleanupByLevel", !!e.group_id);
 
     await e.reply(
       `正在开始清理 ${lowLevelMembers.length} 位低等级的成员...`,

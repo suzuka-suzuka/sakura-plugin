@@ -1,9 +1,10 @@
 import Setting from "../lib/setting.js";
 import { getAI } from "../lib/AIUtils/getAI.js";
-import { loadConversationHistory } from "../lib/AIUtils/ConversationHistory.js";
+import { loadConversationHistory, ConversationHistoryUtils } from "../lib/AIUtils/ConversationHistory.js";
 import { parseAtMessage } from "../lib/AIUtils/messaging.js";
+import fs from "fs";
+import path from "path";
 
-const LAST_INTERACTION_TIME_PREFIX = "AI_LastInteractionTime:";
 const INACTIVITY_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 
 export class ActiveChatScheduler extends plugin {
@@ -23,100 +24,112 @@ export class ActiveChatScheduler extends plugin {
     }
 
     try {
-      const keys = await redis.keys(`${LAST_INTERACTION_TIME_PREFIX}*`);
+      const historyDir = ConversationHistoryUtils.HISTORY_DIR;
+      if (!fs.existsSync(historyDir)) return;
+
+      const groupFolders = await fs.promises.readdir(historyDir);
       const now = Date.now();
 
-      for (const key of keys) {
-        let shouldDeleteKey = false;
+      for (const groupFolder of groupFolders) {
+        // 排除非群组文件夹（如 private）或非数字文件夹
+        if (groupFolder === "private" || isNaN(groupFolder)) continue;
 
-        try {
-          const lastInteractionTime = await redis.get(key);
-          if (!lastInteractionTime) continue;
+        const group_id = parseInt(groupFolder, 10);
 
-          if (
-            now - parseInt(lastInteractionTime, 10) >
-            INACTIVITY_THRESHOLD_MS
-          ) {
-            shouldDeleteKey = true;
+        if (
+          !activeChatConfig?.Groups ||
+          !activeChatConfig.Groups.includes(group_id)
+        ) {
+          continue;
+        }
 
-            const keyParts = key
-              .replace(LAST_INTERACTION_TIME_PREFIX, "")
-              .split(":");
-            if (keyParts.length !== 2) continue;
+        const groupPath = path.join(historyDir, groupFolder);
+        const userFiles = await fs.promises.readdir(groupPath);
 
-            const profilePrefix = keyParts[0];
-            const conversationKey = keyParts[1];
+        for (const userFile of userFiles) {
+          if (!userFile.endsWith(".json")) continue;
 
-            const conversationKeyParts = conversationKey.split("-");
-            if (conversationKeyParts.length !== 2) continue;
+          const user_id = parseInt(userFile.replace(".json", ""), 10);
+          const filePath = path.join(groupPath, userFile);
 
-            const group_id = parseInt(conversationKeyParts[0], 10);
-            const user_id = parseInt(conversationKeyParts[1], 10);
-
-            if (
-              !activeChatConfig?.Groups ||
-              !activeChatConfig.Groups.includes(group_id)
-            ) {
-              continue;
-            }
-
-            logger.info(
-              `用户 ${user_id} 在群 ${group_id} 已超过设定时间未互动，准备触发聊天`
-            );
-
-            const profile = config.profiles.find(
-              (p) => p.prefix === profilePrefix
-            );
-            if (!profile) {
-              logger.warn(`找不到与前缀 ${profilePrefix} 匹配的profile。`);
-              continue;
-            }
-
-            const group = bot.pickGroup?.(group_id);
-            if (!group) {
-              logger.warn(`主动聊天失败: 找不到群 ${group_id}。`);
-              continue;
-            }
-
-            let memberInfo;
-            try {
-              memberInfo = await bot.getGroupMemberInfo(group_id, user_id);
-            } catch {
-              logger.warn(
-                `主动聊天失败: 在群 ${group_id} 中找不到成员 ${user_id}。`
-              );
-              continue;
-            }
-
-            if (!memberInfo) {
-              logger.warn(
-                `主动聊天失败: 在群 ${group_id} 中找不到成员 ${user_id}。`
-              );
-              continue;
-            }
-
-            const mockE = {
-              group_id: group_id,
-              user_id: user_id,
-              self_id: bot.self_id,
-              bot: bot,
-              sender: memberInfo,
-            };
-
-            const history = await loadConversationHistory(mockE, profilePrefix);
-
-            await this.triggerProactiveChat(mockE, profile, history);
+          let userData;
+          try {
+            userData = await ConversationHistoryUtils.readUserFile(filePath);
+          } catch (err) {
+            logger.error(`读取用户 ${user_id} 历史文件失败: ${err}`);
+            continue;
           }
-        } finally {
-          if (shouldDeleteKey) {
-            try {
-              await redis.del(key);
-            } catch (err) {
-              logger.error(`删除互动时间戳 ${key} 失败: ${err}`);
+
+          if (!userData) continue;
+
+          let fileModified = false;
+
+          // 遍历该用户文件下的所有 profile 前缀
+          for (const [profilePrefix, data] of Object.entries(userData)) {
+            if (!data || !data.lastInteraction) continue;
+
+            const lastInteractionTime = data.lastInteraction;
+
+            if (now - lastInteractionTime > INACTIVITY_THRESHOLD_MS) {
+              // 准备触发主动聊天
+              logger.info(
+                `用户 ${user_id} 在群 ${group_id} (profile: ${profilePrefix}) 已超过设定时间未互动，准备触发聊天`
+              );
+
+              const profile = config.profiles.find(
+                (p) => p.prefix === profilePrefix
+              );
+
+              if (!profile) {
+                // 如果 profile 不存在了，清理掉这个 key 的时间戳
+                delete data.lastInteraction;
+                fileModified = true;
+                continue;
+              }
+
+              const group = bot.pickGroup?.(group_id);
+              if (!group) {
+                continue;
+              }
+
+              let memberInfo;
+              try {
+                memberInfo = await bot.getGroupMemberInfo(group_id, user_id);
+              } catch {
+                // 成员可能退群了
+              }
+
+              if (!memberInfo) {
+                // 找不到成员，也清理掉时间戳，避免死循环报错
+                delete data.lastInteraction;
+                fileModified = true;
+                continue;
+              }
+
+              const mockE = {
+                group_id: group_id,
+                user_id: user_id,
+                self_id: bot.self_id,
+                bot: bot,
+                sender: memberInfo,
+              };
+
+              const history = await loadConversationHistory(mockE, profilePrefix);
+              await this.triggerProactiveChat(mockE, profile, history);
+
+              // 触发后，删除 lastInteraction，防止重复触发
+              // 等用户回复后，ConversationHistory.js 会重新写入新的 lastInteraction
+              delete data.lastInteraction;
+              fileModified = true;
             }
+          }
+
+          if (fileModified) {
+            await ConversationHistoryUtils.writeUserFile(filePath, userData);
           }
         }
       }
+
     } catch (error) {
       logger.error(`主动聊天定时任务执行出错: ${error}`);
     }
@@ -168,3 +181,4 @@ export class ActiveChatScheduler extends plugin {
     }
   }
 }
+

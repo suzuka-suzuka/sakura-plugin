@@ -1,11 +1,7 @@
-import fs from "fs";
-import path from "path";
 import _ from "lodash";
 import { plugindata } from "../lib/path.js";
 import FavorabilityImageGenerator from "../lib/favorability/ImageGenerator.js";
 import FavorabilityManager from "../lib/favorability/FavorabilityManager.js";
-
-const dataPath = path.join(plugindata, "favorability");
 
 const lastSender = new Map();
 const penaltyTimers = new Map();
@@ -24,28 +20,10 @@ export class Favorability extends plugin {
   });
 
   applyConsecutiveMessagePenalty(groupId, userId) {
-    const data = FavorabilityManager.readData(groupId);
-    let hasChange = false;
-
-    if (data.favorability) {
-      for (const fromUser in data.favorability) {
-        if (data.favorability[fromUser][userId] !== undefined) {
-          data.favorability[fromUser][userId] -= 1;
-          hasChange = true;
-        }
-      }
-    }
-
-    if (hasChange) {
-      FavorabilityManager.saveData(groupId, data);
-    }
+    FavorabilityManager.decreaseFavorabilityForTarget(groupId, userId, 1);
   }
 
   accept = OnEvent("message.group", 35, async (e) => {
-    if (!fs.existsSync(dataPath)) {
-      fs.mkdirSync(dataPath, { recursive: true });
-    }
-
     if (/^#?好感度.*$/.test(e.msg)) {
       return false;
     }
@@ -94,7 +72,7 @@ export class Favorability extends plugin {
               shouldAddFavorability = true;
             }
           }
-        } catch (err) {}
+        } catch (err) { }
       }
     }
 
@@ -195,27 +173,17 @@ export class Favorability extends plugin {
   whoLikesMe = Command(/^#?(谁在意我|喜欢我的人)$/, async (e) => {
     const groupId = e.group_id.toString();
     const currentUser = e.user_id.toString();
-    const data = FavorabilityManager.readData(groupId);
 
-    const othersToMe = [];
-    for (const fromUser in data.favorability) {
-      if (data.favorability[fromUser][currentUser] !== undefined) {
-        othersToMe.push({
-          userId: fromUser,
-          favorability: data.favorability[fromUser][currentUser],
-        });
-      }
-    }
-    othersToMe.sort((a, b) => b.favorability - a.favorability);
+    // Get inbound favorability (others to me)
+    const othersToMe = FavorabilityManager.getInboundFavorability(groupId, currentUser);
 
     if (othersToMe.length === 0) {
       await e.reply("还没有人对你有好感哦~");
       return true;
     }
 
-    const top10 = othersToMe.slice(0, 10);
     const rankingData = [];
-    for (const item of top10) {
+    for (const item of othersToMe) {
       const userName = await this.getUserName(e, item.userId);
       rankingData.push({
         name: userName,
@@ -238,27 +206,17 @@ export class Favorability extends plugin {
   whoILike = Command(/^#?(我在意谁|我喜欢的人)$/, async (e) => {
     const groupId = e.group_id.toString();
     const currentUser = e.user_id.toString();
-    const data = FavorabilityManager.readData(groupId);
 
-    const myToOthers = [];
-    if (data.favorability[currentUser]) {
-      for (const targetUser in data.favorability[currentUser]) {
-        myToOthers.push({
-          userId: targetUser,
-          favorability: data.favorability[currentUser][targetUser],
-        });
-      }
-    }
-    myToOthers.sort((a, b) => b.favorability - a.favorability);
+    // Get outbound favorability (me to others)
+    const myToOthers = FavorabilityManager.getOutboundFavorability(groupId, currentUser);
 
     if (myToOthers.length === 0) {
       await e.reply("你还没有对任何人产生好感哦~");
       return true;
     }
 
-    const top10 = myToOthers.slice(0, 10);
     const rankingData = [];
-    for (const item of top10) {
+    for (const item of myToOthers) {
       const userName = await this.getUserName(e, item.userId);
       rankingData.push({
         name: userName,

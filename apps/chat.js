@@ -6,8 +6,8 @@ import {
 } from "../lib/AIUtils/ConversationHistory.js";
 import { executeToolCalls } from "../lib/AIUtils/tools/tools.js";
 import { parseAtMessage, getQuoteContent } from "../lib/AIUtils/messaging.js";
+import { checkForNaiTags } from "../lib/AIUtils/naiHandler.js";
 import { randomReact, getImg } from "../lib/utils.js";
-import EconomyManager from "../lib/economy/EconomyManager.js";
 
 export class AIChat extends plugin {
   constructor() {
@@ -66,8 +66,7 @@ export class AIChat extends plugin {
       return false;
     }
 
-    const economyManager = new EconomyManager(e);
-    if (!e.isMaster && !economyManager.pay(e, 15)) {
+    if (!Setting.payForCommand(e, "AI聊天")) {
       return false;
     }
 
@@ -94,35 +93,66 @@ export class AIChat extends plugin {
       query = `(${quoteContent.trim()}) ${query}`;
     }
 
+    // 使用内存 Map 替代 Redis 锁，降低依赖
+    if (!this.userLocks) {
+      this.userLocks = new Map();
+    }
+
     let lockKey = null;
     if (config.enableUserLock) {
       lockKey = e.group_id
-        ? `sakura:chat:lock:${e.group_id}:${e.user_id}`
-        : `sakura:chat:lock:private:${e.user_id}`;
+        ? `${e.group_id}:${e.user_id}`
+        : `private:${e.user_id}`;
 
-      if (await redis.get(lockKey)) {
-        logger.info(
-          `[Chat] 用户 ${e.user_id} 的上一条消息仍在处理中，本次触发已忽略。`
-        );
-        return false;
+      const now = Date.now();
+      if (this.userLocks.has(lockKey)) {
+        const lockTime = this.userLocks.get(lockKey);
+        // 锁超时检查 (120秒)，防止死锁
+        if (now - lockTime < 120 * 1000) {
+          logger.info(
+            `[Chat] 用户 ${e.user_id} 的上一条消息仍在处理中，本次触发已忽略。`
+          );
+          return false;
+        }
       }
-      await redis.set(lockKey, "1", "EX", 120);
+      this.userLocks.set(lockKey, now);
     }
 
     try {
       return await this.doChat(e, { ...matchedProfile, Prompt }, query);
     } finally {
       if (lockKey) {
-        await redis.del(lockKey);
+        this.userLocks.delete(lockKey);
       }
     }
   });
 
   async doChat(e, matchedProfile, query) {
-    const { Channel, Prompt, GroupContext, History, Tool } = matchedProfile;
+    let { Channel, Prompt, GroupContext, History, Tool, enableNaiPainting, naiPrompt } = matchedProfile;
 
     logger.info(`Chat触发`);
     await randomReact(e);
+
+    if (enableNaiPainting) {
+      Prompt += `
+    ---
+    **[Visual Snapshot Instruction]**
+    Generate a strictly visual description tag <draw>...</draw> at the end of your response.
+    
+    Since the character's appearance and image quality are handled by the system, you must ONLY focus on:
+    1. **Dynamic Action**: What is the character doing right now? (e.g., reaching out, running, sitting with legs crossed)
+    2. **Expression**: Detailed facial emotion. (e.g., tears in eyes, wide grin, blushing)
+    3. **Camera & Composition**: How is the scene shot? (e.g., close-up, dutch angle, looking at viewer, from below, cinematic lighting)
+    4. **Environment**: Immediate surroundings. (e.g., rain-soaked street, cozy bedroom, burning ruins)
+
+    **Format Constraint**: 
+    - Use NAI-optimized natural language (short, descriptive phrases).
+    - **DO NOT** describe the character's fixed features (hair color, eye color) unless they are altered by the situation (e.g., blood on face, wet hair).
+    
+    **Example**: 
+    <draw>leaning against the wall, arms crossed, skeptical expression, looking to the side, dimly lit alleyway, neon lights in background, cowboy shot</draw>
+    `;
+    }
 
     let finalResponseText = "";
     let currentFullHistory = [];
@@ -204,7 +234,8 @@ export class AIChat extends plugin {
           }
 
           if (textContent) {
-            const cleanedTextContent = textContent.replace(/\n+$/, "");
+            let cleanedTextContent = textContent.replace(/\n+$/, "");
+            cleanedTextContent = await checkForNaiTags(cleanedTextContent, e, naiPrompt);
             const parsedcleanedTextContent = parseAtMessage(cleanedTextContent);
             await e.reply(parsedcleanedTextContent, 0, true);
           }
@@ -241,6 +272,7 @@ export class AIChat extends plugin {
         await saveConversationHistory(e, historyToSave, prefix);
       }
 
+      finalResponseText = await checkForNaiTags(finalResponseText, e, naiPrompt);
       const msg = parseAtMessage(finalResponseText);
       await e.reply(msg);
     } catch (error) {

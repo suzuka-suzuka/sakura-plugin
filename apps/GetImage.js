@@ -1,7 +1,7 @@
 import { connect } from "puppeteer-real-browser";
 import { FlipImage } from "../lib/ImageUtils/ImageUtils.js";
 import _ from "lodash";
-import EconomyManager from "../lib/economy/EconomyManager.js";
+
 const IMAGE_SOURCES = {
   yande: {
     url: "https://yande.re/post.json?tags=loli+-rating:e+-nipples&limit=500",
@@ -28,10 +28,7 @@ export class GetImagePlugin extends plugin {
       k: "konachan",
     };
 
-    const economyManager = new EconomyManager(e);
-    if (!e.isMaster && !economyManager.pay(e, 5)) {
-      return false;
-    }
+    // 消耗检查已移至框架底层 (loader.js)
 
     let suffix = e.match?.[1];
     if (!suffix) {

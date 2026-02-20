@@ -1,4 +1,3 @@
-import EconomyManager from "../lib/economy/EconomyManager.js";
 import {
   textToVideo,
   imageToVideo,
@@ -15,14 +14,14 @@ export class SoraVideo extends plugin {
     });
   }
 
-  generateVideo = Command(/^([lps])?\s*#v(\+)?(.+)/, async (e) => {
+  generateVideo = Command(/^#?sv\s*([横竖方])?\s*(\+)?\s*(.+)/, async (e) => {
     try {
       if (isBusy()) {
         await e.reply("当前有视频生成任务正在进行中，请稍后再试...", 10);
         return true;
       }
 
-      const match = e.msg.match(/^([lps])?\s*#v(\+)?(.+)/s);
+      const match = e.msg.match(/^#?sv\s*([横竖方])?\s*(\+)?\s*(.+)/s);
       if (!match) {
         return false;
       }
@@ -33,17 +32,13 @@ export class SoraVideo extends plugin {
       const nFrames = isLongVideo ? 450 : 300;
 
       let orientation = "portrait";
-      if (orientationPrefix === "l") {
+      if (orientationPrefix === "横") {
         orientation = "landscape";
-      } else if (orientationPrefix === "s") {
+      } else if (orientationPrefix === "方") {
         orientation = "square";
       }
 
       if (!prompt) {
-        return false;
-      }
-      const economyManager = new EconomyManager(e);
-      if (!e.isMaster && !economyManager.pay(e, 20)) {
         return false;
       }
       const imgs = await getImg(e, true);

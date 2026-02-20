@@ -1,6 +1,5 @@
 import setting from "../lib/setting.js";
 import axios from "axios";
-import EconomyManager from "../lib/economy/EconomyManager.js";
 const API_URL = "https://mikusfan-vits-uma-genshin-honkai.hf.space/api/predict";
 let speakersCache = [];
 
@@ -33,10 +32,6 @@ export class VitsVoice extends plugin {
     }
 
     if (!text) return false;
-    const economyManager = new EconomyManager(e);
-    if (!e.isMaster && !economyManager.pay(e, 5)) {
-      return false;
-    }
     await e.react(124);
     let lang = "中文";
     if (/[\u3040-\u309F\u30A0-\u30FF]/.test(text)) {

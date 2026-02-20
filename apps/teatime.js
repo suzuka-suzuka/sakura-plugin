@@ -7,6 +7,7 @@ export class teatime extends plugin {
     super({
       name: "teatime",
       priority: 1135,
+      configWatch: "teatime",  // 监听 teatime 配置变更，自动重载插件
     })
   }
 

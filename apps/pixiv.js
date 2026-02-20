@@ -2,7 +2,6 @@ import Setting from "../lib/setting.js"
 import PixivHistory from "../lib/pixiv/history.js"
 import { requestApi } from "../lib/pixiv/api.js"
 import { FlipImage } from "../lib/ImageUtils/ImageUtils.js"
-import EconomyManager from "../lib/economy/EconomyManager.js";
 export class pixivSearch extends plugin {
   constructor() {
     super({
@@ -23,10 +22,6 @@ export class pixivSearch extends plugin {
     const match = e.msg.match(/^#?pid\s*(\d+)(?:\s*[pP]\s*(\d+))?/)
     if (!match) {
       return false
-    }
-    const economyManager = new EconomyManager(e);
-    if (!e.isMaster && !economyManager.pay(e, 5)) {
-      return false;
     }
     const pid = match[1]
     const pageNum = parseInt(match[2]) || 1
@@ -86,10 +81,6 @@ export class pixivSearch extends plugin {
     if (isR18Search && !this.r18Config.Groups.includes(e.group_id)) {
       return e.reply("根据插件设置，本群不可使用r18功能。", 10, false)
     }
-    const economyManager = new EconomyManager(e);
-    if (!e.isMaster && !economyManager.pay(e, 5)) {
-      return false;
-    }
     if (!tag) {
       const defaultTags = config.defaultTags
       if (Array.isArray(defaultTags) && defaultTags.length > 0) {
@@ -103,7 +94,7 @@ export class pixivSearch extends plugin {
     const minBookmarks = 500
     tag += ` 500users入り`
 
-await e.react(124) 
+    await e.react(124)
 
     try {
       let illust = null
@@ -280,7 +271,7 @@ await e.react(124)
     const sendResult = await e.reply(initialMsg, 0, true)
     if (sendResult?.message_id) {
       if (isR18) {
-        e.recall(sendResult.message_id,10)
+        e.recall(sendResult.message_id, 10)
       }
       return true
     }
@@ -300,7 +291,7 @@ await e.react(124)
       const retrySendResult = await e.reply(retryMsg, 0, true)
       if (retrySendResult?.message_id) {
         if (isR18) {
-          e.recall(retrySendResult.message_id,10)
+          e.recall(retrySendResult.message_id, 10)
         }
         return true
       }
@@ -315,7 +306,7 @@ await e.react(124)
     ]
     const finalSendResult = await e.reply(linkMsg, 0, true)
     if (finalSendResult?.message_id) {
-      e.recall(finalSendResult.message_id,10)
+      e.recall(finalSendResult.message_id, 10)
     }
 
     return true

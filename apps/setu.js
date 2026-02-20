@@ -1,7 +1,7 @@
 import { FlipImage } from "../lib/ImageUtils/ImageUtils.js";
 import setting from "../lib/setting.js";
 const DEFAULT_PROXY = "pixiv.manbomanbo.asia";
-import EconomyManager from "../lib/economy/EconomyManager.js";
+
 export class setuPlugin extends plugin {
   constructor() {
     super({
@@ -27,10 +27,6 @@ export class setuPlugin extends plugin {
     if (isR18 && !this.r18Config.Groups.includes(e.group_id)) {
       return e.reply("本群未开启r18功能哦~", 10, false);
     }
-    const economyManager = new EconomyManager(e);
-    if (!e.isMaster && !economyManager.pay(e, 5)) {
-      return false;
-    }
     await e.react(124);
     try {
       const imageInfo = await this.fetchLolicon(tag, isR18);
@@ -43,9 +39,8 @@ export class setuPlugin extends plugin {
         );
       }
 
-      const messageText = `${imageInfo.id ? "pid:" + imageInfo.id : ""}${
-        imageInfo.tags?.length ? "\n标签: " + imageInfo.tags.join(", ") : ""
-      }`;
+      const messageText = `${imageInfo.id ? "pid:" + imageInfo.id : ""}${imageInfo.tags?.length ? "\n标签: " + imageInfo.tags.join(", ") : ""
+        }`;
 
       await this.sendImageWithRetry(e, imageInfo.url, messageText, isR18);
     } catch (err) {

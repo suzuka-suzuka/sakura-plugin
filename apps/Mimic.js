@@ -9,7 +9,6 @@ import {
   getQuoteContent,
 } from "../lib/AIUtils/messaging.js";
 import Setting from "../lib/setting.js";
-import EconomyManager from "../lib/economy/EconomyManager.js";
 import { randomReact } from "../lib/utils.js";
 
 export class Mimic extends plugin {
@@ -19,6 +18,7 @@ export class Mimic extends plugin {
       event: "message.group",
       priority: Infinity,
     });
+    this.activeLocks = new Set();
   }
 
   get appconfig() {
@@ -41,34 +41,29 @@ export class Mimic extends plugin {
       return config;
     }
     const mergedConfig = { ...config, ...groupConfig };
-    if (
-      groupConfig.triggerWords &&
-      typeof groupConfig.triggerWords === "string"
-    ) {
-      mergedConfig.triggerWords = groupConfig.triggerWords
-        .split("\n")
-        .map((w) => w.trim())
-        .filter((w) => w);
+    if (groupConfig.triggerWords && Array.isArray(groupConfig.triggerWords)) {
+      mergedConfig.triggerWords = groupConfig.triggerWords;
     }
     return mergedConfig;
   }
 
   Mimic = OnEvent("message.group", async (e) => {
     const config = this.getGroupConfig(e.group_id);
+    const groupIdStr = String(e.group_id);
+
     if (config.enableGroupLock && e.group_id) {
-      const lockKey = `sakura:mimic:lock:${e.group_id}`;
-      if (await redis.get(lockKey)) {
+      if (this.activeLocks.has(groupIdStr)) {
         return false;
       }
-      await redis.set(lockKey, "1", "EX", 120);
+      this.activeLocks.add(groupIdStr);
+      setTimeout(() => this.activeLocks.delete(groupIdStr), 120 * 1000);
     }
 
     try {
       return await this.doMimic(e);
     } finally {
       if (config.enableGroupLock && e.group_id) {
-        const lockKey = `sakura:mimic:lock:${e.group_id}`;
-        await redis.del(lockKey);
+        this.activeLocks.delete(groupIdStr);
       }
     }
   });
@@ -125,9 +120,7 @@ export class Mimic extends plugin {
       e.group_id &&
       (hasKeyword || (config.enableAtReply && isAt))
     ) {
-      const economyManager = new EconomyManager(e);
-      const cost = 10;
-      if (!economyManager.pay(e, cost)) {
+      if (!Setting.payForCommand(e, "伪人")) {
         return false;
       }
     }

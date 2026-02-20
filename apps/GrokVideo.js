@@ -22,9 +22,6 @@ export class GrokVideo extends plugin {
       return false;
     }
     const economyManager = new EconomyManager(e);
-    if (!e.isMaster && !economyManager.pay(e, 20)) {
-      return false;
-    }
     const channelsConfig = Setting.getConfig("Channels");
     const grokList = channelsConfig?.grok || [];
     const grokChannel = grokList[Math.floor(Math.random() * grokList.length)];

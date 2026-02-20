@@ -116,7 +116,7 @@ export class KeywordReply extends plugin {
         const imagePath = path.join(this.getGroupImageDir(groupId), seg.data);
         try {
           await fsp.unlink(imagePath);
-        } catch (err) {}
+        } catch (err) { }
       }
     }
   }
@@ -220,9 +220,6 @@ export class KeywordReply extends plugin {
     }
 
     const economyManager = new EconomyManager(e);
-    if (!e.isMaster && !economyManager.pay(e, 50)) {
-      return false;
-    }
 
     const groupData = await this.loadGroupData(e.group_id);
 
@@ -309,9 +306,6 @@ export class KeywordReply extends plugin {
     }
 
     const economyManager = new EconomyManager(e);
-    if (!e.isMaster && !economyManager.pay(e, 50)) {
-      return false;
-    }
 
     await this.deleteAllRepliesImages(groupData[keywordKey], e.group_id);
 

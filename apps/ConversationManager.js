@@ -12,6 +12,7 @@ import {
   clearAllPrefixesForUser,
   clearAllConversationHistories,
   saveConversationHistory,
+  cleanOldConversations,
 } from "../lib/AIUtils/ConversationHistory.js";
 export class Conversationmanagement extends plugin {
   constructor() {
@@ -21,6 +22,10 @@ export class Conversationmanagement extends plugin {
       priority: 1135,
     });
   }
+
+  CleanOldConversationsTask = Cron("0 0 4 * * *", async () => {
+    await cleanOldConversations();
+  });
 
   get appconfig() {
     return Setting.getConfig("AI");
@@ -52,13 +57,13 @@ export class Conversationmanagement extends plugin {
     await e.reply(`您与「${profileName}」的对话历史已清空！喵~`, 10);
     return true;
   });
-  RollbackSingle = Command(/^#?(?:撤销|回滚)对话\s*(.+)/, async (e) => {
+  RollbackSingle = Command(/^#?(?:撤销|回滚|撤回)对话\s*(.+)/, async (e) => {
     let input = e.match[1].trim();
-    
+
     let rounds = 1;
     let prefix = input;
-    
-    const match = input.match(/^(.+?)\s+(\d+)$/);
+
+    const match = input.match(/^(.+?)\s+(-?\d+)$/);
     if (match) {
       prefix = match[1];
       rounds = parseInt(match[2], 10);
@@ -69,40 +74,54 @@ export class Conversationmanagement extends plugin {
     const config = this.appconfig;
     if (!config || !config.profiles.some((p) => p.prefix === prefix)) {
       if (config.profiles.some((p) => p.prefix === input)) {
-         prefix = input;
-         rounds = 1;
+        prefix = input;
+        rounds = 1;
       } else {
-         await e.reply(`未找到前缀为「${prefix}」的设定，请检查输入。`, 10);
-         return true;
+        await e.reply(`未找到前缀为「${prefix}」的设定，请检查输入。`, 10);
+        return true;
       }
     }
 
     const profileName = this.getProfileName(prefix);
     const history = await loadConversationHistory(e, prefix);
-    
+
     if (history.length === 0) {
       await e.reply(`目前没有与「${profileName}」的对话历史记录。`, 10);
       return true;
     }
 
+    let deleteFromFront = false;
+    if (rounds < 0) {
+      deleteFromFront = true;
+      rounds = Math.abs(rounds);
+    }
+
     const itemsToRemove = rounds * 2;
-    
-    if (itemsToRemove <= 0) {
-        await e.reply("撤销轮数必须大于 0 喵~", 10);
-        return true;
+
+    if (itemsToRemove === 0) {
+      await e.reply("操作轮数必须大于 0 喵~", 10);
+      return true;
     }
 
     if (itemsToRemove >= history.length) {
-        await clearConversationHistory(e, prefix);
-        await e.reply(`已撤销所有与「${profileName}」的对话历史（共 ${Math.ceil(history.length/2)} 轮）。`, 10);
-        return true;
+      await clearConversationHistory(e, prefix);
+      await e.reply(`已撤销所有与「${profileName}」的对话历史（共 ${Math.ceil(history.length / 2)} 轮）。`, 10);
+      return true;
     }
-    
-    history.splice(-itemsToRemove);
-    
+
+    if (deleteFromFront) {
+      history.splice(0, itemsToRemove);
+    } else {
+      history.splice(-itemsToRemove);
+    }
+
     await saveConversationHistory(e, history, prefix);
-    
-    await e.reply(`已撤销与「${profileName}」的最后 ${rounds} 轮对话。当前剩余 ${Math.ceil(history.length/2)} 轮。`, 10);
+
+    if (deleteFromFront) {
+      await e.reply(`已删除与「${profileName}」的前 ${rounds} 轮对话。当前剩余 ${Math.ceil(history.length / 2)} 轮。`, 10);
+    } else {
+      await e.reply(`已撤销与「${profileName}」的最后 ${rounds} 轮对话。当前剩余 ${Math.ceil(history.length / 2)} 轮。`, 10);
+    }
     return true;
   });
   ListSingle = Command(/^#?列出对话\s*(.+)/, async (e) => {
@@ -137,7 +156,7 @@ export class Conversationmanagement extends plugin {
           content: item.parts[0].text
         }
       }];
-      
+
       if (item.role === "user") {
         return {
           user_id: e.user_id,
@@ -204,7 +223,7 @@ export class Conversationmanagement extends plugin {
           const fontFiles = fs.readdirSync(signFontPath).filter(f => f.endsWith(".ttf") || f.endsWith(".otf"));
           fontFiles.forEach(f => fontPaths.push(path.join(signFontPath, f)));
         }
-      } catch {}
+      } catch { }
 
       for (const fontPath of fontPaths) {
         try {

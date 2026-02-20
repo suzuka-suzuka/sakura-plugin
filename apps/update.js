@@ -53,11 +53,7 @@ export class Update extends plugin {
       120
     );
 
-    if (process.send) {
-      process.send("restart");
-    } else {
-      process.exit(0);
-    }
+    process.exit(0);
   }
 
   async runUpdate(isForce, e) {
@@ -177,8 +173,8 @@ export class Update extends plugin {
     if (errMsg.includes("be overwritten by merge")) {
       await e.reply(
         msg +
-          `存在冲突：\n${errMsg}\n` +
-          "请解决冲突后再更新，或者执行#强制更新，放弃本地修改"
+        `存在冲突：\n${errMsg}\n` +
+        "请解决冲突后再更新，或者执行#强制更新，放弃本地修改"
       );
       return;
     }

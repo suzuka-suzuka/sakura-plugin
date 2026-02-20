@@ -1,7 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { getImg } from "../lib/utils.js";
 import Setting from "../lib/setting.js";
-import EconomyManager from "../lib/economy/EconomyManager.js";
 
 export class EditImage extends plugin {
   constructor() {
@@ -175,8 +174,8 @@ export class EditImage extends plugin {
   }
 
   async _processAndCallAPI(e, promptText, imgBase64List, options = {}) {
-    const economyManager = new EconomyManager(e);
-    if (!e.isMaster && !economyManager.pay(e, 20)) {
+    const canProceed = Setting.payForCommand(e, "AI图片编辑");
+    if (!canProceed) {
       return false;
     }
 
@@ -282,8 +281,7 @@ export class EditImage extends plugin {
         imageConfig.vertexApi
       ) {
         logger.warn(
-          `Gemini 渠道失败(${
-            result.error?.message || "被拦截"
+          `Gemini 渠道失败(${result.error?.message || "被拦截"
           }), 尝试切换到 Vertex 渠道重试...`
         );
         result = await tryCall(imageConfig.vertexApi, true);

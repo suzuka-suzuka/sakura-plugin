@@ -46,13 +46,10 @@ function detail(code) {
   if (!d) return "未找到该表情信息";
 
   let keywords = d.keywords.join("、");
-  let ins = `【代码】${d.key}\n【名称】${keywords}\n【最大图片数量】${
-    d.params.max_images
-  }\n【最小图片数量】${d.params.min_images}\n【最大文本数量】${
-    d.params.max_texts
-  }\n【最小文本数量】${
-    d.params.min_texts
-  }\n【默认文本】${d.params.default_texts.join("/")}\n`;
+  let ins = `【代码】${d.key}\n【名称】${keywords}\n【最大图片数量】${d.params.max_images
+    }\n【最小图片数量】${d.params.min_images}\n【最大文本数量】${d.params.max_texts
+    }\n【最小文本数量】${d.params.min_texts
+    }\n【默认文本】${d.params.default_texts.join("/")}\n`;
 
   if (d.params.args_type?.parser_options?.length > 0) {
     let supportArgs = generateSupportArgsText(d);
@@ -113,9 +110,8 @@ function generateSupportArgsText(info) {
             const valuesText = valueNames.join("、");
             const exampleName =
               chineseNames.length > 0 ? chineseNames[0] : valueNames[0];
-            return `${
-              description || prop
-            }，可选值：${valuesText}。如#${exampleName}`;
+            return `${description || prop
+              }，可选值：${valuesText}。如#${exampleName}`;
           }
         } else if (propInfo.type === "integer" || propInfo.type === "number") {
           let rangeText = "";
@@ -131,9 +127,8 @@ function generateSupportArgsText(info) {
             rangeText = propInfo.description;
           }
 
-          return `${description || prop}${
-            rangeText ? "，" + rangeText : ""
-          }。如#1`;
+          return `${description || prop}${rangeText ? "，" + rangeText : ""
+            }。如#1`;
         }
 
         break;
@@ -419,9 +414,6 @@ export class memesPlugin extends plugin {
     }
 
     const economyManager = new EconomyManager(e);
-    if (!e.isMaster && !economyManager.pay(e, 5)) {
-      return false;
-    }
     await e.react(124);
     let [text, args = ""] = text1.split("#");
     const info = infos[targetCode];

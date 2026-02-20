@@ -20,9 +20,6 @@ export class GrokImage extends plugin {
       return false;
     }
     const economyManager = new EconomyManager(e);
-    if (!e.isMaster && !economyManager.pay(e, 10)) {
-      return false;
-    }
     const imgBase64List = await getImg(e, true, true);
 
     const channelsConfig = Setting.getConfig("Channels");

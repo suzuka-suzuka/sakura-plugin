@@ -5,10 +5,12 @@
   "author": "suzuka",
   "dependencies": {
     "@google/genai": "^1.30.0",
+    "@mapbox/node-pre-gyp": "^2.0.3",
     "@napi-rs/canvas": "^0.1.82",
     "@pdf-lib/fontkit": "^1.1.1",
+    "adm-zip": "^0.5.16",
     "axios": "^1.13.2",
-    "express": "^5.1.0",
+    "better-sqlite3": "^12.6.2",
     "marked": "^17.0.1",
     "muhammara": "^6.0.2",
     "openai": "^6.9.1",
