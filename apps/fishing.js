@@ -1314,7 +1314,7 @@ export default class Fishing extends plugin {
 
     if (!professionInfo.profession) {
       const canChoose = fishingManager.canChooseProfession(e.user_id);
-      const catchCount = userData.totalCatch || 0;
+      const catchCount = userData.total_catch || 0;
 
       if (canChoose) {
         msgs.push([
@@ -1343,7 +1343,7 @@ export default class Fishing extends plugin {
           const nextLevelConfig = professionConfig.levels[2];
           advanceInfo = `\n\n🆙 可以进阶到「${nextLevelConfig.title}」！发送「#进阶职业」`;
         } else {
-          const remaining = requirements.level_2 - userData.totalCatch;
+          const remaining = requirements.level_2 - userData.total_catch;
           advanceInfo = `\n\n📊 进阶需要: 钓鱼${requirements.level_2}次 (还差${remaining}次)`;
         }
       } else {
