@@ -13,13 +13,13 @@ async function processQueue() {
         const { e, prompt, width, height, characters, imageBase64 } = task
 
         try {
-            await e.reply(`开始绘制，当前队列剩余: ${queue.length}`, true)
+            await e.reply(`开始绘制，当前队列剩余: ${queue.length}`, 10)
             const imageBuffer = await generateImage(prompt, null, null, { width, height }, imageBase64, characters)
             const base64Image = imageBuffer.toString('base64')
-            await e.reply(segment.image(`base64://${base64Image}`), true)
+            await e.reply(segment.image(`base64://${base64Image}`))
         } catch (error) {
             logger.error(`[NaiPainting] Error: ${error.message}`)
-            await e.reply(`绘图失败: ${error.message}`, true)
+            await e.reply(`绘图失败: ${error.message}`, 10)
         }
     }
 
@@ -107,7 +107,7 @@ export class NaiPainting extends plugin {
         queue.push(task)
 
         if (isProcessing) {
-            await e.reply(`已加入绘图队列，前方排队: ${queue.length} 人`, true)
+            await e.reply(`已加入绘图队列，前方排队: ${queue.length} 人`, 10)
         }
 
         processQueue()
