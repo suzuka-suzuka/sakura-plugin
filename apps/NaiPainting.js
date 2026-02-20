@@ -35,7 +35,7 @@ export class NaiPainting extends plugin {
         })
     }
 
-    naiParams = Command(/^绘图\s*(.*)$/, async (e) => {
+    naiParams = Command(/^绘图\s*(.*)$/, "white", async (e) => {
         let rawMsg = e.msg.replace(/^绘图\s*/, '').trim()
 
         const characters = []
