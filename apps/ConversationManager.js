@@ -148,44 +148,8 @@ export class Conversationmanagement extends plugin {
     const info = await e.getInfo(e.self_id);
     const botName = info?.card || info?.nickname || e.self_id;
     const userName = e.sender.card || e.sender.nickname || e.user_id;
+    await e.react(124);
 
-    const buildNode = (item) => {
-      const innerContent = [{
-        type: 'markdown',
-        data: {
-          content: item.parts[0].text
-        }
-      }];
-
-      if (item.role === "user") {
-        return {
-          user_id: e.user_id,
-          nickname: userName,
-          content: [{
-            type: 'node',
-            data: {
-              user_id: e.user_id,
-              nickname: userName,
-              content: innerContent
-            }
-          }],
-        };
-      } else if (item.role === "model") {
-        return {
-          user_id: e.self_id,
-          nickname: botName,
-          content: [{
-            type: 'node',
-            data: {
-              user_id: e.self_id,
-              nickname: botName,
-              content: innerContent
-            }
-          }],
-        };
-      }
-      return null;
-    };
 
     const buildSimpleNode = (item) => {
       if (item.role === "user") {
