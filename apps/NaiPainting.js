@@ -97,7 +97,7 @@ export class NaiPainting extends plugin {
 
         try {
             const onStart = async (remaining) => {
-                await e.reply(`开始绘制，当前队列剩余: ${remaining}`, 10);
+                await e.reply(`开始绘制，当前队列剩余: ${remaining}`, 10, true);
             };
             const imageBuffer = await generateImageWithCallback(
                 prompt,
@@ -112,7 +112,7 @@ export class NaiPainting extends plugin {
             await e.reply(segment.image(`base64://${base64Image}`));
         } catch (error) {
             logger.error(`[NaiPainting] Error: ${error.message}`);
-            await e.reply(`绘图失败: ${error.message}`, 10);
+            await e.reply(`绘图失败: ${error.message}`, 10, true);
         }
 
         return true;
