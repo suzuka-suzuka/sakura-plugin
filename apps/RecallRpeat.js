@@ -5,7 +5,7 @@ const msgStore = new Map()
 export class handleRecall extends plugin {
   constructor() {
     super({
-      name: "撤回复读",
+      name: "防撤回",
       event: "",
       priority: 35,
     })
@@ -49,7 +49,7 @@ export class handleRecall extends plugin {
         try {
           const member = await e.group.getMemberInfo(e.user_id)
           nickname = member?.card || member?.nickname || e.user_id
-        } catch (err) {}
+        } catch (err) { }
 
         const forwardMsg = [
           {
@@ -58,7 +58,7 @@ export class handleRecall extends plugin {
             content: recalledMsg.message,
           },
         ]
-        await e.sendForwardMsg(forwardMsg)
+        await e.sendForwardMsg(forwardMsg, { source: "防撤回", news: [{ text: `检测到${nickname}撤回了一条消息` }] })
       }
       msgStore.delete(e.message_id)
     }
