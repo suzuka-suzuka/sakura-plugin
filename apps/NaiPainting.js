@@ -24,11 +24,17 @@ export class NaiPainting extends plugin {
                 let center = { x: 0.5, y: 0.5 };
 
                 const positionMap = {
+                    左上: { x: 0.3, y: 0.3 },
+                    右上: { x: 0.7, y: 0.3 },
+                    左下: { x: 0.3, y: 0.7 },
+                    右下: { x: 0.7, y: 0.7 },
+                    中间: { x: 0.5, y: 0.5 },
+                    中心: { x: 0.5, y: 0.5 },
                     左: { x: 0.3, y: 0.5 },
-                    中: { x: 0.5, y: 0.5 },
                     右: { x: 0.7, y: 0.5 },
                     上: { x: 0.5, y: 0.3 },
                     下: { x: 0.5, y: 0.7 },
+                    中: { x: 0.5, y: 0.5 },
                 };
 
                 for (const [key, pos] of Object.entries(positionMap)) {
