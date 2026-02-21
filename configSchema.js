@@ -236,8 +236,8 @@ export const R18Schema = z.object({
 }).describe('R18 管理');
 
 export const RecallSchema = z.object({
-    Groups: z.array(z.number()).default([]).describe('撤回复读|#groupSelect|在这些群中监听消息撤回'),
-}).describe('撤回复读');
+    Groups: z.array(z.number()).default([]).describe('防撤回启用的群|#groupSelect|在这些群中监听消息撤回'),
+}).describe('防撤回');
 
 export const RepeatSchema = z.object({
     enable: z.boolean().default(true).describe('启用复读|是否启用自动复读功能'),
