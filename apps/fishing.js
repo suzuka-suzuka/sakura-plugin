@@ -1111,14 +1111,7 @@ export default class Fishing extends plugin {
     if (equippedRodId) {
       const rodConfig = fishingManager.getRodConfig(equippedRodId);
       if (rodConfig) {
-        const durabilityInfo = fishingManager.getRodDurabilityInfo(userId, equippedRodId);
-        const durabilityPercent = durabilityInfo.maxControl > 0
-          ? Math.round((durabilityInfo.currentControl / durabilityInfo.maxControl) * 100)
-          : 100;
-        const mastery = fishingManager.getRodMastery(userId, equippedRodId);
         equipMsg += `🎣 鱼竿：【${rodConfig.name}】\n`;
-        equipMsg += `   耐久：${durabilityPercent}% | 操控：${durabilityInfo.currentControl}/${durabilityInfo.maxControl}\n`;
-        equipMsg += `   熟练度：${mastery}\n`;
       }
     } else {
       equipMsg += `🎣 鱼竿：未装备\n`;
@@ -1127,13 +1120,7 @@ export default class Fishing extends plugin {
     if (equippedLineId) {
       const lineConfig = fishingManager.getLineConfig(equippedLineId);
       if (lineConfig) {
-        let lineBonus = 0;
-        if (equippedRodId) {
-          lineBonus = fishingManager.getLineBonusFromMastery(userId, equippedRodId);
-        }
-        const totalCapacity = lineConfig.capacity + lineBonus;
         equipMsg += `🧵 鱼线：【${lineConfig.name}】\n`;
-        equipMsg += `   承重：${totalCapacity}${lineBonus > 0 ? ` (基础${lineConfig.capacity}+加成${lineBonus})` : ""}\n`;
       }
     } else {
       equipMsg += `🧵 鱼线：未装备\n`;
@@ -1143,8 +1130,7 @@ export default class Fishing extends plugin {
       const baitConfig = fishingManager.getBaitConfig(equippedBaitId);
       if (baitConfig) {
         const baitCount = fishingManager.getBaitCount(userId, equippedBaitId);
-        equipMsg += `🪱 鱼饵：【${baitConfig.name}】\n`;
-        equipMsg += `   品质：${"⭐".repeat(baitConfig.quality || 1)} | 库存：${baitCount}个\n`;
+        equipMsg += `🪱 鱼饵：【${baitConfig.name}】 库存：${baitCount}个\n`;
       }
     } else {
       equipMsg += `🪱 鱼饵：未装备\n`;
