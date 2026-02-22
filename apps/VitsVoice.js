@@ -18,19 +18,23 @@ export class VitsVoice extends plugin {
     let config = setting.getConfig("VitsVoice");
     let speaker = config.defaultSpeaker || "派蒙";
     let emotion = config.defaultEmotion || "默认";
+    let lang = config.defaultLang || "中文";
     let text = "";
 
     if (msg.startsWith("说")) {
       text = msg.substring(1).trim();
     } else {
-      // 支持格式: 可莉说 / 可莉(开心)说
-      const match = msg.match(/^(.+?)(?:\((.+?)\))?说\s+(.*)$/);
+      // 支持格式: 可莉说 / 可莉(开心)说 / 可莉[日语]说 / 可莉(开心)[日语]说
+      const match = msg.match(/^(.+?)(?:\((.+?)\))?(?:\[(.+?)\])?说\s+(.*)$/);
       if (match) {
         speaker = match[1].trim();
         if (match[2]) {
           emotion = match[2].trim();
         }
-        text = match[3].trim();
+        if (match[3]) {
+          lang = match[3].trim();
+        }
+        text = match[4].trim();
       } else {
         return false;
       }
@@ -40,10 +44,22 @@ export class VitsVoice extends plugin {
     await e.react(124);
 
     try {
-      logger.info(`[VitsVoice] 合成语音: 角色=${speaker}, 情绪=${emotion}, 文本=${text}`);
-      const result = await hobbyist.getModelDetail(speaker, text, emotion);
+      logger.info(`[VitsVoice] 合成语音: 角色=${speaker}, 情绪=${emotion}, 语言=${lang}, 文本=${text}`);
+      const result = await hobbyist.getModelDetail(speaker, text, emotion, lang);
 
       if (!result) {
+        // 如果中文找不到，尝试日语
+        const altLang = lang === "中文" ? "日语" : "中文";
+        const altResult = await hobbyist.getModelDetail(speaker, text, emotion, altLang);
+        if (altResult) {
+          if (altResult.audio) {
+            const buffer = Buffer.from(altResult.audio, "base64");
+            await e.reply(segment.record(buffer));
+          } else if (altResult.audio_url) {
+            await e.reply(segment.record(altResult.audio_url));
+          }
+          return;
+        }
         await e.reply(`未找到角色「${speaker}」，请使用 #语音角色列表 查看可用角色。`, 10, true);
         return;
       }
@@ -99,35 +115,69 @@ export class VitsVoice extends plugin {
     await e.react(124);
     
     try {
-      if (!speakersCache || speakersCache.length === 0) {
-        const models = await hobbyist.getModelList();
-        const modelNames = Object.keys(models);
-        
-        speakersCache = modelNames
-          .filter((name) => name.includes("中文-"))
-          .map((name) => {
-            const parts = name.split("-");
-            return parts[parts.length - 1].replace(/_ZH$/, "");
-          });
-        speakersCache = [...new Set(speakersCache)].sort();
-      }
+      const models = await hobbyist.getModelList();
+      const modelNames = Object.keys(models);
+      
+      // 提取中文角色
+      const zhSpeakers = modelNames
+        .filter((name) => name.includes("中文-"))
+        .map((name) => {
+          const parts = name.split("-");
+          return parts[parts.length - 1].replace(/_ZH$/, "");
+        });
+      const uniqueZhSpeakers = [...new Set(zhSpeakers)].sort();
 
-      if (!speakersCache || speakersCache.length === 0) {
+      // 提取日语角色
+      const jpSpeakers = modelNames
+        .filter((name) => name.includes("日语-"))
+        .map((name) => {
+          const parts = name.split("-");
+          return parts[parts.length - 1].replace(/_JP$/, "");
+        });
+      const uniqueJpSpeakers = [...new Set(jpSpeakers)].sort();
+
+      if (uniqueZhSpeakers.length === 0 && uniqueJpSpeakers.length === 0) {
         return e.reply("未获取到角色列表。", 10, true);
       }
 
-      let nodes = [];
-      for (let i = 0; i < speakersCache.length; i += 50) {
-        const chunk = speakersCache.slice(i, i + 50);
-        nodes.push({
+      // 构建中文角色转发消息
+      let zhNodes = [];
+      for (let i = 0; i < uniqueZhSpeakers.length; i += 50) {
+        const chunk = uniqueZhSpeakers.slice(i, i + 50);
+        zhNodes.push({
           user_id: e.bot.self_id,
           nickname: e.bot.nickname,
           content: chunk.join("、"),
         });
       }
 
-      await e.sendForwardMsg(nodes, {
-        source: `语音角色列表（共${speakersCache.length}个）`,
+      // 构建日语角色转发消息
+      let jpNodes = [];
+      for (let i = 0; i < uniqueJpSpeakers.length; i += 50) {
+        const chunk = uniqueJpSpeakers.slice(i, i + 50);
+        jpNodes.push({
+          user_id: e.bot.self_id,
+          nickname: e.bot.nickname,
+          content: chunk.join("、"),
+        });
+      }
+
+      // 构建两层嵌套转发
+      const outerNodes = [
+        {
+          user_id: e.bot.self_id,
+          nickname: `中文角色（${uniqueZhSpeakers.length}个）`,
+          content: zhNodes,
+        },
+        {
+          user_id: e.bot.self_id,
+          nickname: `日语角色（${uniqueJpSpeakers.length}个）`,
+          content: jpNodes,
+        },
+      ];
+
+      await e.sendForwardMsg(outerNodes, {
+        source: `语音角色列表（共${uniqueZhSpeakers.length + uniqueJpSpeakers.length}个）`,
         prompt: "快来选一个喜欢的角色吧！",
       });
     } catch (err) {
@@ -142,16 +192,25 @@ export class VitsVoice extends plugin {
       return false;
     }
 
-    // 支持格式: 切换语音 可莉 / 切换语音 可莉 开心
+    // 支持格式: 切换语音 可莉 / 切换语音 可莉 开心 / 切换语音 可莉 开心 日语
     const parts = input.split(/\s+/);
     const newSpeaker = parts[0];
     const newEmotion = parts[1] || null;
+    const newLang = parts[2] || null;
 
     await e.react(124);
 
-    // 验证角色是否存在
+    // 验证角色是否存在（先尝试中文，再尝试日语）
     try {
-      const model = await hobbyist.findModel(newSpeaker);
+      let lang = newLang || "中文";
+      let model = await hobbyist.findModel(newSpeaker, lang);
+      
+      // 如果指定语言找不到，尝试另一种语言
+      if (!model && !newLang) {
+        lang = "日语";
+        model = await hobbyist.findModel(newSpeaker, lang);
+      }
+      
       if (!model) {
         await e.reply(`未找到角色「${newSpeaker}」，请使用 #语音角色列表 查看可用角色。`, 10, true);
         return;
@@ -159,21 +218,21 @@ export class VitsVoice extends plugin {
 
       // 如果指定了情绪，验证情绪是否支持
       if (newEmotion) {
-        const emotions = await hobbyist.getModelEmotions(newSpeaker);
+        const emotions = await hobbyist.getModelEmotions(newSpeaker, lang);
         if (emotions && !emotions.includes(newEmotion)) {
           await e.reply(`角色「${newSpeaker}」不支持情绪「${newEmotion}」\n支持的情绪：${emotions.join("、")}`, 10, true);
           return;
         }
       }
 
-      const configUpdate = { defaultSpeaker: newSpeaker };
+      const configUpdate = { defaultSpeaker: newSpeaker, defaultLang: lang };
       if (newEmotion) {
         configUpdate.defaultEmotion = newEmotion;
       }
 
       setting.setConfig("VitsVoice", configUpdate);
       
-      let replyMsg = `默认语音角色已切换为：${newSpeaker}`;
+      let replyMsg = `默认语音角色已切换为：${newSpeaker}（${lang}）`;
       if (newEmotion) {
         replyMsg += `，默认情绪：${newEmotion}`;
       }
@@ -186,21 +245,38 @@ export class VitsVoice extends plugin {
 
   // 查看角色支持的情绪
   getEmotions = Command(/^#?查看角色情绪\s*(.*)$/, async (e) => {
-    let speaker = e.msg.replace(/^#?查看角色情绪\s*/, "").trim();
-    if (!speaker) {
+    let input = e.msg.replace(/^#?查看角色情绪\s*/, "").trim();
+    let speaker, lang;
+    
+    if (!input) {
       const config = setting.getConfig("VitsVoice");
       speaker = config.defaultSpeaker || "派蒙";
+      lang = config.defaultLang || "中文";
+    } else {
+      const parts = input.split(/\s+/);
+      speaker = parts[0];
+      lang = parts[1] || "中文";
     }
     
     await e.react(124);
     
     try {
-      const emotions = await hobbyist.getModelEmotions(speaker);
+      let emotions = await hobbyist.getModelEmotions(speaker, lang);
+      
+      // 如果找不到，尝试另一种语言
+      if (!emotions) {
+        const altLang = lang === "中文" ? "日语" : "中文";
+        emotions = await hobbyist.getModelEmotions(speaker, altLang);
+        if (emotions) {
+          lang = altLang;
+        }
+      }
+      
       if (!emotions) {
         await e.reply(`未找到角色「${speaker}」`, 10, true);
         return;
       }
-      await e.reply(`角色「${speaker}」支持的情绪：\n${emotions.join("、")}`, 10);
+      await e.reply(`角色「${speaker}」（${lang}）支持的情绪：\n${emotions.join("、")}`, 10);
     } catch (err) {
       logger.error(`[VitsVoice] 获取情绪列表出错: ${err.message}`);
       await e.reply("获取情绪列表出错，请稍后再试。", 10, true);
