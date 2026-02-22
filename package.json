@@ -4,6 +4,7 @@
   "type": "module",
   "author": "suzuka",
   "dependencies": {
+    "@book000/pixivts": "^0.45.69",
     "@google/genai": "^1.30.0",
     "@mapbox/node-pre-gyp": "^2.0.3",
     "@napi-rs/canvas": "^0.1.82",
@@ -11,6 +12,7 @@
     "adm-zip": "^0.5.16",
     "axios": "^1.13.2",
     "better-sqlite3": "^12.6.2",
+    "https-proxy-agent": "^7.0.6",
     "marked": "^17.0.1",
     "muhammara": "^6.0.2",
     "openai": "^6.9.1",

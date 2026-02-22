@@ -28,7 +28,6 @@ export class GetImagePlugin extends plugin {
       k: "konachan",
     };
 
-    // 消耗检查已移至框架底层 (loader.js)
 
     let suffix = e.match?.[1];
     if (!suffix) {
@@ -56,10 +55,10 @@ export class GetImagePlugin extends plugin {
             headless: false,
             args: isLinux
               ? [
-                  "--no-sandbox",
-                  "--disable-setuid-sandbox",
-                  "--disable-dev-shm-usage",
-                ]
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+              ]
               : [],
             turnstile: true,
             customConfig: {},
@@ -105,7 +104,7 @@ export class GetImagePlugin extends plugin {
 
           if (!sendResult?.message_id) {
             logger.warn(
-              `图片URL发送失败(${sourceKey}): ${imageUrl}，尝试备用方案...`
+              `图片发送失败(${sourceKey}): ${imageUrl}，尝试备用方案...`
             );
             await e.reply("图片发送失败，正在尝试翻转图片...", 10, true);
 

@@ -1094,6 +1094,112 @@ export default class Fishing extends plugin {
     return true;
   });
 
+  fishingStatus = Command(/^#?钓鱼状态$/, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
+    const groupId = e.group_id;
+    const userId = e.user_id;
+    const fishingManager = new FishingManager(groupId);
+
+    const msgs = [];
+
+    const equippedRodId = fishingManager.getEquippedRod(userId);
+    const equippedLineId = fishingManager.getEquippedLine(userId);
+    const equippedBaitId = fishingManager.getEquippedBait(userId);
+
+    let equipMsg = `🎣 当前装备\n━━━━━━━━━━━━━━━━\n`;
+
+    if (equippedRodId) {
+      const rodConfig = fishingManager.getRodConfig(equippedRodId);
+      if (rodConfig) {
+        const durabilityInfo = fishingManager.getRodDurabilityInfo(userId, equippedRodId);
+        const durabilityPercent = durabilityInfo.maxControl > 0
+          ? Math.round((durabilityInfo.currentControl / durabilityInfo.maxControl) * 100)
+          : 100;
+        const mastery = fishingManager.getRodMastery(userId, equippedRodId);
+        equipMsg += `🎣 鱼竿：【${rodConfig.name}】\n`;
+        equipMsg += `   耐久：${durabilityPercent}% | 操控：${durabilityInfo.currentControl}/${durabilityInfo.maxControl}\n`;
+        equipMsg += `   熟练度：${mastery}\n`;
+      }
+    } else {
+      equipMsg += `🎣 鱼竿：未装备\n`;
+    }
+
+    if (equippedLineId) {
+      const lineConfig = fishingManager.getLineConfig(equippedLineId);
+      if (lineConfig) {
+        let lineBonus = 0;
+        if (equippedRodId) {
+          lineBonus = fishingManager.getLineBonusFromMastery(userId, equippedRodId);
+        }
+        const totalCapacity = lineConfig.capacity + lineBonus;
+        equipMsg += `🧵 鱼线：【${lineConfig.name}】\n`;
+        equipMsg += `   承重：${totalCapacity}${lineBonus > 0 ? ` (基础${lineConfig.capacity}+加成${lineBonus})` : ""}\n`;
+      }
+    } else {
+      equipMsg += `🧵 鱼线：未装备\n`;
+    }
+
+    if (equippedBaitId) {
+      const baitConfig = fishingManager.getBaitConfig(equippedBaitId);
+      if (baitConfig) {
+        const baitCount = fishingManager.getBaitCount(userId, equippedBaitId);
+        equipMsg += `🪱 鱼饵：【${baitConfig.name}】\n`;
+        equipMsg += `   品质：${"⭐".repeat(baitConfig.quality || 1)} | 库存：${baitCount}个\n`;
+      }
+    } else {
+      equipMsg += `🪱 鱼饵：未装备\n`;
+    }
+
+    msgs.push(equipMsg.trim());
+
+    let buffMsg = `✨ Buff 状态\n━━━━━━━━━━━━━━━━\n`;
+    let hasAnyBuff = false;
+
+    const doubleKey = `sakura:fishing:buff:item_card_double_coin:${groupId}:${userId}`;
+    const doubleTtl = await redis.ttl(doubleKey);
+    if (doubleTtl > 0) {
+      hasAnyBuff = true;
+      const minutes = Math.ceil(doubleTtl / 60);
+      buffMsg += `💰 双倍金币卡：生效中\n`;
+      buffMsg += `   ⏰ 剩余时间：${minutes} 分钟\n`;
+    }
+
+    const luckyKey = `sakura:fishing:buff:item_charm_lucky:${groupId}:${userId}`;
+    const luckyTtl = await redis.ttl(luckyKey);
+    if (luckyTtl > 0) {
+      hasAnyBuff = true;
+      const minutes = Math.ceil(luckyTtl / 60);
+      buffMsg += `🍀 好运护符：生效中\n`;
+      buffMsg += `   ⏰ 剩余时间：${minutes} 分钟\n`;
+    }
+
+    if (!hasAnyBuff) {
+      buffMsg += `暂无生效中的Buff\n`;
+    }
+
+    msgs.push(buffMsg.trim());
+
+    const dailyKey = `sakura:economy:daily_fishing_count:${groupId}:${userId}`;
+    const dailyCount = await redis.get(dailyKey);
+    const todayCount = dailyCount ? parseInt(dailyCount) : 0;
+
+    let dailyMsg = `📊 今日统计\n━━━━━━━━━━━━━━━━\n`;
+    dailyMsg += `🎣 今日钓鱼次数：${todayCount} 次`;
+
+    msgs.push(dailyMsg);
+
+    await e.sendForwardMsg(msgs, {
+      prompt: "🎣 钓鱼状态",
+      source: "钓鱼系统",
+      news: [
+        { text: `🎣 装备: ${equippedRodId ? "已装备" : "未装备"}` },
+        { text: `🎣 今日钓鱼: ${todayCount}次` },
+      ]
+    });
+
+    return true;
+  });
+
   fishingRecord = Command(/^#?钓鱼记录(\s*\d+)?$/, async (e) => {
     if (!this.checkWhitelist(e)) return false;
     let msg = e.msg.replace(/^#?钓鱼记录/, "").trim();
