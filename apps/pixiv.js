@@ -79,8 +79,8 @@ export class pixivSearch extends plugin {
     return true
   });
 
-  searchPixiv = Command(/^#?来张色图(。)?(.*)$/, async (e) => {
-    const match = e.msg.match(/^#?来张色图(。)?(.*)$/)
+  searchPixiv = Command(/^#?来张插画(。)?(.*)$/, async (e) => {
+    const match = e.msg.match(/^#?来张插画(。)?(.*)$/)
     if (!match) return false
 
     const config = this.appconfig

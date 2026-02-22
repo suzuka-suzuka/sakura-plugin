@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const commandNames = {
-    "setuPlugin.handleApiRequest": "来张涩图",
+    "setuPlugin.handleApiRequest": "来张插画",
     "GetImagePlugin.handleImage": "来张萝莉图",
     "GrokImage.editImage": "gi（Grok图片编辑）",
     "GrokVideo.generateVideo": "gv（Grok视频生成）",
@@ -138,7 +138,7 @@ const CommandCostSchema = z.object({
 });
 
 const defaultCommandCosts = [
-    { command: "来张涩图", cost: 5 },
+    { command: "来张插画", cost: 5 },
     { command: "来张萝莉图", cost: 5 },
     { command: "gi（Grok图片编辑）", cost: 10 },
     { command: "gv（Grok视频生成）", cost: 20 },
