@@ -166,13 +166,17 @@ export class VitsVoice extends plugin {
       const outerNodes = [
         {
           user_id: e.bot.self_id,
-          nickname: `中文角色（${uniqueZhSpeakers.length}个）`,
+          nickname: e.bot.nickname,
           content: zhNodes,
+          source: `中文角色（${uniqueZhSpeakers.length}个）`,
+          news: [{ text: `共 ${uniqueZhSpeakers.length} 个中文角色` }],
         },
         {
           user_id: e.bot.self_id,
-          nickname: `日语角色（${uniqueJpSpeakers.length}个）`,
+          nickname: e.bot.nickname,
           content: jpNodes,
+          source: `日语角色（${uniqueJpSpeakers.length}个）`,
+          news: [{ text: `共 ${uniqueJpSpeakers.length} 个日语角色` }],
         },
       ];
 
