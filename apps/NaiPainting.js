@@ -4,6 +4,7 @@ import {
     getIsProcessing,
 } from "../lib/nai/naiApi.js";
 import { getImg } from "../lib/utils.js";
+import { Setting } from "../setting.js";
 
 export class NaiPainting extends plugin {
     constructor() {
@@ -14,7 +15,7 @@ export class NaiPainting extends plugin {
         });
     }
 
-    naiParams = Command(/^绘图\s*(.*)$/, "white", async (e) => {
+    naiParams = Command(/^绘图\s*(.*)$/, async (e) => {
         let rawMsg = e.msg.replace(/^绘图\s*/, "").trim();
 
         const characters = [];
@@ -92,7 +93,7 @@ export class NaiPainting extends plugin {
         } catch (err) {
             logger.error(`[NaiPainting] Failed to get image: ${err.message}`);
         }
-
+        if (!e.isWhite && !Setting.payForCommand(e, "绘图")) return false;
         const currentQueueLength = getQueueLength();
         if (getIsProcessing()) {
             await e.reply(

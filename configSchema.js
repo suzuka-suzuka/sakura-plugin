@@ -13,13 +13,13 @@ export const commandNames = {
     "pixivSearch.searchPixiv": "涩图（P站搜图）",
     "SoraVideo.generateVideo": "sv（Sora视频生成）",
     "VitsVoice.vitsSpeak": "xx说（语音合成）",
-    "NaiPainting.naiParams": "绘图",
 };
 
 export const manualCommandNames = [
     "AI图片编辑",
     "AI聊天",
     "伪人",
+    "绘图",
 ];
 
 export const News60sSchema = z.object({
@@ -153,7 +153,7 @@ const defaultCommandCosts = [
     { command: "AI图片编辑", cost: 20 },
     { command: "AI聊天", cost: 10 },
     { command: "伪人", cost: 10 },
-    { command: "绘图", cost: 20 },
+    { command: "绘图", cost: 30 },
 ];
 
 export const EconomySchema = z.object({
