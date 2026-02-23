@@ -41,8 +41,7 @@ export class Ludo extends plugin {
       return false
     }
 
-    const response = await gameManager.joinGame(e.user_id)
-    await e.reply(response)
+    await gameManager.joinGame(e.user_id)
     return true
   });
 
