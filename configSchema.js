@@ -38,7 +38,7 @@ const ProfileSchema = z.object({
 });
 
 export const AISchema = z.object({
-    profiles: z.array(ProfileSchema).default([]).describe('AI角色列表|配置多个AI角色，每个角色可以有不同的前缀和设置'),
+    profiles: z.array(ProfileSchema).default([]).describe('AI角色列表|#nameField:prefix|配置多个AI角色，每个角色可以有不同的前缀和设置'),
     groupContextLength: z.number().default(20).describe('群上下文长度|群聊上下文记忆的消息条数'),
     chatHistoryLength: z.number().default(20).describe('对话历史长度|保留的对话历史消息条数'),
     enableUserLock: z.boolean().default(false).describe('用户锁定|同一用户同时只能进行一个对话'),
@@ -211,14 +211,35 @@ export const MimicSchema = z.object({
     GroupConfigs: z.array(GroupConfigSchema).default([]).describe('群独立配置|为每个群设置不同的模拟人参数'),
 }).describe('伪人配置');
 
+const RankingConfigSchema = z.object({
+    mode: z.string().describe('排行榜类型'),
+    minLikeRate: z.number().default(0.1).describe('最低点赞率|#step:0.01'),
+    minBookmarkRate: z.number().default(0.1).describe('最低收藏率|#step:0.01'),
+    minBookmarks: z.number().default(500).describe('最低收藏数'),
+});
+
+const defaultRankingConfigs = [
+    { mode: '日榜', minLikeRate: 0.1, minBookmarkRate: 0.1, minBookmarks: 600 },
+    { mode: '周榜', minLikeRate: 0.15, minBookmarkRate: 0.2, minBookmarks: 2000 },
+    { mode: '月榜', minLikeRate: 0.05, minBookmarkRate: 0.075, minBookmarks: 5000 },
+    { mode: '男性日榜', minLikeRate: 0.1, minBookmarkRate: 0.1, minBookmarks: 700 },
+    { mode: '女性日榜', minLikeRate: 0.1, minBookmarkRate: 0.1, minBookmarks: 500 },
+    { mode: '原创日榜', minLikeRate: 0.1, minBookmarkRate: 0.1, minBookmarks: 400 },
+    { mode: '新人日榜', minLikeRate: 0.1, minBookmarkRate: 0.1, minBookmarks: 200 },
+    { mode: 'r18日榜', minLikeRate: 0.1, minBookmarkRate: 0.1, minBookmarks: 800 },
+    { mode: 'r18周榜', minLikeRate: 0.15, minBookmarkRate: 0.2, minBookmarks: 2500 },
+];
+
 export const PixivSchema = z.object({
     refresh_token: z.string().default('').describe('Pixiv Refresh Token|#textarea'),
     cookie: z.string().default('').describe('Pixiv Cookie|#textarea|可选：用于 Web API 搜索，支持深层分页'),
     proxy: z.string().default('').describe('图片反代域名|如 i.pixiv.re，留空则不使用'),
     excludeAI: z.boolean().default(true).describe('排除AI作品|是否过滤AI生成的作品'),
-    minBookmarks: z.number().default(100).describe('最低收藏数|低于此值的作品不显示'),
-    minBookmarkViewRatio: z.number().default(0.03).describe('最低收藏率|#step:0.01|收藏/浏览比低于此值的不显示'),
+    minBookmarks: z.number().default(600).describe('最低收藏数|低于此值的作品不显示'),
+    minBookmarkViewRatio: z.number().default(0.09).describe('最低收藏率|#step:0.01|收藏/浏览比低于此值的不显示'),
     defaultTags: z.array(z.string()).default([]).describe('默认标签|搜索时使用的默认标签'),
+    rankingConfigs: z.array(RankingConfigSchema).default(defaultRankingConfigs).describe('排行榜筛选配置|#fixed|#nameField:mode|为每个排行榜单独配置筛选参数'),
+    rankingPushGroups: z.array(z.string()).default([]).describe('排行榜定时推送群|#groupSelectArray|每天11点自动推送日榜的群'),
 }).describe('Pixiv 图库');
 
 export const PokeSchema = z.object({

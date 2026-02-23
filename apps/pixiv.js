@@ -2,6 +2,11 @@ import Setting from "../lib/setting.js"
 import { getPixivClient } from "../lib/pixiv/api.js"
 import { searchPixivImage } from "../lib/pixiv/search.js"
 import { FlipImage } from "../lib/ImageUtils/ImageUtils.js"
+import { 
+  getRankingItemFromRedis,
+  getRankingOverview,
+  buildRankingForwardParams,
+} from "../lib/pixiv/ranking.js"
 
 const processingUsers = new Set()
 
@@ -34,11 +39,9 @@ export class pixivSearch extends plugin {
     const lockKey = `pid:${e.user_id}`
     if (processingUsers.has(lockKey)) return false
     processingUsers.add(lockKey)
-
+    await e.react(124)
     const pid = match[1]
     const pageNum = parseInt(match[2]) || 1
-
-    await e.reply(`正在获取P站作品ID: ${pid} (第${pageNum}页)...`, 10, false)
 
     try {
       const pixivCli = await getPixivClient()
@@ -192,6 +195,207 @@ export class pixivSearch extends plugin {
     await e.reply(`pid:${illust.id}\n标签：${tags}`, 60, false)
 
     await e.reply("图片已发送", 10, true)
+
+    return true
+  }
+
+  // ============ 排行榜功能 ============
+  
+  /**
+   * 查看排行榜一览（没有缓存则自动拉取）
+   * 触发: #日榜 / #周榜 / #月榜 等
+   */
+  viewRanking = Command(/^#?(日榜|周榜|月榜|男性日榜|女性日榜|原创日榜|新人日榜|r18日榜|r18周榜)$/, async (e) => {
+    const match = e.msg.match(/^#?(日榜|周榜|月榜|男性日榜|女性日榜|原创日榜|新人日榜|r18日榜|r18周榜)$/)
+    if (!match) return false
+    
+    const modeKey = match[1]
+    
+    // R18排行榜检查
+    if (modeKey.includes("r18") && !this.r18Config.Groups.includes(e.group_id)) {
+      return e.reply("本群未开启R18功能，无法查看R18排行榜~", 10, false)
+    }
+    
+    const config = this.appconfig
+    if (!config.cookie || !config.refresh_token) {
+      return e.reply("未配置 Pixiv Cookie 或 RefreshToken，请先在插件设置中填写。", 10, true)
+    }
+    
+    const lockKey = `ranking:view:${e.user_id}`
+    if (processingUsers.has(lockKey)) return false
+    processingUsers.add(lockKey)
+    
+   await e.react(124)
+    
+    try {
+      const result = await getRankingOverview(modeKey)
+      
+      if (result.images && result.images.length > 0) {
+        await this.sendRankingForward(e, result, modeKey)
+      } else {
+        await e.reply(`${modeKey}暂无数据，请稍后再试~`, 10, true)
+      }
+    } catch (error) {
+      logger.error(`[P站排行榜] 查看${modeKey}失败: ${error}`)
+      await e.reply(`获取${modeKey}失败: ${error.message}`, 10, true)
+    } finally {
+      processingUsers.delete(lockKey)
+    }
+    
+    return true
+  });
+  
+  /**
+   * 以合并转发形式发送排行榜一览图
+   */
+  async sendRankingForward(e, result, modeKey) {
+    const { nodes, prompt, news, source } = buildRankingForwardParams(result, modeKey, e.self_id)
+    const sendResult = await e.sendForwardMsg(nodes, { prompt, news, source })
+    return sendResult
+  }
+  
+  /**
+   * 获取指定排名的作品
+   * 触发: 日榜#1 / 周榜#5 / 月榜#10 或 日榜1 / 周榜5 等
+   */
+  getRankingItem = Command(/^#?(日榜|周榜|月榜|男性日榜|女性日榜|原创日榜|新人日榜|r18日榜|r18周榜)#?(\d+)$/, async (e) => {
+    const match = e.msg.match(/^#?(日榜|周榜|月榜|男性日榜|女性日榜|原创日榜|新人日榜|r18日榜|r18周榜)#?(\d+)$/)
+    if (!match) return false
+    
+    const modeKey = match[1]
+    const rank = parseInt(match[2])
+    
+    // R18排行榜检查
+    const isR18 = modeKey.includes("r18")
+    if (isR18 && !this.r18Config.Groups.includes(e.group_id)) {
+      return e.reply("本群未开启R18功能，无法查看R18排行榜~", 10, false)
+    }
+    
+    if (rank < 1) {
+      return e.reply("排名必须大于0哦~", 10, true)
+    }
+    
+    const config = this.appconfig
+    if (!config.cookie || !config.refresh_token) {
+      return e.reply("未配置 Pixiv Cookie 或 RefreshToken，请先在插件设置中填写。", 10, true)
+    }
+    
+    const lockKey = `ranking:item:${e.user_id}`
+    if (processingUsers.has(lockKey)) return false
+    processingUsers.add(lockKey)
+    await e.react(124)
+    try {
+      const modeMap = {
+        "日榜": "daily",
+        "周榜": "weekly",
+        "月榜": "monthly",
+        "男性日榜": "daily_male",
+        "女性日榜": "daily_female",
+        "原创日榜": "daily_original",
+        "新人日榜": "daily_rookie",
+        "r18日榜": "daily_r18",
+        "r18周榜": "weekly_r18",
+      }
+      const mode = modeMap[modeKey] || "daily"
+      
+      const item = await getRankingItemFromRedis(mode, rank)
+      
+      if (!item) {
+        return e.reply(`${modeKey}第${rank}名不存在，请先"#刷新${modeKey}"或检查排名是否超出范围~`, 10, true)
+      }
+      
+      // 直接从 Redis 缓存中取原图链接，无需再调 API
+      let pages = []
+      if (item.meta_pages && item.meta_pages.length > 0) {
+        pages = item.meta_pages.map(page => ({ urls: { original: page.image_urls.original } }))
+      } else if (item.meta_single_page?.original_image_url) {
+        pages.push({ urls: { original: item.meta_single_page.original_image_url } })
+      }
+      
+      if (pages.length === 0) {
+        return e.reply(`${modeKey}第${rank}名缓存中无图片链接，请先"#刷新${modeKey}"重新获取~`, 10, true)
+      }
+      
+      // 构造 illust 对象（复用缓存数据）
+      const illust = {
+        id: item.id,
+        title: item.title,
+        user: { name: item.user_name },
+        total_bookmarks: item.total_bookmarks,
+        total_view: item.total_view,
+        tags: item.tags || [],
+      }
+      
+      // 发送图片和信息
+      await this.sendRankingIllustMessage(e, illust, pages, isR18, rank, modeKey, item)
+      
+    } catch (error) {
+      logger.error(`[P站排行榜] 获取${modeKey}第${rank}名失败: ${error}`)
+      await e.reply(`获取作品失败: ${error.message}`, 10, true)
+    } finally {
+      processingUsers.delete(lockKey)
+    }
+    
+    return true
+  });
+  
+  /**
+   * 发送排行榜作品消息
+   */
+  async sendRankingIllustMessage(e, illust, pages, isR18 = false, rank, modeKey, rankInfo) {
+    const config = this.appconfig
+    const imagesPerPage = 3
+    const totalPages = pages.length
+    
+    const startIndex = 0
+    const imagesToSend = pages.slice(startIndex, startIndex + imagesPerPage)
+
+    const imageUrls = imagesToSend.map(page => {
+      let proxiedUrl = page.urls.original
+      if (config.proxy) {
+        const u = new URL(page.urls.original)
+        u.hostname = config.proxy
+        proxiedUrl = u.href
+      }
+      return proxiedUrl
+    })
+
+    const tags = illust.tags?.slice(0, 5).map(t => `#${t.name}`).join(" ") || "无"
+
+    const sendImages = async (imgs) => e.reply(imgs, 0, false)
+
+    let imgSendResult = await sendImages(imageUrls.map(url => segment.image(url)))
+    if (imgSendResult?.message_id) {
+      if (isR18) e.recall(imgSendResult.message_id, 30)
+    } else {
+      e.reply("图片发送失败，正在尝试翻转后重发...", 10, true)
+      const flippedBuffers = []
+      for (const url of imageUrls) {
+        const buf = await FlipImage(url)
+        if (buf) flippedBuffers.push(buf)
+      }
+
+      if (flippedBuffers.length > 0) {
+        imgSendResult = await sendImages(flippedBuffers.map(buf => segment.image(buf)))
+        if (imgSendResult?.message_id && isR18) e.recall(imgSendResult.message_id, 30)
+      }
+
+      if (!imgSendResult?.message_id) {
+        const linkResult = await e.reply("图片最终发送失败，请点击链接查看：\n" + imageUrls.join("\n"), 0, false)
+        if (linkResult?.message_id && isR18) e.recall(linkResult.message_id, 30)
+      }
+    }
+
+    const infoMsg = [
+      `【${modeKey}第${rank}名】`,
+      `PID: ${illust.id}`,
+      `点赞率: ${((rankInfo?.likeRate || 0) * 100).toFixed(2)}% | 收藏率: ${((rankInfo?.bookmarkRate || 0) * 100).toFixed(2)}%`,
+      `收藏: ${illust.total_bookmarks || 0} | 浏览: ${illust.total_view || 0}`,
+      `标签: ${tags}`,
+      totalPages > imagesPerPage ? `(共${totalPages}张，发送"pid${illust.id} p2"查看更多)` : ''
+    ].filter(Boolean).join("\n")
+    
+    await e.reply(infoMsg, 60, false)
 
     return true
   }
