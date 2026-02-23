@@ -4,7 +4,7 @@ import {
     getIsProcessing,
 } from "../lib/nai/naiApi.js";
 import { getImg } from "../lib/utils.js";
-import { Setting } from "../setting.js";
+import { Setting } from "../lib/setting.js";
 
 export class NaiPainting extends plugin {
     constructor() {
