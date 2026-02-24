@@ -399,9 +399,10 @@ export class PixivTask extends plugin {
     const sendImages = async (imgs) => bot.sendGroupMsg(groupId, imgs)
 
     let imgSendResult = await sendImages(imageUrls.map(url => segment.image(url)))
+    let shouldRecall = isR18
 
     if (!imgSendResult?.message_id) {
-
+      shouldRecall = true
       const flippedBuffers = []
       for (const url of imageUrls) {
         const buf = await FlipImage(url)
@@ -413,14 +414,14 @@ export class PixivTask extends plugin {
       }
 
       if (!imgSendResult?.message_id) {
-        await bot.sendGroupMsg(groupId, "图片发送失败，请点击链接查看：\n" + imageUrls.join("\n"))
+        imgSendResult = await bot.sendGroupMsg(groupId, "图片发送失败，请点击链接查看：\n" + imageUrls.join("\n"))
       }
     }
 
-    if (isR18 && imgSendResult?.message_id) {
+    if (shouldRecall && imgSendResult?.message_id) {
       setTimeout(() => {
         bot.deleteMsg(imgSendResult.message_id).catch(() => { })
-      }, 30000)
+      }, isR18 ? 10000 : 30000)
     }
   }
 

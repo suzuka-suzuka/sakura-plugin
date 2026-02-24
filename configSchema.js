@@ -28,6 +28,8 @@ export const commandNames = {
     "pixivSearch.searchPixiv": "涩图（P站搜图）",
     "SoraVideo.generateVideo": "sv（Sora视频生成）",
     "VitsVoice.vitsSpeak": "xx说（语音合成）",
+    "pixivSearch.viewRanking": "p站排行榜",
+    "pixivSearch.getRankingItem": "p站排行榜详情",
 };
 
 export const manualCommandNames = [
@@ -169,6 +171,8 @@ const defaultCommandCosts = [
     { command: "AI聊天", cost: 10 },
     { command: "伪人", cost: 10 },
     { command: "绘图", cost: 30 },
+    { command: "p站排行榜", cost: 20 },
+    { command: "p站排行榜详情", cost: 5 },
 ];
 
 export const EconomySchema = z.object({
@@ -266,7 +270,7 @@ export const PixivSchema = z.object({
     minBookmarkViewRatio: z.number().default(0.09).describe('最低收藏率|#step:0.01|收藏/浏览比低于此值的不显示'),
     defaultTags: z.array(z.string()).default([]).describe('默认标签|搜索时使用的默认标签'),
     rankingConfigs: z.array(RankingConfigSchema).default(defaultRankingConfigs).describe('排行榜筛选配置|#fixed|#nameField:mode|为每个排行榜单独配置筛选参数'),
-    rankingPushGroups: z.array(z.string()).default([]).describe('周榜定时推送群|#groupSelectArray|每周日11点自动推送周榜的群'),
+    rankingPushGroups: z.array(z.string()).default([]).describe('周榜定时推送群|#groupSelect|每周日11点自动推送周榜的群'),
     // 标签订阅配置
     tagSubscriptions: z.array(TagSubscriptionSchema).default([]).describe('标签订阅|#nameField:groupId|为每个群配置要订阅的标签'),
     tagSubMaxPages: z.number().default(5).describe('标签订阅扫描页数|每次检查时最多扫描的页数'),
