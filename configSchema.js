@@ -1,4 +1,19 @@
 import { z } from 'zod';
+import { CronExpressionParser } from 'cron-parser';
+
+function cronString(defaultValue = '0 * * * *') {
+    return z.string().default(defaultValue).refine((val) => {
+        if (!val || !val.trim()) return false;
+        const parts = val.trim().split(/\s+/);
+        if (parts.length !== 5) return false;
+        try {
+            CronExpressionParser.parse(val);
+            return true;
+        } catch {
+            return false;
+        }
+    }, { message: 'Cron 表达式格式无效，请使用标准 5 段式 cron 格式' });
+}
 
 export const commandNames = {
     "setuPlugin.handleApiRequest": "来张插画",
@@ -230,6 +245,18 @@ const defaultRankingConfigs = [
     { mode: 'r18周榜', minLikeRate: 0.15, minBookmarkRate: 0.2, minBookmarks: 2500 },
 ];
 
+// 标签订阅配置 Schema
+const TagSubscriptionSchema = z.object({
+    groupId: z.number().default(0).describe('群号|#groupSelect|订阅推送的目标群'),
+    tags: z.array(z.string()).default([]).describe('订阅标签列表|要订阅的 Pixiv 标签'),
+});
+
+// 画师订阅配置 Schema
+const ArtistSubscriptionSchema = z.object({
+    groupId: z.number().default(0).describe('群号|#groupSelect|订阅推送的目标群'),
+    artistIds: z.array(z.string()).default([]).describe('画师ID列表|要订阅的画师 UID'),
+});
+
 export const PixivSchema = z.object({
     refresh_token: z.string().default('').describe('Pixiv Refresh Token|#textarea'),
     cookie: z.string().default('').describe('Pixiv Cookie|#textarea|可选：用于 Web API 搜索，支持深层分页'),
@@ -239,8 +266,18 @@ export const PixivSchema = z.object({
     minBookmarkViewRatio: z.number().default(0.09).describe('最低收藏率|#step:0.01|收藏/浏览比低于此值的不显示'),
     defaultTags: z.array(z.string()).default([]).describe('默认标签|搜索时使用的默认标签'),
     rankingConfigs: z.array(RankingConfigSchema).default(defaultRankingConfigs).describe('排行榜筛选配置|#fixed|#nameField:mode|为每个排行榜单独配置筛选参数'),
-    rankingPushGroups: z.array(z.string()).default([]).describe('排行榜定时推送群|#groupSelectArray|每天11点自动推送日榜的群'),
-}).describe('Pixiv 图库');
+    rankingPushGroups: z.array(z.string()).default([]).describe('周榜定时推送群|#groupSelectArray|每周日11点自动推送周榜的群'),
+    // 标签订阅配置
+    tagSubscriptions: z.array(TagSubscriptionSchema).default([]).describe('标签订阅|#nameField:groupId|为每个群配置要订阅的标签'),
+    tagSubMaxPages: z.number().default(5).describe('标签订阅扫描页数|每次检查时最多扫描的页数'),
+    tagSubFreshnessPeriod: z.number().default(86400).describe('标签订阅保质期(秒)|只推送发布时间在此范围内的作品'),
+    tagSubMinBookmark: z.number().default(300).describe('标签订阅最低收藏|作品收藏数必须达到此值'),
+    tagSubMinBookRate: z.number().default(0.09).describe('标签订阅最低收藏率|#step:0.01|收藏/浏览比'),
+    tagSubMinBookPerHour: z.number().default(50).describe('标签订阅每小时收藏增速|作品每小时需新增的收藏数'),
+    // 画师订阅配置
+    artistSubscriptions: z.array(ArtistSubscriptionSchema).default([]).describe('画师订阅|#nameField:groupId|为每个群配置要订阅的画师'),
+    artistSubFreshnessPeriod: z.number().default(43200).describe('画师订阅保质期(秒)|只推送发布时间在此范围内的作品'),
+}).describe('Pixiv 功能');
 
 export const PokeSchema = z.object({
     enable: z.boolean().default(true).describe('启用戳一戳'),
@@ -281,7 +318,7 @@ export const SummarySchema = z.object({
 
 export const TeatimeSchema = z.object({
     Groups: z.array(z.number()).default([]).describe('下午茶群号|#groupSelect'),
-    cron: z.string().default('0 0 15 * * *').describe('定时推送的时间表达式'),
+    cron: cronString('0 15 * * *').describe('定时推送的时间表达式|#cron|5段格式: 分 时 日 月 周'),
 }).describe('下午茶推送');
 
 

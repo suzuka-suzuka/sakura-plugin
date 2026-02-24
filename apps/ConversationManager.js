@@ -23,7 +23,7 @@ export class Conversationmanagement extends plugin {
     });
   }
 
-  CleanOldConversationsTask = Cron("0 0 4 * * *", async () => {
+  CleanOldConversationsTask = Cron("0 4 * * *", async () => {
     await cleanOldConversations();
   });
 

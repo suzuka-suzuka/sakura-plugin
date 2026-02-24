@@ -15,7 +15,7 @@ export class ActiveChatScheduler extends plugin {
     });
   }
 
-  proactiveChatTask = Cron("0 0 * * * *", async () => {
+  proactiveChatTask = Cron("0 * * * *", async () => {
     if (!bot) return;
     const config = Setting.getConfig("AI");
     const activeChatConfig = Setting.getConfig("ActiveChat");

@@ -1,5 +1,4 @@
 import _ from "lodash";
-import { plugindata } from "../lib/path.js";
 import FavorabilityImageGenerator from "../lib/favorability/ImageGenerator.js";
 import FavorabilityManager from "../lib/favorability/FavorabilityManager.js";
 
@@ -15,7 +14,7 @@ export class Favorability extends plugin {
     });
   }
 
-  cleanupFavorabilityTask = Cron("0 0 4 * * *", async () => {
+  cleanupFavorabilityTask = Cron("0 4 * * *", async () => {
     FavorabilityManager.cleanupFavorability();
   });
 

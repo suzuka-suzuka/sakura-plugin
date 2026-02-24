@@ -12,7 +12,7 @@ export class AutoCleanup extends plugin {
     return Setting.getConfig("AutoCleanup");
   }
 
-  autoCleanupTask = Cron("0 0 0 * * *", async () => {
+  autoCleanupTask = Cron("0 0 * * *", async () => {
     const config = this.appconfig;
     const groups = config?.groups ?? [];
 

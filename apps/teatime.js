@@ -15,7 +15,7 @@ export class teatime extends plugin {
     return Setting.getConfig("teatime")
   }
 
-  teatimeTask = Cron(this.appconfig?.cron ?? "0 0 15 * * *", async () => {
+  teatimeTask = Cron(this.appconfig?.cron ?? "0 15 * * *", async () => {
     const config = this.appconfig
     if (!config) {
       return

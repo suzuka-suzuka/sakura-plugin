@@ -27,7 +27,7 @@ export class cool extends plugin {
         return false;
     });
 
-    coolTask = Cron('0 */20 * * * *', async () => {
+    coolTask = Cron('*/20 * * * *', async () => {
         const currentTime = moment().unix();
         const config = this.appconfig;
 
