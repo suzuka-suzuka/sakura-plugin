@@ -1,117 +1,144 @@
-<!doctype html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <title>sukara菜单</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Fira+Code:wght@500&display=swap"
-      rel="stylesheet"
-    />
-    <style>
-      body {
-        font-family: "Inter", sans-serif;
-        background-color: #f0f2f5;
-        color: #000000;
-        text-shadow: 0px 0px 5px rgba(255, 255, 255, 0.8), 0px 0px 7px rgba(255, 255, 255, 0.8);
-      }
-      .command {
-        font-family: "Fira Code", monospace;
-        color: #000000;
-        background-color: rgba(255, 255, 255, 0.5);
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 0.9em;
-        display: inline-block;
-        text-shadow: none;
-      }
-      .help-container {
-        border-radius: 8px;
-        padding: 24px;
-        max-width: 900px;
-        width: 100%;
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
-        overflow: hidden;
-        position: relative;
-      }
-      #main-title {
-        text-shadow: 0px 0px 6px rgba(255, 255, 255, 0.9), 0px 0px 8px rgba(255, 255, 255, 0.9);
-      }
-      .command-desc {
-         text-shadow: 0px 0px 3px rgba(255, 255, 255, 0.7);
-      }
-    </style>
-  </head>
-  <body class="p-8">
-    <div class="help-container" id="capture-target">
-      <header class="pb-4 mb-8 text-center">
-        <h1 id="main-title" class="text-3xl font-bold text-gray-900"></h1>
-        <p id="main-description" class="text-md text-gray-700 mt-2"></p>
-      </header>
+<!DOCTYPE html>
+<html lang="zh">
 
-      <main id="menu-content" class="space-y-8"></main>
-      <footer class="text-center pt-6 mt-8">
-        <p class="text-sm text-gray-600">Created by @suzuka-suzuka&sakura-plugin</p>
-      </footer>
+<head>
+  <meta charset="UTF-8">
+  <title>Sakura Plugin Menu</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
+
+    body {
+      margin: 0;
+      padding: 30px;
+      font-family: 'Noto Sans SC', sans-serif;
+      /* 唯美的背景图或渐变色，可以根据需要替换 background-image */
+      background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+      color: #333;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      width: 900px;
+      padding: 40px;
+      /* 主容器也使用一点磨砂效果 */
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+      box-sizing: border-box;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .header h1 {
+      font-size: 42px;
+      color: #ffb7c5;
+      /* Sakura Pink */
+      margin: 0 0 10px 0;
+      text-shadow: 1px 1px 3px rgba(255, 183, 197, 0.4);
+      letter-spacing: 2px;
+    }
+
+    .header p {
+      font-size: 16px;
+      color: #666;
+      margin: 0;
+      font-weight: 500;
+    }
+
+    /* 每个大类的容器 */
+    .category-section {
+      margin-bottom: 40px;
+    }
+
+    .category-title {
+      font-size: 24px;
+      color: #444;
+      margin: 0 0 20px 10px;
+      border-left: 5px solid #ffb7c5;
+      padding-left: 12px;
+      font-weight: 700;
+    }
+
+    /* 指令列表网格布局：一行三个 */
+    .command-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    /* 单个指令的透明磨砂框 */
+    .command-card {
+      background: rgba(255, 255, 255, 0.45);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .cmd-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #2c3e50;
+      margin-bottom: 8px;
+    }
+
+    .cmd-desc {
+      font-size: 13px;
+      color: #666;
+      line-height: 1.5;
+      margin: 0;
+      flex-grow: 1;
+      /* 让描述部分占据剩余空间，保证对齐 */
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 50px;
+      font-size: 14px;
+      color: #888;
+      border-top: 1px solid rgba(0, 0, 0, 0.05);
+      padding-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container" id="capture-area">
+    <div class="header">
+      <h1>🌸 Sakura Plugin 🌸</h1>
+      <p>『落樱飘雪，为你服务』 - 指令大纲</p>
     </div>
 
-    <template id="category-template">
-      <div class="p-5 rounded-lg">
-        <h2 class="category-title text-lg font-bold uppercase mb-4 tracking-wider"></h2>
-        <div class="command-grid grid grid-cols-3 gap-4"></div>
+    {{each menuData category}}
+    <div class="category-section">
+      <h2 class="category-title">{{category.category || "未分类"}}</h2>
+      <div class="command-grid">
+        {{each category.commands cmd}}
+        <div class="command-card">
+          <div class="cmd-name">{{cmd.name}}</div>
+          <p class="cmd-desc">{{cmd.desc}}</p>
+        </div>
+        {{/each}}
       </div>
-    </template>
+    </div>
+    {{/each}}
 
-    <template id="command-template">
-      <div class="bg-white/60 p-4 rounded-md h-full flex flex-col">
-        <code class="command-cmd"></code>
-        <p class="command-desc text-gray-800 text-sm mt-2 flex-grow"></p>
-      </div>
-    </template>
+    <div class="footer">
+      Powered by Sakura Plugin
+    </div>
+  </div>
+</body>
 
-    <script>
-      function renderMenu(data, imageUrl) {
-        const captureTarget = document.getElementById('capture-target');
-        if (imageUrl) {
-          captureTarget.style.backgroundImage = `url('${imageUrl}')`;
-        } else {
-          captureTarget.style.backgroundColor = '#f3f4f6';
-        }
-
-        document.getElementById("main-title").textContent = data.title
-        document.getElementById("main-description").textContent = data.description
-
-        const menuContent = document.getElementById("menu-content")
-        const categoryTemplate = document.getElementById("category-template")
-        const commandTemplate = document.getElementById("command-template")
-
-        for (const category of data.categories) {
-          const categoryNode = categoryTemplate.content.cloneNode(true)
-
-          const categoryTitle = categoryNode.querySelector(".category-title")
-          categoryTitle.textContent = category.name
-
-          const titleColor = "text-blue-600"
-          categoryTitle.classList.add(titleColor)
-
-          const commandGrid = categoryNode.querySelector(".command-grid")
-
-          for (const command of category.commands) {
-            const commandNode = commandTemplate.content.cloneNode(true)
-
-            commandNode.querySelector(".command-cmd").textContent = command.cmd
-            commandNode.querySelector(".command-desc").textContent = command.desc
-
-            commandGrid.appendChild(commandNode)
-          }
-
-          menuContent.appendChild(categoryNode)
-        }
-      }
-    </script>
-  </body>
 </html>

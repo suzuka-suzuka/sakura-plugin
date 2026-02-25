@@ -11,8 +11,8 @@ export class GrokVideo extends plugin {
     });
   }
 
-  generateVideo = Command(/^#?gv(.*)/, async (e) => {
-    const match = e.msg.match(/^#?gv(.*)/);
+  generateVideo = Command(/^#gv(.*)/, async (e) => {
+    const match = e.msg.match(/^#gv(.*)/);
     if (!match) return false;
 
     const prompt = match[1].trim();

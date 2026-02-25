@@ -1320,15 +1320,19 @@ export default class Fishing extends plugin {
     if (!this.checkWhitelist(e)) return false;
     const fishingManager = new FishingManager(e.group_id);
     const dangerousTorpedoes = fishingManager.getAvailableTorpedoCount(e.user_id);
+    const hasDeployedTorpedo = fishingManager.getUserTorpedoCount(e.user_id) > 0;
     const priceBoostActive = await fishingManager.isFishPriceBoostActive();
 
     let msgs = [];
 
+    let torpedoMsg = "";
     if (dangerousTorpedoes > 0) {
-      msgs.push(`💣 对你有威胁的鱼雷：${dangerousTorpedoes} 个\n⚠️ 小心钓鱼！随时可能触雷！`);
+      torpedoMsg += `💣 对你有威胁的鱼雷：${dangerousTorpedoes} 个\n⚠️ 小心钓鱼！随时可能触雷！`;
     } else {
-      msgs.push(`✨ 鱼塘安全，没有威胁你的鱼雷`);
+      torpedoMsg += `✨ 鱼塘安全，没有威胁你的鱼雷`;
     }
+    torpedoMsg += `\n\n🎯 你的潜伏鱼雷：${hasDeployedTorpedo ? "1 个 (静待猎物中)" : "0 个"}`;
+    msgs.push(torpedoMsg);
 
     if (priceBoostActive) {
       const remainingMinutes = await fishingManager.getFishPriceBoostRemainingMinutes();
@@ -1340,7 +1344,7 @@ export default class Fishing extends plugin {
     await e.sendForwardMsg(msgs, {
       prompt: "🎣 鱼塘状态",
       news: [
-        { text: `💣 威胁鱼雷: ${dangerousTorpedoes}个` },
+        { text: `💣 威胁: ${dangerousTorpedoes}个 | 🎯 已投放: ${hasDeployedTorpedo ? "1个" : "0个"}` },
         { text: priceBoostActive ? "💰 鱼价: ×1.5" : "💰 鱼价: 正常" }
       ],
       source: "钓鱼系统"

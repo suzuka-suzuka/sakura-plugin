@@ -168,13 +168,12 @@ export class pixivSearch extends plugin {
 
     const tags = illust.tags?.slice(0, 5).map(t => `#${t.name}`).join(" ") || "无"
 
-    const sendImages = async (imgs) => e.reply(imgs, 0, false)
+    const sendImages = async (imgs, recallTime = 0) => e.reply(imgs, recallTime, false)
 
-    let imgSendResult = await sendImages(imageUrls.map(url => segment.image(url)))
-    let shouldRecall = isR18
+    const initialRecallTime = isR18 ? (config.recallTime ?? 10) : 0
+    let imgSendResult = await sendImages(imageUrls.map(url => segment.image(url)), initialRecallTime)
 
     if (!imgSendResult?.message_id) {
-      shouldRecall = true
       e.reply("图片发送失败，正在尝试翻转后重发...", 10, true)
       const flippedBuffers = []
       for (const url of imageUrls) {
@@ -183,16 +182,13 @@ export class pixivSearch extends plugin {
       }
 
       if (flippedBuffers.length > 0) {
-        imgSendResult = await sendImages(flippedBuffers.map(buf => segment.image(buf)))
+        const fallbackRecallTime = config.recallTime ?? 10
+        imgSendResult = await sendImages(flippedBuffers.map(buf => segment.image(buf)), fallbackRecallTime)
       }
 
       if (!imgSendResult?.message_id) {
-        imgSendResult = await e.reply("图片最终发送失败，请点击链接查看：\n" + imageUrls.join("\n"), 0, false)
+        imgSendResult = await e.reply("图片最终发送失败，请点击链接查看：\n" + imageUrls.join("\n"), 60, false)
       }
-    }
-
-    if (shouldRecall && imgSendResult?.message_id) {
-      e.recall(imgSendResult.message_id, isR18 ? 10 : 30)
     }
 
     const bookmarks = illust.total_bookmarks || 0
@@ -371,13 +367,12 @@ export class pixivSearch extends plugin {
 
     const tags = illust.tags?.slice(0, 5).map(t => `#${t.name}`).join(" ") || "无"
 
-    const sendImages = async (imgs) => e.reply(imgs, 0, false)
+    const sendImages = async (imgs, recallTime = 0) => e.reply(imgs, recallTime, false)
 
-    let imgSendResult = await sendImages(imageUrls.map(url => segment.image(url)))
-    let shouldRecall = isR18
+    const initialRecallTime = isR18 ? (config.recallTime ?? 10) : 0
+    let imgSendResult = await sendImages(imageUrls.map(url => segment.image(url)), initialRecallTime)
 
     if (!imgSendResult?.message_id) {
-      shouldRecall = true
       e.reply("图片发送失败，正在尝试翻转后重发...", 10, true)
       const flippedBuffers = []
       for (const url of imageUrls) {
@@ -386,16 +381,13 @@ export class pixivSearch extends plugin {
       }
 
       if (flippedBuffers.length > 0) {
-        imgSendResult = await sendImages(flippedBuffers.map(buf => segment.image(buf)))
+        const fallbackRecallTime = config.recallTime ?? 10
+        imgSendResult = await sendImages(flippedBuffers.map(buf => segment.image(buf)), fallbackRecallTime)
       }
 
       if (!imgSendResult?.message_id) {
-        imgSendResult = await e.reply("图片最终发送失败，请点击链接查看：\n" + imageUrls.join("\n"), 0, false)
+        imgSendResult = await e.reply("图片最终发送失败，请点击链接查看：\n" + imageUrls.join("\n"), 60, false)
       }
-    }
-
-    if (shouldRecall && imgSendResult?.message_id) {
-      e.recall(imgSendResult.message_id, isR18 ? 10 : 30)
     }
     const pageStr = totalPages > imagesPerPage ? `(共${totalPages}张)` : ''
     const infoMsg = [

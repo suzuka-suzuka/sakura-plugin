@@ -14,14 +14,14 @@ export class SoraVideo extends plugin {
     });
   }
 
-  generateVideo = Command(/^#?sv\s*([横竖方])?\s*(\+)?\s*(.+)/, async (e) => {
+  generateVideo = Command(/^#sv\s*([横竖方])?\s*(\+)?\s*(.+)/, async (e) => {
     try {
       if (isBusy()) {
         await e.reply("当前有视频生成任务正在进行中，请稍后再试...", 10);
         return true;
       }
 
-      const match = e.msg.match(/^#?sv\s*([横竖方])?\s*(\+)?\s*(.+)/s);
+      const match = e.msg.match(/^#sv\s*([横竖方])?\s*(\+)?\s*(.+)/s);
       if (!match) {
         return false;
       }

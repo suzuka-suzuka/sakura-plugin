@@ -38,7 +38,7 @@ export class PixivTask extends plugin {
 
     const tag = match[1].trim()
     if (!tag) {
-      return e.reply("请输入要订阅的标签，例如：#订阅标签 白毛", 10, true)
+      return e.reply("请输入要订阅的标签，例如：#订阅标签 白毛", 10)
     }
 
     const config = this.appconfig
@@ -65,7 +65,7 @@ export class PixivTask extends plugin {
 
     Setting.setConfig("pixiv", { ...config, tagSubscriptions })
 
-    return e.reply(`✅ 成功订阅标签「${tag}」`, 10, true)
+    return e.reply(`✅ 成功订阅标签「${tag}」`, 10)
   });
 
 
@@ -86,7 +86,7 @@ export class PixivTask extends plugin {
     const groupSub = tagSubscriptions.find(s => s.groupId === groupId)
 
     if (!groupSub || !groupSub.tags.includes(tag)) {
-      return e.reply(`本群未订阅标签「${tag}」`, 10, true)
+      return e.reply(`本群未订阅标签「${tag}」`, 10)
     }
 
     groupSub.tags = groupSub.tags.filter(t => t !== tag)
@@ -97,7 +97,7 @@ export class PixivTask extends plugin {
     }
 
     Setting.setConfig("pixiv", { ...config, tagSubscriptions })
-    return e.reply(`✅ 已取消订阅标签「${tag}」`, 10, true)
+    return e.reply(`✅ 已取消订阅标签「${tag}」`, 10)
   });
 
 
@@ -123,13 +123,13 @@ export class PixivTask extends plugin {
     }
 
     if (groupSub.artistIds.includes(artistId)) {
-      return e.reply(`本群已订阅画师「${artistId}」，无需重复订阅~`, 10, true)
+      return e.reply(`本群已订阅画师「${artistId}」，无需重复订阅~`, 10)
     }
 
     groupSub.artistIds.push(artistId)
     Setting.setConfig("pixiv", { ...config, artistSubscriptions })
 
-    return e.reply(`✅ 成功订阅画师「${artistId}」`, 10, true)
+    return e.reply(`✅ 成功订阅画师「${artistId}」`, 10)
   });
 
 
@@ -150,7 +150,7 @@ export class PixivTask extends plugin {
     const groupSub = artistSubscriptions.find(s => s.groupId === groupId)
 
     if (!groupSub || !groupSub.artistIds.includes(artistId)) {
-      return e.reply(`本群未订阅画师「${artistId}」`, 10, true)
+      return e.reply(`本群未订阅画师「${artistId}」`, 10)
     }
 
     groupSub.artistIds = groupSub.artistIds.filter(a => a !== artistId)
@@ -160,7 +160,7 @@ export class PixivTask extends plugin {
     }
     Setting.setConfig("pixiv", { ...config, artistSubscriptions })
 
-    return e.reply(`✅ 已取消订阅画师「${artistId}」`, 10, true)
+    return e.reply(`✅ 已取消订阅画师「${artistId}」`, 10)
   });
 
 
@@ -176,7 +176,7 @@ export class PixivTask extends plugin {
     const artistSubs = artistSubConfig?.artistIds || []
 
     if (tagSubs.length === 0 && artistSubs.length === 0) {
-      return e.reply("本群暂无任何P站订阅~", 10, true)
+      return e.reply("本群暂无任何P站订阅~", 10)
     }
     let msg = "📋 本群P站订阅列表：\n"
 
@@ -398,11 +398,11 @@ export class PixivTask extends plugin {
 
     const sendImages = async (imgs) => bot.sendGroupMsg(groupId, imgs)
 
+    const initialRecallTime = isR18 ? (config.recallTime ?? 10) : 0
     let imgSendResult = await sendImages(imageUrls.map(url => segment.image(url)))
-    let shouldRecall = isR18
+    let recallTimeToUse = initialRecallTime
 
     if (!imgSendResult?.message_id) {
-      shouldRecall = true
       const flippedBuffers = []
       for (const url of imageUrls) {
         const buf = await FlipImage(url)
@@ -410,18 +410,20 @@ export class PixivTask extends plugin {
       }
 
       if (flippedBuffers.length > 0) {
+        recallTimeToUse = config.recallTime ?? 10
         imgSendResult = await sendImages(flippedBuffers.map(buf => segment.image(buf)))
       }
 
       if (!imgSendResult?.message_id) {
         imgSendResult = await bot.sendGroupMsg(groupId, "图片发送失败，请点击链接查看：\n" + imageUrls.join("\n"))
+        recallTimeToUse = 60
       }
     }
 
-    if (shouldRecall && imgSendResult?.message_id) {
+    if (recallTimeToUse > 0 && imgSendResult?.message_id) {
       setTimeout(() => {
         bot.deleteMsg(imgSendResult.message_id).catch(() => { })
-      }, isR18 ? 10000 : 30000)
+      }, recallTimeToUse * 1000)
     }
   }
 

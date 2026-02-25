@@ -1,0 +1,5 @@
+menu:
+  - category: "AI功能"
+    commands:
+      - name: "和小叶聊天"
+        desc: "消息里只要包含小叶就会回复"

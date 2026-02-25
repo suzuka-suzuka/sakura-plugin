@@ -11,8 +11,8 @@ export class GrokImage extends plugin {
     });
   }
 
-  editImage = Command(/^#?gi\s*(.+)/, async (e) => {
-    const match = e.msg.match(/^#?gi\s*(.+)/);
+  editImage = Command(/^#gi\s*(.+)/, async (e) => {
+    const match = e.msg.match(/^#gi\s*(.+)/);
     if (!match) return false;
 
     const prompt = match[1].trim();

@@ -15,6 +15,10 @@ export class setuPlugin extends plugin {
     return setting.getConfig("r18");
   }
 
+  get pixivConfig() {
+    return setting.getConfig("pixiv");
+  }
+
   handleApiRequest = Command(/^#?来张涩图(。)?(.*)$/, async (e) => {
     let apiType = "lolicon",
       tag,
@@ -49,12 +53,13 @@ export class setuPlugin extends plugin {
     }
   });
 
-  async sendImageWithRetry(e, imageUrl, messageText, shouldRecall) {
-    const recallTime = shouldRecall ? 10 : 0;
+  async sendImageWithRetry(e, imageUrl, messageText, isR18) {
+    const config = this.pixivConfig;
+    const initialRecallTime = isR18 ? (config.recallTime ?? 10) : 0;
 
     let sendResult;
     try {
-      sendResult = await e.reply(segment.image(imageUrl), recallTime, false);
+      sendResult = await e.reply(segment.image(imageUrl), initialRecallTime, false);
     } catch (err) {
       logger.error(`初次发送图片失败 (URL): ${err.message}`);
       sendResult = null;
@@ -72,8 +77,9 @@ export class setuPlugin extends plugin {
       const flippedImageBuffer = await FlipImage(imageUrl);
 
       if (flippedImageBuffer) {
+        const fallbackRecallTime = config.recallTime ?? 10;
         sendResult = await e
-          .reply(segment.image(flippedImageBuffer), recallTime, false)
+          .reply(segment.image(flippedImageBuffer), fallbackRecallTime, false)
           .catch((err) => {
             logger.error(`第二次尝试发送图片失败 (flipped): ${err.message}`);
             return null;
@@ -94,7 +100,7 @@ export class setuPlugin extends plugin {
     } else {
       await e.reply(
         `图片发送仍然失败，请自行查看图片链接：\n${imageUrl}`,
-        10,
+        60,
         true
       );
     }
