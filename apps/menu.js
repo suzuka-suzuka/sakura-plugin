@@ -15,7 +15,7 @@ export class SakuraMenu extends plugin {
         });
     }
 
-    showMenu = Command(/^#?(sakura|樱花)帮助$/, async (e) => {
+    showMenu = Command(/^#?(sakura|樱花)(菜单|帮助)$/, async (e) => {
         const yamlPath = path.join(
             _path,
             "plugins",

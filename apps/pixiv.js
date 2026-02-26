@@ -7,6 +7,7 @@ import {
   getRankingOverview,
   buildRankingForwardParams,
 } from "../lib/pixiv/ranking.js"
+import sharp from "sharp"
 
 const processingUsers = new Set()
 
@@ -255,7 +256,24 @@ export class pixivSearch extends plugin {
    */
   async sendRankingForward(e, result, modeKey) {
     const { nodes, prompt, news, source } = buildRankingForwardParams(result, modeKey, e.self_id)
-    const sendResult = await e.sendForwardMsg(nodes, { prompt, news, source })
+    let sendResult = await e.sendForwardMsg(nodes, { prompt, news, source })
+
+    const isR18 = modeKey.includes("r18")
+    if (!isR18 && (!sendResult || !sendResult.message_id)) {
+      try {
+        await e.reply("排行榜转发消息发送失败，正在尝试高斯模糊后重发...", 10, true)
+        const blurredImages = []
+        for (const imgBuffer of result.images) {
+          const blurred = await sharp(imgBuffer).blur(7.5).png().toBuffer()
+          blurredImages.push(blurred)
+        }
+        const blurredResult = { ...result, images: blurredImages }
+        const fallbackParams = buildRankingForwardParams(blurredResult, modeKey, e.self_id)
+        sendResult = await e.sendForwardMsg(fallbackParams.nodes, { prompt: fallbackParams.prompt, news: fallbackParams.news, source: fallbackParams.source })
+      } catch (error) {
+        logger.error(`[P站排行榜] 发送模糊转发消息失败: ${error}`)
+      }
+    }
     return sendResult
   }
 
