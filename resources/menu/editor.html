@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Sakura 菜单在线编辑器</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
+
+        body {
+            margin: 0;
+            padding: 30px;
+            font-family: 'Noto Sans SC', sans-serif;
+            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 900px;
+            max-width: 100%;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            box-sizing: border-box;
+        }
+
+        .toolbar {
+            width: 900px;
+            max-width: 100%;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .toolbar button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.3s;
+            font-weight: bold;
+        }
+
+        .btn-save {
+            background: #ffb7c5;
+            color: white;
+            box-shadow: 0 4px 10px rgba(255, 183, 197, 0.4);
+        }
+
+        .btn-save:hover {
+            background: #ff9fb0;
+        }
+
+        .btn-add {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-add:hover {
+            background: #d0d0d0;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 42px;
+            color: #ffb7c5;
+            margin: 0 0 10px 0;
+            text-shadow: 1px 1px 3px rgba(255, 183, 197, 0.4);
+            cursor: text;
+            transition: 0.2s;
+        }
+
+        .header h1:hover {
+            opacity: 0.8;
+        }
+
+        .header p {
+            font-size: 16px;
+            color: #666;
+            margin: 0;
+            font-weight: 500;
+            cursor: text;
+            transition: 0.2s;
+        }
+
+        .header p:hover {
+            opacity: 0.8;
+        }
+
+        .category-section {
+            margin-bottom: 30px;
+            position: relative;
+            padding: 15px;
+            border: 2px dashed rgba(255, 183, 197, 0.3);
+            transition: 0.3s;
+            border-radius: 12px;
+        }
+
+        .category-section:hover {
+            border-color: rgba(255, 183, 197, 0.8);
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .category-title {
+            font-size: 24px;
+            color: #444;
+            margin: 0 10px 0 10px;
+            border-left: 5px solid #ffb7c5;
+            padding-left: 12px;
+            font-weight: 700;
+            cursor: text;
+            flex-grow: 1;
+            transition: 0.2s;
+        }
+
+        .category-title:hover {
+            opacity: 0.8;
+        }
+
+        .command-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            min-height: 80px;
+        }
+
+        .command-card {
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+            display: flex;
+            flex-direction: column;
+            cursor: grab;
+            position: relative;
+            min-height: 100px;
+        }
+
+        .command-card:active {
+            cursor: grabbing;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .cmd-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            cursor: text;
+            transition: 0.2s;
+        }
+
+        .cmd-name:hover {
+            opacity: 0.8;
+        }
+
+        .cmd-desc {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.5;
+            margin: 0;
+            flex-grow: 1;
+            cursor: text;
+            transition: 0.2s;
+        }
+
+        .cmd-desc:hover {
+            opacity: 0.8;
+        }
+
+        .del-btn {
+            position: absolute;
+            right: 8px;
+            top: 8px;
+            background: rgba(255, 0, 0, 0.1);
+            color: red;
+            border: none;
+            border-radius: 4px;
+            padding: 2px 6px;
+            cursor: pointer;
+            display: none;
+            font-size: 12px;
+        }
+
+        .command-card:hover .del-btn,
+        .category-section:hover>.category-header .del-btn {
+            display: inline-block;
+        }
+
+        .category-header .del-btn {
+            position: static;
+            margin-left: 10px;
+            display: none;
+        }
+
+        .cat-drag-handle {
+            cursor: grab;
+            color: #aaa;
+            margin-right: 10px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            padding: 0 5px;
+        }
+
+        .cat-drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 12px;
+            font-weight: normal;
+            margin-left: auto;
+            margin-right: 10px;
+        }
+
+        .sortable-ghost {
+            opacity: 0.4;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+</head>
+
+<body>
+    <div class="toolbar">
+        <button class="btn-add" onclick="goBack()">◀ 返回面板</button>
+        <div>
+            <button class="btn-add" onclick="addCategory()">+ 添加分类</button>
+            <button class="btn-save" onclick="saveMenu()">💾 保存配置</button>
+        </div>
+    </div>
+    <div class="container" id="editor-container">
+        <!-- JS rendered -->
+    </div>
+
+    <script>
+        let configData = { title: "", subtitle: "", menu: [] };
+        const token = localStorage.getItem('sakura_token');
+
+        function goBack() { window.location.href = '/'; }
+
+        async function init() {
+            if (!token) { alert('请先在主面板登录'); return goBack(); }
+            try {
+                const res = await fetch('/api/menu', { headers: { 'Authorization': `Bearer ${token}` } });
+                const json = await res.json();
+                if (json.success && json.data) {
+                    if (json.data.title) configData.title = json.data.title;
+                    if (json.data.subtitle) configData.subtitle = json.data.subtitle;
+                    if (json.data.menu) configData.menu = json.data.menu;
+                }
+                render();
+            } catch (e) {
+                alert('加载配置失败，请检查网络');
+            }
+        }
+
+        function render() {
+            const container = document.getElementById('editor-container');
+            let html = `
+                <div class="header">
+                    <h1 ondblclick="editField(this, 'title')" title="双击修改" style="pointer-events: auto;">${configData.title || "🌸 Sakura 菜单 🌸"}</h1>
+                    <p ondblclick="editField(this, 'subtitle')" title="双击修改" style="pointer-events: auto;">${configData.subtitle || "『落樱飘雪，为你服务』 - 指令大纲"}</p>
+                </div>
+                <div id="categories-container">
+            `;
+
+            (configData.menu || []).forEach((cat, cIdx) => {
+                html += `
+                    <div class="category-section" data-idx="${cIdx}">
+                        <div class="category-header">
+                            <span class="cat-drag-handle" title="拖拽排序">☰</span>
+                            <h2 class="category-title" ondblclick="editCategory(${cIdx}, this)" title="双击修改">${cat.category || '未分类'}</h2>
+                            <button class="btn-add btn-sm" onclick="addCommand(${cIdx})">+ 添加指令</button>
+                            <button class="del-btn" onclick="delCategory(${cIdx})">删除该类</button>
+                        </div>
+                        <div class="command-grid" id="cmd-grid-${cIdx}">
+                `;
+                (cat.commands || []).forEach((cmd, cmdIdx) => {
+                    html += `
+                            <div class="command-card" data-idx="${cmdIdx}" title="长按拖拽排序">
+                                <button class="del-btn" onclick="delCommand(${cIdx}, ${cmdIdx})" title="删除指令">❌</button>
+                                <div class="cmd-name" ondblclick="editCommand(${cIdx}, ${cmdIdx}, 'name', this)" title="双击修改">${cmd.name || '新指令'}</div>
+                                <p class="cmd-desc" ondblclick="editCommand(${cIdx}, ${cmdIdx}, 'desc', this)" title="双击修改">${cmd.desc || '指令描述'}</p>
+                            </div>
+                    `;
+                });
+                html += `</div></div>`;
+            });
+            html += `</div>`;
+            container.innerHTML = html;
+
+            // Init sortable for categories
+            const catContainer = document.getElementById('categories-container');
+            new Sortable(catContainer, {
+                handle: '.cat-drag-handle',
+                animation: 150,
+                onEnd: function (evt) {
+                    const item = configData.menu.splice(evt.oldIndex, 1)[0];
+                    configData.menu.splice(evt.newIndex, 0, item);
+                    render(); // Re-render to update index
+                }
+            });
+
+            // Init sortable for commands
+            configData.menu.forEach((cat, cIdx) => {
+                const grid = document.getElementById(`cmd-grid-${cIdx}`);
+                new Sortable(grid, {
+                    animation: 150,
+                    delay: 150, // 移动端长按支持
+                    delayOnTouchOnly: true,
+                    forceFallback: true,
+                    fallbackClass: 'sortable-ghost',
+                    group: 'commands',
+                    filter: '.del-btn', // 防止误触
+                    onEnd: function (evt) {
+                        const fromSection = evt.from.closest('.category-section');
+                        const toSection = evt.to.closest('.category-section');
+                        if (!fromSection || !toSection) return;
+                        const fromCatIdx = parseInt(fromSection.getAttribute('data-idx'));
+                        const toCatIdx = parseInt(toSection.getAttribute('data-idx'));
+
+                        const item = configData.menu[fromCatIdx].commands.splice(evt.oldIndex, 1)[0];
+                        if (!configData.menu[toCatIdx].commands) configData.menu[toCatIdx].commands = [];
+                        configData.menu[toCatIdx].commands.splice(evt.newIndex, 0, item);
+                        render();
+                    }
+                });
+            });
+        }
+
+        function makeEditable(el, onSave) {
+            const oldText = el.innerText;
+            el.setAttribute('contenteditable', 'true');
+            el.style.borderBottom = '2px dashed #ffb7c5';
+            el.style.outline = 'none';
+            el.style.cursor = 'text';
+            el.focus();
+
+            const saveSelection = () => {
+                if (window.getSelection) {
+                    const range = document.createRange();
+                    range.selectNodeContents(el);
+                    window.getSelection().removeAllRanges();
+                    window.getSelection().addRange(range);
+                }
+            };
+            saveSelection();
+
+            const finish = () => {
+                el.removeAttribute('contenteditable');
+                el.style.borderBottom = 'none';
+                el.removeEventListener('blur', finish);
+                el.removeEventListener('keydown', keydown);
+                const newText = el.innerText.trim();
+                if (newText !== oldText) {
+                    onSave(newText);
+                    render();
+                } else {
+                    el.innerText = oldText;
+                }
+            };
+            const keydown = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el.blur(); }
+                // ESC to cancel
+                if (e.key === 'Escape') { e.preventDefault(); el.innerText = oldText; el.blur(); }
+            };
+            el.addEventListener('blur', finish);
+            el.addEventListener('keydown', keydown);
+        }
+
+        function editField(el, field) {
+            makeEditable(el, (newVal) => {
+                configData[field] = newVal;
+            });
+        }
+
+        function editCategory(cIdx, el) {
+            makeEditable(el, (newVal) => {
+                configData.menu[cIdx].category = newVal;
+            });
+        }
+
+        function editCommand(cIdx, cmdIdx, field, el) {
+            makeEditable(el, (newVal) => {
+                configData.menu[cIdx].commands[cmdIdx][field] = newVal;
+            });
+        }
+
+        function addCategory() {
+            configData.menu.push({ category: "新分类", commands: [] });
+            render();
+            // Scroll to bottom
+            setTimeout(() => {
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            }, 100);
+        }
+
+        function delCategory(cIdx) {
+            if (confirm('确认删除此分类及所有包含的指令吗？')) {
+                configData.menu.splice(cIdx, 1);
+                render();
+            }
+        }
+
+        function addCommand(cIdx) {
+            if (!configData.menu[cIdx].commands) configData.menu[cIdx].commands = [];
+            configData.menu[cIdx].commands.push({ name: "新指令", desc: "可双击修改" });
+            render();
+        }
+
+        function delCommand(cIdx, cmdIdx) {
+            if (confirm('确认删除此指令？')) {
+                configData.menu[cIdx].commands.splice(cmdIdx, 1);
+                render();
+            }
+        }
+
+        async function saveMenu() {
+            try {
+                const res = await fetch('/api/menu', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(configData)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const saveBtn = document.querySelector('.btn-save');
+                    saveBtn.innerText = '✅ 保存成功';
+                    saveBtn.style.background = '#4CAF50';
+                    setTimeout(() => {
+                        saveBtn.innerText = '💾 保存配置';
+                        saveBtn.style.background = '#ffb7c5';
+                    }, 2000);
+                } else {
+                    alert('保存失败: ' + (data.error || ''));
+                }
+            } catch (e) {
+                alert('网络连接错误，保存失败');
+            }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

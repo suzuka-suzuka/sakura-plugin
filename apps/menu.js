@@ -15,7 +15,7 @@ export class SakuraMenu extends plugin {
         });
     }
 
-    showMenu = Command(/^#?(sakura|樱花)(菜单|帮助)$/, async (e) => {
+    showMenu = Command(/^#?(sakura|樱花)?(菜单|帮助)$/, async (e) => {
         const yamlPath = path.join(
             _path,
             "plugins",
@@ -26,10 +26,14 @@ export class SakuraMenu extends plugin {
         );
 
         let menuData = [];
+        let title = "🌸 Sakura 菜单 🌸";
+        let subtitle = "『落樱飘雪，为你服务』 - 指令大纲";
         try {
             const fileContent = fs.readFileSync(yamlPath, "utf8");
             const config = yaml.load(fileContent);
             menuData = config.menu || [];
+            if (config.title) title = config.title;
+            if (config.subtitle) subtitle = config.subtitle;
         } catch (err) {
             logger.error("读取 menu.yaml 失败:", err);
             return e.reply(
@@ -49,7 +53,7 @@ export class SakuraMenu extends plugin {
         let htmlContent;
         try {
             const templateHtml = fs.readFileSync(htmlPath, "utf8");
-            htmlContent = template.render(templateHtml, { menuData });
+            htmlContent = template.render(templateHtml, { menuData, title, subtitle });
         } catch (err) {
             logger.error("渲染模板失败:", err);
             return e.reply("菜单模板渲染失败，请检查 html 文件。");
