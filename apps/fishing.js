@@ -1159,6 +1159,13 @@ export default class Fishing extends plugin {
       buffMsg += `   ⏰ 剩余时间：${minutes} 分钟\n`;
     }
 
+    const curseKey = `sakura:fishing:nightmare:${groupId}:${userId}`;
+    const curseCount = parseInt(await redis.get(curseKey)) || 0;
+    if (curseCount > 0) {
+      hasAnyBuff = true;
+      buffMsg += `☠️ 诅咒：剩余 ${curseCount} 层\n`;
+    }
+
     if (!hasAnyBuff) {
       buffMsg += `暂无生效中的Buff\n`;
     }
