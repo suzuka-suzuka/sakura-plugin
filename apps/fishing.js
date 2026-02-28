@@ -880,7 +880,7 @@ export default class Fishing extends plugin {
 
         case "nightmare_cursed_skull":
           const key = `sakura:fishing:nightmare:${groupId}:${userId}`;
-          await redis.incrby(key, 9);
+          await redis.incrby(key, 5);
           await redis.expire(key, 3 * 24 * 60 * 60);
           punishmentMsg = `☠️ 诅咒附身！你感觉厄运缠身！`;
           break;
@@ -1163,7 +1163,8 @@ export default class Fishing extends plugin {
     const curseCount = parseInt(await redis.get(curseKey)) || 0;
     if (curseCount > 0) {
       hasAnyBuff = true;
-      buffMsg += `☠️ 诅咒：剩余 ${curseCount} 层\n`;
+      const displayCount = Math.max(1, curseCount - 2);
+      buffMsg += `☠️ 诅咒：剩余 ${displayCount} 层\n`;
     }
 
     if (!hasAnyBuff) {
