@@ -881,7 +881,7 @@ export default class Fishing extends plugin {
         case "nightmare_cursed_skull":
           const key = `sakura:fishing:nightmare:${groupId}:${userId}`;
           await redis.incrby(key, 5);
-          await redis.expire(key, 3 * 24 * 60 * 60);
+          await redis.expire(key, 2 * 24 * 60 * 60);
           punishmentMsg = `☠️ 诅咒附身！你感觉厄运缠身！`;
           break;
 
