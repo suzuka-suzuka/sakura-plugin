@@ -1,6 +1,6 @@
 import moment from "moment";
 import path from "path";
-import { pluginresources} from "../lib/path.js";
+import { pluginresources } from "../lib/path.js";
 import { yandeimage } from "../lib/ImageUtils/ImageUtils.js";
 import Setting from "../lib/setting.js";
 import _ from "lodash";
@@ -141,11 +141,14 @@ export class poke extends plugin {
     if (!e.group_id) {
       return false;
     }
-    const pokeConfig = this.appconfig;
-    if (!pokeConfig) {
+    const rawConfig = this.appconfig;
+    if (!rawConfig) {
       logger.error("[戳一戳] 获取配置失败");
       return false;
     }
+
+    // 使用克隆避免直接修改 pluginConfigManager 中存储的配置对象
+    const pokeConfig = structuredClone(rawConfig);
 
     const replyKeys = [
       "masterReplies",
