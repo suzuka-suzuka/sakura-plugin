@@ -12,7 +12,7 @@ export class GrokVideo extends plugin {
       priority: 1000,
       rule: [
         {
-          reg: "^#?gv(.*)",
+          reg: "^#gv(.*)",
           fnc: "generateVideo",
           log: false,
         },
@@ -21,7 +21,7 @@ export class GrokVideo extends plugin {
   }
 
   async generateVideo(e) {
-    const match = e.msg.match(/^#?gv(.*)/)
+    const match = e.msg.match(/^#gv(.*)/)
     if (!match) return false
 
     const prompt = match[1].trim()
