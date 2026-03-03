@@ -12,7 +12,7 @@ export class GrokImage extends plugin {
       priority: 1135,
       rule: [
         {
-          reg: "^#?gi\\s*(.+)",
+          reg: "^#gi\\s*(.+)",
           fnc: "editImage",
           log: false,
         },
@@ -21,7 +21,7 @@ export class GrokImage extends plugin {
   }
 
   async editImage(e) {
-    const match = e.msg.match(/^#?gi\s*(.+)/)
+    const match = e.msg.match(/^#gi\s*(.+)/)
     if (!match) return false
 
     const prompt = match[1].trim()
