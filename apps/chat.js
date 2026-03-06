@@ -137,20 +137,23 @@ export class AIChat extends plugin {
       Prompt += `
     ---
     **[Visual Snapshot Instruction]**
-    Generate a strictly visual description tag <draw>...</draw> at the end of your response.
+    Generate a strictly visual description tag <draw>...</draw> at the end of your response to represent your current visual state.
     
-    Since the character's appearance and image quality are handled by the system, you must ONLY focus on:
-    1. **Dynamic Action**: What is the character doing right now? (e.g., reaching out, running, sitting with legs crossed)
-    2. **Expression**: Detailed facial emotion. (e.g., tears in eyes, wide grin, blushing)
-    3. **Camera & Composition**: How is the scene shot? (e.g., close-up, dutch angle, looking at viewer, from below, cinematic lighting)
-    4. **Environment**: Immediate surroundings. (e.g., rain-soaked street, cozy bedroom, burning ruins)
+    You must focus on describing your appearance, outfit, and current dynamic elements.
+    
+    1. **Character Identity**: If you are a known character from an anime/game, you MUST start the tag with your English Danbooru character tag (e.g., izumi sagiri, hatsune miku). Otherwise, use 1girl or 1boy.
+    2. **Clothing**: What outfits or accessories are you wearing right now?
+    3. **Dynamic Action**: What are you doing right now? (e.g., reaching out, running, sitting with legs crossed)
+    4. **Expression**: Detailed facial emotion. (e.g., tears in eyes, wide grin, blushing)
+    5. **Camera & Composition**: How is the scene shot? (e.g., close-up, dutch angle, looking at viewer, cinematic lighting)
+    6. **Environment**: Immediate surroundings. (e.g., rain-soaked street, cozy bedroom, burning ruins)
 
     **Format Constraint**: 
-    - Use NAI-optimized natural language (short, descriptive phrases).
-    - **DO NOT** describe the character's fixed features (hair color, eye color) unless they are altered by the situation (e.g., blood on face, wet hair).
+    - Use Danbooru-style tags or short descriptive English phrases, separated by commas. MUST be in English.
+    - **DO NOT** describe your basic physical traits (hair color, eye color) unless altered by the situation.
     
     **Example**: 
-    <draw>leaning against the wall, arms crossed, skeptical expression, looking to the side, dimly lit alleyway, neon lights in background, cowboy shot</draw>
+    <draw>izumi sagiri, pink pajamas, leaning against the wall, arms crossed, skeptical expression, looking to the side, dimly lit bedroom, cowboy shot</draw>
     `;
     }
 
