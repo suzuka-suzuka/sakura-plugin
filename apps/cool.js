@@ -97,15 +97,21 @@ export class cool extends plugin {
                     } catch (error) {
                         logger.error(`发送图片到群 ${groupId} 失败: ${error}`);
                         try {
-                            const response = await fetch('https://international.v1.hitokoto.cn/');
-                            const data = await response.json();
-                            const hitokotoText = data.hitokoto;
-                            await Bot.pickGroup(groupId).sendMsg(hitokotoText);
-                        } catch (fallbackError) {
-                            logger.error(`获取一言也失败了: ${fallbackError}`);
-                            await Bot.pickGroup(groupId).sendMsg('喵');
-                        } finally {
+                            await Bot.pickGroup(groupId).sendMsg(segment.image('https://t.alcy.cc/moez'));
                             _lastMsgTime[groupId] = moment().unix();
+                        } catch (fallbackError) {
+                            logger.error(`发送备用图片也失败: ${fallbackError}`);
+                            try {
+                                const response = await fetch('https://international.v1.hitokoto.cn/');
+                                const data = await response.json();
+                                const hitokotoText = data.hitokoto;
+                                await Bot.pickGroup(groupId).sendMsg(hitokotoText);
+                            } catch (fallbackError2) {
+                                logger.error(`获取一言也失败了: ${fallbackError2}`);
+                                await Bot.pickGroup(groupId).sendMsg('喵');
+                            } finally {
+                                _lastMsgTime[groupId] = moment().unix();
+                            }
                         }
                     }
                 } else {
