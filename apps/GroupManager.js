@@ -133,31 +133,22 @@ export class GroupManager extends plugin {
       return false
     }
 
-    if (!global.GroupRequests) {
-      return false
-    }
-
     const match = e.msg.match(/^#?开门\s*(\d+)$/)
     if (!match) return false
-    const markerId = Number(match[1])
+    const markerId = match[1]
 
-    const groupRequests = global.GroupRequests.get(e.group_id)
+    const redisKey = `sakura:group-request:${e.group_id}:${markerId}`
+    const flag = await redis.get(redisKey)
 
-    if (!groupRequests) {
-      return false
-    }
-
-    if (!groupRequests.has(markerId)) {
+    if (!flag) {
       await this.reply(`门牌号 ${markerId} 不存在或已过期`, false, { recallMsg: 10 })
       return true
     }
 
-    const flag = groupRequests.get(markerId)
-
     try {
       await this.reply(`好的，我这就开门`)
       await e.bot.setGroupAddRequest(flag, true)
-      groupRequests.delete(markerId)
+      await redis.del(redisKey)
     } catch (err) {
       logger.error(`[GroupManager] 开门失败: ${err}`)
       await this.reply(`开门失败，Flag可能已失效。`, false, { recallMsg: 10 })
@@ -171,32 +162,23 @@ export class GroupManager extends plugin {
       return false
     }
 
-    if (!global.GroupRequests) {
-      return false
-    }
-
     const match = e.msg.match(/^#?(关门|拒绝)\s*(\d+)\s*(.*?)$/)
     if (!match) return false
-    const markerId = Number(match[2])
+    const markerId = match[2]
     const reason = match[3]?.trim() || ""
 
-    const groupRequests = global.GroupRequests.get(e.group_id)
+    const redisKey = `sakura:group-request:${e.group_id}:${markerId}`
+    const flag = await redis.get(redisKey)
 
-    if (!groupRequests) {
-      return false
-    }
-
-    if (!groupRequests.has(markerId)) {
+    if (!flag) {
       await this.reply(`门牌号 ${markerId} 不存在或已过期`, false, { recallMsg: 10 })
       return true
     }
 
-    const flag = groupRequests.get(markerId)
-
     try {
       await this.reply(`好的，我这就关门`)
       await e.bot.setGroupAddRequest(flag, false, reason)
-      groupRequests.delete(markerId)
+      await redis.del(redisKey)
     } catch (err) {
       logger.error(`[GroupManager] 拒绝入群失败: ${err}`)
       await this.reply(`拒绝失败，Flag可能已失效。`, false, { recallMsg: 10 })
