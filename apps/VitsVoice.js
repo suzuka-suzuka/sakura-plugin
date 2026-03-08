@@ -14,7 +14,7 @@ export class VitsVoice extends plugin {
       priority: 1135,
       rule: [
         {
-          reg: "^#?(.+)?说\\s+(.*)$",
+          reg: "^#(.+)?说\\s+(.*)$",
           fnc: "vitsSpeak",
           log: false,
         },
