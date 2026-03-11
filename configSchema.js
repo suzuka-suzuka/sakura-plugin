@@ -64,6 +64,7 @@ export const AISchema = z.object({
     toolschannel: z.string().default('default').describe('工具渠道|#channelSelect'),
     appschannel: z.string().default('default').describe('应用渠道|#channelSelect'),
     defaultchannel: z.string().default('default').describe('默认渠道|#channelSelect'),
+    retryCount: z.number().int().min(0).default(1).describe('渠道重试次数|请求失败时对当前渠道的最大重试次数，等待时间线性回退（10s、20s、30s…），耗尽后再回退至默认渠道'),
     githubToken: z.string().default('').describe('GitHub Token|#textarea|MCP GitHub 工具使用的 Personal Access Token'),
 }).describe('AI 对话设定');
 
