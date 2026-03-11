@@ -6,6 +6,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import muhammara from "muhammara";
 import { pluginresources } from "../lib/path.js";
+import { getAI } from "../lib/AIUtils/getAI.js";
 import {
   loadConversationHistory,
   clearConversationHistory,
@@ -124,6 +125,73 @@ export class Conversationmanagement extends plugin {
     }
     return true;
   });
+
+  CompressSingle = Command(/^#?总结对话\s*(.+)/, async (e) => {
+    const prefix = e.match[1].trim();
+    if (!prefix) return false;
+
+    const config = this.appconfig;
+    if (!config || !config.profiles.some((p) => p.prefix === prefix)) {
+      await e.reply(`未找到前缀为「${prefix}」的设定，请检查输入。`, 10);
+      return true;
+    }
+
+    const profileName = this.getProfileName(prefix);
+    const history = await loadConversationHistory(e, prefix);
+
+    if (history.length === 0) {
+      await e.reply(`目前没有与「${profileName}」的对话历史记录，无需总结。`, 10);
+      return true;
+    }
+
+    if (history.length <= 2) {
+      await e.reply(`与「${profileName}」的对话历史只有 1 轮，无需总结。`, 10);
+      return true;
+    }
+
+    await e.reply(`正在总结与「${profileName}」的 ${Math.ceil(history.length / 2)} 轮对话，请稍候…`, 10);
+
+    // 将历史格式化为纯文本
+    const historyText = history.map((item) => {
+      const role = item.role === "user" ? "用户" : "AI";
+      const text = item.parts?.map((p) => p.text).filter(Boolean).join("\n") || "";
+      if (!text) return null;
+      return `【${role}】${text}`;
+    }).filter(Boolean).join("\n\n");
+
+    const summarySystemPrompt =
+      "你是一个对话历史压缩助手。请将提供的对话历史总结为一段完整的上下文摘要，" +
+      "以第三人称叙述的方式描述对话中发生的事情、建立的设定和关键信息，" +
+      "确保摘要可以作为后续对话的有效背景，不遗漏重要细节，同时删除所有冗余内容。";
+
+    const summaryQuery = [{
+      text: `请压缩总结以下对话历史（共 ${Math.ceil(history.length / 2)} 轮），生成一段可作为后续对话背景的上下文摘要：\n\n${historyText}`,
+    }];
+
+    const profile = config.profiles.find((p) => p.prefix === prefix);
+    const channelName = profile?.Channel || config.appschannel;
+    const response = await getAI(channelName, e, summaryQuery, summarySystemPrompt, false, false, []);
+
+    let summaryText;
+    if (typeof response === "string") {
+      summaryText = response;
+    } else if (response?.text) {
+      summaryText = response.text;
+    } else {
+      await e.reply(`总结失败，AI 没有返回有效内容。`, 10);
+      return true;
+    }
+
+    const compressedHistory = [
+      { role: "user", parts: [{ text: "（以下是之前对话内容的压缩摘要，请以此作为对话背景继续）" }] },
+      { role: "model", parts: [{ text: summaryText }] },
+    ];
+
+    await saveConversationHistory(e, compressedHistory, prefix);
+    await e.reply(`已将与「${profileName}」的 ${Math.ceil(history.length / 2)} 轮对话压缩为 1 轮摘要！`, 10);
+    return true;
+  });
+
   ListSingle = Command(/^#?列出对话\s*(.+)/, async (e) => {
     const prefix = e.match[1].trim();
 

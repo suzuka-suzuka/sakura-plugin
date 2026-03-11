@@ -19,6 +19,11 @@
     pnpm install
     ```
     _如果你没有 `pnpm`，请先安装：`npm install -g pnpm`_
+    
+## 📦 额外依赖 (MCP相关)
+部分 MCP 功能依赖于外部扩展，使用对应工具前请确保已经安装了相关的支持：
+* **Fetch Server**：
+`pip install mcp-server-fetch` (如果使用了隔离的虚拟环境，请将其安装在机器人运行的全局 Python 环境下)
 
 ## 💬 支持与交流
 

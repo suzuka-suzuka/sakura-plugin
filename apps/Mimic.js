@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { plugindata as data } from "../lib/path.js";
-import { getAI } from "../lib/AIUtils/getAI.js";
+import { getAI, getCurrentAndPreviousUserText } from "../lib/AIUtils/getAI.js";
 import { executeToolCalls } from "../lib/AIUtils/tools/tools.js";
 import {
   splitAndReplyMessages,
@@ -9,7 +9,7 @@ import {
   getQuoteContent,
 } from "../lib/AIUtils/messaging.js";
 import Setting from "../lib/setting.js";
-import { randomReact } from "../lib/utils.js";
+import { randomReact, isMdText, sendMarkdownMsg } from "../lib/utils.js";
 
 export class Mimic extends plugin {
   constructor() {
@@ -217,6 +217,7 @@ export class Mimic extends plugin {
     const Channel = config.Channel;
     try {
       const queryParts = [{ text: query }];
+      const lockedVectorContext = getCurrentAndPreviousUserText(queryParts, currentFullHistory);
 
       const geminiInitialResponse = await getAI(
         Channel,
@@ -225,7 +226,8 @@ export class Mimic extends plugin {
         selectedPresetPrompt,
         true,
         true,
-        currentFullHistory
+        currentFullHistory,
+        lockedVectorContext
       );
 
       if (typeof geminiInitialResponse === "string") {
@@ -261,15 +263,24 @@ export class Mimic extends plugin {
 
         if (functionCalls && functionCalls.length > 0) {
           toolCallCount++;
-          if (toolCallCount >= 5) {
+          if (toolCallCount >= 10) {
             logger.warn(`[Mimic] 工具调用次数超过上限，强行结束对话`);
             return false;
           }
 
           if (textContent) {
             const cleanedTextContent = textContent.replace(/\n+$/, "");
-            const parsedcleanedTextContent = parseAtMessage(cleanedTextContent);
-            await e.reply(parsedcleanedTextContent, true);
+            if (isMdText(cleanedTextContent) && cleanedTextContent.length >= 150) {
+              try {
+                const botname = Setting.getConfig("bot").botname;
+                const result = await sendMarkdownMsg(e, cleanedTextContent, { source: `${botname}回复` });
+                if (!result?.message_id) throw new Error('发送失败');
+              } catch {
+                await e.reply(parseAtMessage(cleanedTextContent), true);
+              }
+            } else {
+              await e.reply(parseAtMessage(cleanedTextContent), true);
+            }
           }
           const executedResults = await executeToolCalls(e, functionCalls);
           currentFullHistory.push(...executedResults);
@@ -280,7 +291,8 @@ export class Mimic extends plugin {
             selectedPresetPrompt,
             true,
             true,
-            currentFullHistory
+            currentFullHistory,
+            lockedVectorContext
           );
 
           if (typeof currentGeminiResponse === "string") {
@@ -293,6 +305,20 @@ export class Mimic extends plugin {
       }
 
       const recalltime = config.recalltime;
+
+      if (isMdText(finalResponseText) && finalResponseText.length >= 150) {
+        try {
+          const botname = Setting.getConfig("bot").botname;
+          const result = await sendMarkdownMsg(e, finalResponseText, { source: `${botname}回复` });
+          if (result?.message_id) {
+            return false;
+          }
+          logger.warn(`[Mimic] Markdown转发发送失败，降级为普通回复`);
+        } catch (err) {
+          logger.error(`[Mimic] Markdown发送出错: ${err.message}，降级为普通回复`);
+        }
+      }
+
       if (config.splitMessage) {
         await splitAndReplyMessages(
           e,

@@ -1,7 +1,9 @@
 
-export class groupRequestListener extends plugin {
-  groupRequests = new Map();
+const requestHashKey = (group_id) => `sakura:groupRequest:${group_id}`;
+const requestCounterKey = (group_id) => `sakura:groupRequest:${group_id}:counter`;
+const REQUEST_TTL = 7 * 24 * 60 * 60;
 
+export class groupRequestListener extends plugin {
   constructor() {
     super({
       name: "入群申请监听",
@@ -9,15 +11,13 @@ export class groupRequestListener extends plugin {
   }
 
   handleGroupAddRequest = OnEvent("request.group.add", async (e) => {
-    const info = await e.bot.getStrangerInfo(e.user_id);
+    const info = await e.getStrangerInfo(e.user_id);
     const nickname = info?.nickname || e.user_id;
 
-    if (!this.groupRequests.has(e.group_id)) {
-      this.groupRequests.set(e.group_id, new Map());
-    }
-    const requests = this.groupRequests.get(e.group_id);
-    const markerId = requests.size + 1;
-    requests.set(markerId, { flag: e.flag, event: e });
+    const markerId = await redis.incr(requestCounterKey(e.group_id));
+    await redis.expire(requestCounterKey(e.group_id), REQUEST_TTL);
+    await redis.hset(requestHashKey(e.group_id), markerId, e.flag);
+    await redis.expire(requestHashKey(e.group_id), REQUEST_TTL);
 
     const avatarUrl = `https://q1.qlogo.cn/g?b=qq&nk=${e.user_id}&s=100`;
     const message = [
@@ -41,23 +41,17 @@ export class groupRequestListener extends plugin {
         return false;
       }
 
-      const requests = this.groupRequests.get(e.group_id);
-      if (!requests) {
-        return false;
-      }
-
       const markerId = Number(e.msg.match(/^#?开门\s*(\d+)$/)[1]);
+      const flag = await redis.hget(requestHashKey(e.group_id), markerId);
 
-      if (!requests.has(markerId)) {
+      if (!flag) {
         await e.reply(`门牌号${markerId}不存在`, 10);
         return true;
       }
 
       await e.reply(`好的，我这就开门`);
-      const { event } = requests.get(markerId);
-
-      await event.approve();
-      requests.delete(markerId);
+      await e.bot.setGroupAddRequest({ flag, approve: true });
+      await redis.hdel(requestHashKey(e.group_id), markerId);
 
       return true;
     }

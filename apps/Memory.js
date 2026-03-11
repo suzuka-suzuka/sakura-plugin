@@ -2,6 +2,8 @@ import fs from "fs";
 import path from "path";
 import { plugindata as data } from "../lib/path.js";
 
+const MEMORY_MAX = 30;
+
 export class Memory extends plugin {
   constructor() {
     super({
@@ -53,8 +55,13 @@ export class Memory extends plugin {
     }
 
     memories.push(memoryContent);
+    let dropped = null;
+    if (memories.length > MEMORY_MAX) {
+      dropped = memories.shift();
+    }
     fs.writeFileSync(memoryFile, JSON.stringify(memories, null, 2));
-    await e.reply(`已添加记忆`, 10);
+    const dropNote = dropped ? `\n（已自动丢弃最旧记忆：${dropped}）` : "";
+    await e.reply(`已添加记忆${dropNote}`, 10);
     return true;
   });
 

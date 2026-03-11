@@ -30,6 +30,7 @@ export const commandNames = {
     "VitsVoice.vitsSpeak": "xx说（语音合成）",
     "pixivSearch.viewRanking": "p站排行榜",
     "pixivSearch.getRankingItem": "p站排行榜详情",
+    "SearchImage.imageSearch": "搜图",
 };
 
 export const manualCommandNames = [
@@ -50,6 +51,7 @@ const ProfileSchema = z.object({
     GroupContext: z.boolean().default(false).describe('群组上下文|是否读取群聊上下文'),
     History: z.boolean().default(true).describe('历史记录|是否保存对话历史'),
     Tool: z.boolean().default(true).describe('工具调用|是否允许AI使用工具'),
+    Memory: z.boolean().default(false).describe('用户记忆|是否将用户长期记忆注入到系统提示中'),
     enableNaiPainting: z.boolean().default(false).describe('NAI绘图|是否启用NAI绘图功能'),
     naiPrompt: z.string().default('').describe('NAI绘图提示词|#textarea|附加到生成的NAI绘图指令后的提示词'),
 });
@@ -62,6 +64,7 @@ export const AISchema = z.object({
     toolschannel: z.string().default('default').describe('工具渠道|#channelSelect'),
     appschannel: z.string().default('default').describe('应用渠道|#channelSelect'),
     defaultchannel: z.string().default('default').describe('默认渠道|#channelSelect'),
+    githubToken: z.string().default('').describe('GitHub Token|#textarea|MCP GitHub 工具使用的 Personal Access Token'),
 }).describe('AI 对话设定');
 
 export const ActiveChatSchema = z.object({
@@ -173,6 +176,7 @@ const defaultCommandCosts = [
     { command: "绘图", cost: 30 },
     { command: "p站排行榜", cost: 20 },
     { command: "p站排行榜详情", cost: 5 },
+    { command: "搜图", cost: 5 },
 ];
 
 export const EconomySchema = z.object({
@@ -284,9 +288,12 @@ export const PixivSchema = z.object({
     artistSubFreshnessPeriod: z.number().default(43200).describe('画师订阅保质期(秒)|只推送发布时间在此范围内的作品'),
 }).describe('Pixiv 功能');
 
+export const BotSchema = z.object({
+    botname: z.string().default('小叶').describe('机器人名称|机器人在各功能中使用的名称'),
+}).describe('机器人基础设定');
+
 export const PokeSchema = z.object({
     enable: z.boolean().default(true).describe('启用戳一戳'),
-    botname: z.string().default('小叶').describe('机器人名称'),
     personas: z.array(z.string()).default(['猫娘', '雌小鬼']).describe('人格列表|#roleSelectArray|戳一戳回复使用的人格'),
     masterReplies: z.string().default('').describe('主人回复|#textarea|对主人的特殊回复模板'),
     genericTextReplies: z.string().default('').describe('通用文字回复|#textarea'),
@@ -321,6 +328,12 @@ export const SummarySchema = z.object({
     Summaries: z.array(z.string()).default([]).describe('图片外显内容'),
 }).describe('图片外显');
 
+export const SearchImageSchema = z.object({
+    defaultChannel: z.enum(['ascii2d', 'google', 'saucenao']).default('ascii2d').describe('默认搜图渠道|不带前缀的“搜图”指令默认使用的渠道'),
+    maxResults: z.number().default(3).describe('结果条数|转发消息中展示的最大结果数量'),
+    sauceNaoApiKey: z.string().default('debf00d9dc4684e18f4fd02dd2218aa346f65d31').describe('SauceNAO API Key|SauceNAO 搜图使用的 API Key'),
+}).describe('搜图');
+
 export const TeatimeSchema = z.object({
     Groups: z.array(z.number()).default([]).describe('下午茶群号|#groupSelect'),
     cron: cronString('0 15 * * *').describe('定时推送的时间表达式|#cron|5段格式: 分 时 日 月 周'),
@@ -335,6 +348,7 @@ export const pluginMeta = {
 
 
 export const configSchema = {
+    'bot': BotSchema,
     '60sNews': News60sSchema,
     'AI': AISchema,
     'ActiveChat': ActiveChatSchema,
@@ -357,22 +371,25 @@ export const configSchema = {
     'recall': RecallSchema,
     'repeat': RepeatSchema,
     'roles': RolesSchema,
+    'SearchImage': SearchImageSchema,
     'summary': SummarySchema,
     'teatime': TeatimeSchema,
 };
 
 
 export const schemaCategories = {
+    '基础设定': ['bot'],
     'AI渠道': ['Channels'],
     'AI角色': ['roles'],
     'AI设定': ['AI', 'mimic', 'ActiveChat'],
     '戳一戳': ['poke'],
-    '图片功能': ['r18', 'summary', 'cool', 'teatime', 'EmojiThief', 'EditImage', 'nai', 'pixiv'],
+    '图片功能': ['r18', 'summary', 'SearchImage', 'cool', 'teatime', 'EmojiThief', 'EditImage', 'nai', 'pixiv'],
     '经济系统': ['economy'],
     '其他功能': ['60sNews', 'AutoCleanup', 'forwardMessage', 'groupnotice', 'repeat', 'recall', 'bilicookie', 'VitsVoice', 'SoraVideo'],
 };
 
 export const schemaLabels = {
+    'bot': '机器人基础设定',
     '60sNews': '60秒新闻推送',
     'AI': 'AI 对话设定',
     'ActiveChat': '主动聊天',
@@ -395,6 +412,7 @@ export const schemaLabels = {
     'recall': '撤回监听',
     'repeat': '复读机',
     'roles': 'AI 角色',
+    'SearchImage': '统一搜图',
     'summary': '图片外显',
     'teatime': '下午茶推送',
 };

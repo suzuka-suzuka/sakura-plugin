@@ -76,7 +76,7 @@ export class GroupNotice extends plugin {
     if (!(await checkCD(e.group_id))) return;
 
     const strangerInfo = await e
-      .getStrangerInfo(e.user_id, true)
+      .getStrangerInfo(e.user_id)
       .catch(() => null);
     const name = strangerInfo?.nickname || e.nickname || "未知用户";
     const avatar = segment.image(

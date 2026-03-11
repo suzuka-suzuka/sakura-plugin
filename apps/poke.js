@@ -21,7 +21,7 @@ export class poke extends plugin {
   }
 
   get botname() {
-    return this.appconfig.botname;
+    return Setting.getConfig("bot").botname;
   }
 
   async checkCD(key, duration) {
