@@ -332,7 +332,7 @@ export const SummarySchema = z.object({
 export const SearchImageSchema = z.object({
     defaultChannel: z.enum(['ascii2d', 'google', 'saucenao']).default('ascii2d').describe('默认搜图渠道|不带前缀的“搜图”指令默认使用的渠道'),
     maxResults: z.number().default(3).describe('结果条数|转发消息中展示的最大结果数量'),
-    sauceNaoApiKey: z.string().default('debf00d9dc4684e18f4fd02dd2218aa346f65d31').describe('SauceNAO API Key|SauceNAO 搜图使用的 API Key'),
+    sauceNaoApiKey: z.string().default('').describe('SauceNAO API Key|SauceNAO 搜图使用的 API Key'),
 }).describe('搜图');
 
 export const TeatimeSchema = z.object({
