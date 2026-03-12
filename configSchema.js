@@ -318,6 +318,13 @@ export const RepeatSchema = z.object({
 const RoleSchema = z.object({
     name: z.string().default('').describe('角色名称'),
     prompt: z.string().default('').describe('角色提示词|#textarea|定义此角色的系统提示词'),
+    Channel: z.string().default('').describe('使用渠道|#channelSelect|留空则使用系统默认渠道'),
+    GroupContext: z.boolean().default(false).describe('群组上下文|是否读取群聊上下文'),
+    History: z.boolean().default(true).describe('历史记录|是否保存对话历史'),
+    Tool: z.boolean().default(false).describe('工具调用|是否允许AI使用工具'),
+    Memory: z.boolean().default(false).describe('用户记忆|是否将用户长期记忆注入到系统提示中'),
+    enableNaiPainting: z.boolean().default(false).describe('NAI绘图|是否启用NAI绘图功能'),
+    naiPrompt: z.string().default('').describe('NAI绘图提示词|#textarea|附加到生成的NAI绘图指令后的提示词'),
 });
 
 export const RolesSchema = z.object({

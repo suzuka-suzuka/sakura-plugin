@@ -168,6 +168,35 @@ export class AIChat extends plugin {
         }
         return true;
       }
+
+      // 未找到 prefix 匹配，尝试按角色名直接查找 roles.yaml
+      const rolesConfigForStart = Setting.getConfig("roles");
+      const allRoles = rolesConfigForStart?.roles || [];
+      const roleByName = allRoles.find((r) => r.name && afterCmd === r.name);
+      if (roleByName) {
+        const virtualPrefix = roleByName.name;
+        const virtualProfile = {
+          prefix: virtualPrefix,
+          name: roleByName.name,
+          Prompt: roleByName.prompt || "",
+          Channel: roleByName.Channel || config.defaultchannel || "default",
+          GroupContext: roleByName.GroupContext ?? false,
+          History: roleByName.History ?? true,
+          Tool: roleByName.Tool ?? false,
+          Memory: roleByName.Memory ?? false,
+          enableNaiPainting: roleByName.enableNaiPainting ?? false,
+          naiPrompt: roleByName.naiPrompt || "",
+        };
+        const existingSession = await this.getSession(e);
+        await this.startSession(e, virtualProfile, virtualProfile.Prompt);
+        if (existingSession) {
+          const oldLabel = existingSession.profile?.name || existingSession.profile?.prefix;
+          await e.reply(`已从【${oldLabel}】切换到【${roleByName.name}】的对话，发送「结束对话」或5分钟内无活动将自动结束。`, 10);
+        } else {
+          await e.reply(`已开始与【${roleByName.name}】的对话，发送「结束对话」或5分钟内无活动将自动结束。`, 10);
+        }
+        return true;
+      }
     }
 
     const matchedProfile = config.profiles.find((p) =>
