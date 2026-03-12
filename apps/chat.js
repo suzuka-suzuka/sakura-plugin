@@ -374,6 +374,32 @@ export class AIChat extends plugin {
         currentFullHistory.push({ role: "user", parts: historyParts });
       }
 
+      const truncateHistory = (history) => history.map((item) => {
+        if (item.role === "function" && item.parts) {
+          return {
+            ...item,
+            parts: item.parts.map((part) => {
+              if (part.functionResponse?.response) {
+                const responseStr = JSON.stringify(part.functionResponse.response);
+                if (responseStr.length > 2000) {
+                  return {
+                    ...part,
+                    functionResponse: {
+                      ...part.functionResponse,
+                      response: {
+                        message: responseStr.substring(0, 2000) + "...(已截断)",
+                      },
+                    },
+                  };
+                }
+              }
+              return part;
+            }),
+          };
+        }
+        return item;
+      });
+
       while (true) {
         const textContent = currentAIResponse.text;
         const functionCalls = currentAIResponse.functionCalls;
@@ -436,32 +462,6 @@ export class AIChat extends plugin {
           break;
         }
       }
-
-      const truncateHistory = (history) => history.map((item) => {
-        if (item.role === "function" && item.parts) {
-          return {
-            ...item,
-            parts: item.parts.map((part) => {
-              if (part.functionResponse?.response) {
-                const responseStr = JSON.stringify(part.functionResponse.response);
-                if (responseStr.length > 2000) {
-                  return {
-                    ...part,
-                    functionResponse: {
-                      ...part.functionResponse,
-                      response: {
-                        message: responseStr.substring(0, 2000) + "...(已截断)",
-                      },
-                    },
-                  };
-                }
-              }
-              return part;
-            }),
-          };
-        }
-        return item;
-      });
 
       if (History) {
         await saveConversationHistory(e, truncateHistory(currentFullHistory), prefix);
