@@ -126,6 +126,100 @@ export class Conversationmanagement extends plugin {
   });
 
 
+  TamperSingle = Command(/^#?篡改对话\s*([\s\S]+)/, async (e) => {
+    let input = e.match[1].trim();
+
+    const config = this.appconfig;
+    if (!config || !config.profiles) return false;
+
+    let prefix = null;
+    let index = 1; // 默认：倒数第 1 条（最后一条）
+    let newContent = null;
+
+    // 尝试匹配：前缀 + 空格 + 序号 + 空格 + 新内容
+    const match3 = input.match(/^(.+?)\s+(-?\d+)\s+([\s\S]+)$/);
+    // 尝试匹配：前缀 + 空格 + 新内容（无序号）
+    const match2 = input.match(/^(.+?)\s+([\s\S]+)$/);
+
+    if (match3) {
+      const p = match3[1];
+      if (config.profiles.some((prof) => prof.prefix === p)) {
+        prefix = p;
+        index = parseInt(match3[2], 10);
+        newContent = match3[3];
+      }
+    }
+
+    if (!prefix && match2) {
+      const p = match2[1];
+      if (config.profiles.some((prof) => prof.prefix === p)) {
+        prefix = p;
+        newContent = match2[2];
+      }
+    }
+
+    if (!prefix || !newContent) {
+      return false;
+    }
+
+    if (index === 0) {
+      return false;
+    }
+
+    const profileName = this.getProfileName(prefix);
+    const history = await loadConversationHistory(e, prefix);
+
+    if (history.length === 0) {
+      await e.reply(`目前没有与「${profileName}」的对话历史记录。`, 10);
+      return true;
+    }
+
+    // 收集所有 model 条目在 history 数组中的下标
+    const modelIndices = history
+      .map((item, i) => (item.role === "model" ? i : -1))
+      .filter((i) => i !== -1);
+
+    if (modelIndices.length === 0) {
+      await e.reply(`没有找到 AI 的回复记录。`, 10);
+      return true;
+    }
+
+    let targetIdx;
+    if (index > 0) {
+      // 正数：从末尾算，1 = 最后一条
+      const pos = modelIndices.length - index;
+      if (pos < 0) {
+        await e.reply(`序号超出范围，共有 ${modelIndices.length} 条回复。`, 10);
+        return true;
+      }
+      targetIdx = modelIndices[pos];
+    } else {
+      // 负数：从开头算，-1 = 第一条
+      const pos = Math.abs(index) - 1;
+      if (pos >= modelIndices.length) {
+        await e.reply(`序号超出范围，共有 ${modelIndices.length} 条回复。`, 10);
+        return true;
+      }
+      targetIdx = modelIndices[pos];
+    }
+
+    const oldText = history[targetIdx].parts?.[0]?.text || "(无文本)";
+    // 将该条 model 回复替换为纯文本，清除可能的 functionCall 等 parts
+    history[targetIdx].parts = [{ text: newContent }];
+
+    await saveConversationHistory(e, history, prefix);
+
+    const direction = index > 0 ? `倒数第 ${index}` : `正数第 ${Math.abs(index)}`;
+    const preview = (str) => str.length > 60 ? str.substring(0, 60) + "..." : str;
+    await e.reply(
+      `已篡改「${profileName}」${direction} 条 AI 回复喵~\n` +
+      `原内容：${preview(oldText)}\n` +
+      `新内容：${preview(newContent)}`,
+      10
+    );
+    return true;
+  });
+
   ListSingle = Command(/^#?列出对话\s*(.+)/, async (e) => {
     const prefix = e.match[1].trim();
 

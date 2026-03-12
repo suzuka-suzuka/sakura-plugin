@@ -142,3 +142,6 @@ vite.config.ts.timestamp-*
 config/
 data/
 readmeresource/
+
+# 忽略 GitHub MCP Server 二进制文件
+github-mcp-server/

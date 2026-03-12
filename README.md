@@ -25,6 +25,11 @@
 * **Fetch Server**：
 `pip install mcp-server-fetch` (如果使用了隔离的虚拟环境，请将其安装在机器人运行的全局 Python 环境下)
 
+* **GitHub MCP Server**：
+  前往 [github-mcp-server Releases](https://github.com/github/github-mcp-server/releases/latest) 页面下载对应平台的二进制文件，并将其放置在插件目录的 `github-mcp-server/` 文件夹下：
+  - **Windows**：下载 `github-mcp-server_windows_amd64.zip`，解压后将 `github-mcp-server.exe` 放入 `plugins/sakura-plugin/github-mcp-server/`
+  - **Linux**：下载 `github-mcp-server_linux_amd64.tar.gz`，解压后将 `github-mcp-server` 放入 `plugins/sakura-plugin/github-mcp-server/`，并执行 `chmod +x github-mcp-server` 赋予可执行权限
+
 ## 💬 支持与交流
 
 如果你在使用过程中遇到任何问题，或者有好的建议，欢迎通过以下方式联系：
