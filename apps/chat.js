@@ -7,7 +7,7 @@ import {
 import { executeToolCalls } from "../lib/AIUtils/tools/tools.js";
 import { parseAtMessage, getQuoteContent } from "../lib/AIUtils/messaging.js";
 import { checkForNaiTags } from "../lib/AIUtils/naiHandler.js";
-import { randomReact, getImg, isMdText, sendMarkdownMsg } from "../lib/utils.js";
+import { randomReact, getImg, smartReplyMsg } from "../lib/utils.js";
 import fs from "fs";
 import path from "path";
 import { plugindata as data } from "../lib/path.js";
@@ -75,24 +75,8 @@ export class AIChat extends plugin {
   // 统一回复处理函数
   async smartReply(e, text, quote = 0, at = false) {
     if (!text) return;
-
-    // 检测到 Markdown 语法且字数足够多时，通过三层合并转发发送
-    if (isMdText(text) && text.length >= 150) {
-      try {
-        const botname = Setting.getConfig("bot").botname;
-        const result = await sendMarkdownMsg(e, text, { source: `${botname}回复` });
-        if (result && result.message_id) {
-          return result;
-        }
-        // 发送失败则降级为纯文本
-        logger.warn(`[Chat] Markdown转发发送失败，降级为纯文本`);
-      } catch (err) {
-        logger.error(`[Chat] Markdown发送出错: ${err.message}，降级为纯文本`);
-      }
-    }
-
-    const msg = parseAtMessage(text);
-    return await e.reply(msg, quote, at);
+    const botname = Setting.getConfig("bot").botname;
+    return await smartReplyMsg(e, text, { quote, at, botname });
   }
 
   Chat = OnEvent("message", async (e) => {

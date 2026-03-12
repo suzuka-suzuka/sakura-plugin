@@ -9,7 +9,7 @@ import {
   getQuoteContent,
 } from "../lib/AIUtils/messaging.js";
 import Setting from "../lib/setting.js";
-import { randomReact, isMdText, sendMarkdownMsg } from "../lib/utils.js";
+import { randomReact, smartReplyMsg } from "../lib/utils.js";
 
 export class Mimic extends plugin {
   constructor() {
@@ -270,17 +270,7 @@ export class Mimic extends plugin {
 
           if (textContent) {
             const cleanedTextContent = textContent.replace(/\n+$/, "");
-            if (isMdText(cleanedTextContent) && cleanedTextContent.length >= 150) {
-              try {
-                const botname = Setting.getConfig("bot").botname;
-                const result = await sendMarkdownMsg(e, cleanedTextContent, { source: `${botname}回复` });
-                if (!result?.message_id) throw new Error('发送失败');
-              } catch {
-                await e.reply(parseAtMessage(cleanedTextContent), true);
-              }
-            } else {
-              await e.reply(parseAtMessage(cleanedTextContent), true);
-            }
+            await smartReplyMsg(e, cleanedTextContent, { quote: true });
           }
           const executedResults = await executeToolCalls(e, functionCalls);
           currentFullHistory.push(...executedResults);
@@ -306,30 +296,15 @@ export class Mimic extends plugin {
 
       const recalltime = config.recalltime;
 
-      if (isMdText(finalResponseText) && finalResponseText.length >= 150) {
-        try {
-          const botname = Setting.getConfig("bot").botname;
-          const result = await sendMarkdownMsg(e, finalResponseText, { source: `${botname}回复` });
-          if (result?.message_id) {
-            return false;
+      await smartReplyMsg(e, finalResponseText, {
+        textReplyFn: async (t) => {
+          if (config.splitMessage) {
+            await splitAndReplyMessages(e, t, shouldRecall, recalltime);
+          } else {
+            await e.reply(parseAtMessage(t), shouldRecall ? recalltime : 0, true);
           }
-          logger.warn(`[Mimic] Markdown转发发送失败，降级为普通回复`);
-        } catch (err) {
-          logger.error(`[Mimic] Markdown发送出错: ${err.message}，降级为普通回复`);
-        }
-      }
-
-      if (config.splitMessage) {
-        await splitAndReplyMessages(
-          e,
-          finalResponseText,
-          shouldRecall,
-          recalltime
-        );
-      } else {
-        const parsedResponse = parseAtMessage(finalResponseText);
-        await e.reply(parsedResponse, shouldRecall ? recalltime : 0, true);
-      }
+        },
+      });
     } catch (error) {
       logger.error(`处理过程中出现错误: ${error.message}`);
       return false;
