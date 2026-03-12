@@ -332,8 +332,7 @@ export const SummarySchema = z.object({
 export const SearchImageSchema = z.object({
     defaultChannel: z.enum(['ascii2d', 'google', 'saucenao']).default('ascii2d').describe('默认搜图渠道|不带前缀的“搜图”指令默认使用的渠道'),
     maxResults: z.number().default(3).describe('结果条数|转发消息中展示的最大结果数量'),
-    sauceNaoApiKey: z.string().default('').describe('SauceNAO API Key|SauceNAO 搜图使用的 API Key'),
-}).describe('搜图');
+    sauceNaoApiKey: z.string().default('').describe('SauceNAO API Key|SauceNAO 搜图使用的 API Key'),    googleProxy: z.string().default('').describe('谷歌搜图代理|给 Google Lens 浏览器单独指定的代理地址，格式: http://host:port 或 socks5://host:port，留空则不指定（依赖系统代理）'),}).describe('搜图');
 
 export const TeatimeSchema = z.object({
     Groups: z.array(z.number()).default([]).describe('下午茶群号|#groupSelect'),
