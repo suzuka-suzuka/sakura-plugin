@@ -44,7 +44,6 @@ export class SearchImage extends plugin {
       const result = await searchImageByUrl(imgs[0], {
         channel,
         sauceNaoApiKey: this.appconfig.sauceNaoApiKey,
-        googleProxy: this.appconfig.googleProxy || '',
       })
 
       const hasResults = Boolean(result.aiText) || (Array.isArray(result.items) && result.items.length > 0)
