@@ -378,7 +378,7 @@ export class AIChat extends plugin {
       );
 
       if (typeof currentAIResponse === "string") {
-        await this.smartReply(e, currentAIResponse, 10, true);
+        await e.reply(currentAIResponse, 10, true);
         return true;
       }
 
@@ -467,7 +467,7 @@ export class AIChat extends plugin {
           );
 
           if (typeof currentAIResponse === "string") {
-            await this.smartReply(e, currentAIResponse, 10, true);
+            await e.reply(currentAIResponse, 10, true);
             return true;
           }
         } else if (textContent) {
