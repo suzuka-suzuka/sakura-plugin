@@ -5,7 +5,7 @@ import {
   saveConversationHistory,
 } from "../lib/AIUtils/ConversationHistory.js";
 import { executeToolCalls } from "../lib/AIUtils/tools/tools.js";
-import { parseAtMessage, getQuoteContent } from "../lib/AIUtils/messaging.js";
+import { getQuoteContent } from "../lib/AIUtils/messaging.js";
 import { checkForNaiTags } from "../lib/AIUtils/naiHandler.js";
 import { randomReact, getImg, smartReplyMsg } from "../lib/utils.js";
 import fs from "fs";
@@ -75,8 +75,7 @@ export class AIChat extends plugin {
   // 统一回复处理函数
   async smartReply(e, text, quote = 0, at = false) {
     if (!text) return;
-    const botname = Setting.getConfig("bot").botname;
-    return await smartReplyMsg(e, text, { quote, at, botname });
+    return await smartReplyMsg(e, text, { quote, at });
   }
 
   Chat = OnEvent("message", async (e) => {
