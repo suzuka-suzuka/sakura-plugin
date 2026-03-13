@@ -66,6 +66,7 @@ export const AISchema = z.object({
     defaultchannel: z.string().default('default').describe('默认渠道|#channelSelect'),
     retryCount: z.number().int().min(0).default(1).describe('渠道重试次数|请求失败时对当前渠道的最大重试次数，等待时间线性回退（5s、10s、15s…），耗尽后再回退至默认渠道'),
     githubToken: z.string().default('').describe('GitHub Token|#textarea|MCP GitHub 工具使用的 Personal Access Token'),
+    maxToolCalls: z.number().default(20).describe('最大工具调用次数|每次对话允许AI连续调用工具的最大次数，超过后将强制结束'),
 }).describe('AI 对话设定');
 
 export const ActiveChatSchema = z.object({
@@ -218,6 +219,7 @@ const GroupConfigSchema = z.object({
     Channel: z.string().default('2.5').describe('使用渠道|#channelSelect'),
     enableGroupLock: z.boolean().default(false).describe('群锁定|是否锁定只在此群生效'),
     splitMessage: z.boolean().default(true).describe('拆分消息|是否拆分长消息'),
+    maxToolCalls: z.number().default(10).describe('最大工具调用次数|允许AI连续调用工具的最大次数'),
 });
 
 export const MimicSchema = z.object({
@@ -231,6 +233,7 @@ export const MimicSchema = z.object({
     Channel: z.string().default('2.5').describe('使用渠道|#channelSelect'),
     enableGroupLock: z.boolean().default(false).describe('群锁定'),
     splitMessage: z.boolean().default(true).describe('拆分消息'),
+    maxToolCalls: z.number().default(10).describe('最大工具调用次数|允许AI连续调用工具的最大次数'),
     Groups: z.array(z.number()).default([]).describe('启用群号|#groupSelect'),
     GroupConfigs: z.array(GroupConfigSchema).default([]).describe('群独立配置|为每个群设置不同的模拟人参数'),
 }).describe('伪人配置');

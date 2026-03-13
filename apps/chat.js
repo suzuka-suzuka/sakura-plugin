@@ -11,6 +11,7 @@ import { randomReact, getImg, smartReplyMsg } from "../lib/utils.js";
 import fs from "fs";
 import path from "path";
 import { plugindata as data } from "../lib/path.js";
+import { checkAndClearStopFlag } from "../lib/AIUtils/stopFlag.js";
 
 export class AIChat extends plugin {
   constructor() {
@@ -413,6 +414,11 @@ export class AIChat extends plugin {
       });
 
       while (true) {
+        if (checkAndClearStopFlag(e)) {
+          logger.info(`[Chat] 用户 ${e.user_id} 触发了强制停止`);
+          break;
+        }
+
         const textContent = currentAIResponse.text;
         const functionCalls = currentAIResponse.functionCalls;
         const rawParts = currentAIResponse.rawParts;
@@ -437,8 +443,9 @@ export class AIChat extends plugin {
 
         if (functionCalls && functionCalls.length > 0) {
           toolCallCount++;
-          if (toolCallCount >= 20) {
-            logger.warn(`[Chat] 工具调用次数超过上限，强行结束对话`);
+          const maxToolCalls = this.appconfig.maxToolCalls ?? 20;
+          if (toolCallCount >= maxToolCalls) {
+            logger.warn(`[Chat] 工具调用次数超过上限(${maxToolCalls})，强行结束对话`);
             if (History) {
               await saveConversationHistory(e, truncateHistory(currentFullHistory), prefix);
             }

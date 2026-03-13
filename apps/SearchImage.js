@@ -15,7 +15,7 @@ export class SearchImage extends plugin {
       name: '搜图',
       dsc: '统一搜图入口',
       event: 'message',
-      priority: 1000,
+      priority: 1135,
     })
   }
 
@@ -57,11 +57,11 @@ export class SearchImage extends plugin {
       })
 
       if (!sendResult?.message_id) {
-        await e.reply(`已获取 ${channelLabel} 结果，但转发发送失败。`,10, true)
+        await e.reply(`已获取 ${channelLabel} 结果，但转发发送失败。`, 10, true)
       }
     } catch (error) {
       logger.error('[SearchImage] 搜图失败:', error)
-      await e.reply(`${channelLabel} 搜图失败: ${error.message}`, 10,true)
+      await e.reply(`${channelLabel} 搜图失败: ${error.message}`, 10, true)
     }
 
     return true

@@ -8,6 +8,7 @@ import {
   parseAtMessage,
   getQuoteContent,
 } from "../lib/AIUtils/messaging.js";
+import { checkAndClearStopFlag } from "../lib/AIUtils/stopFlag.js";
 import Setting from "../lib/setting.js";
 import { randomReact, smartReplyMsg } from "../lib/utils.js";
 
@@ -239,6 +240,11 @@ export class Mimic extends plugin {
       let currentGeminiResponse = geminiInitialResponse;
 
       while (true) {
+        if (checkAndClearStopFlag(e)) {
+          logger.info(`[Mimic] 用户 ${e.user_id} 触发了强制停止`);
+          break;
+        }
+
         const textContent = currentGeminiResponse.text;
         const functionCalls = currentGeminiResponse.functionCalls;
         const rawParts = currentGeminiResponse.rawParts;
@@ -263,8 +269,9 @@ export class Mimic extends plugin {
 
         if (functionCalls && functionCalls.length > 0) {
           toolCallCount++;
-          if (toolCallCount >= 10) {
-            logger.warn(`[Mimic] 工具调用次数超过上限，强行结束对话`);
+          const maxToolCalls = config.maxToolCalls ?? 10;
+          if (toolCallCount >= maxToolCalls) {
+            logger.warn(`[Mimic] 工具调用次数超过上限(${maxToolCalls})，强行结束对话`);
             return false;
           }
 
