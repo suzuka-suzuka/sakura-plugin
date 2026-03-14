@@ -1,4 +1,3 @@
-import moment from "moment";
 import path from "path";
 import { pluginresources } from "../lib/path.js";
 import { yandeimage } from "../lib/ImageUtils/ImageUtils.js";
@@ -265,9 +264,12 @@ export class poke extends plugin {
       return false;
     }
 
-    let time = moment(Date.now()).add(1, "days").format("YYYY-MM-DD 00:00:00");
+    let tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    let time = tomorrow.toISOString().slice(0, 10) + " 00:00:00";
     let exTime = Math.round(
-      (new Date(time).getTime() - new Date().getTime()) / 1000
+      (tomorrow.getTime() - Date.now()) / 1000
     );
 
     let count = await redis.get(`Mz:pokecount:${e.group_id}`);
@@ -283,12 +285,7 @@ export class poke extends plugin {
       exTime
     );
 
-    let time_A = moment(Date.now())
-      .add(20, "minutes")
-      .format("YYYY-MM-DD HH:mm:ss");
-    let exTime_A = Math.round(
-      (new Date(time_A).getTime() - new Date().getTime()) / 1000
-    );
+    let exTime_A = 20 * 60;
 
     let counter = await redis.get(`Mz:pokecount_A:${e.group_id}`);
     counter = counter ? parseInt(counter) + 1 : 1;

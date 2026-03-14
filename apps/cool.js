@@ -1,9 +1,8 @@
 import lodash from 'lodash';
-import moment from 'moment';
 import Setting from '../lib/setting.js';
 
 const _lastMsgTime = {};
-const _pluginGlobalStartTime = moment().unix();
+const _pluginGlobalStartTime = Math.floor(Date.now() / 1000);
 
 export class cool extends plugin {
     constructor() {
@@ -22,13 +21,13 @@ export class cool extends plugin {
         const config = this.appconfig;
 
         if ((config?.Groups ?? []).includes(groupId)) {
-            _lastMsgTime[groupId] = moment().unix();
+            _lastMsgTime[groupId] = Math.floor(Date.now() / 1000);
         }
         return false;
     });
 
     coolTask = Cron('*/20 * * * *', async () => {
-        const currentTime = moment().unix();
+        const currentTime = Math.floor(Date.now() / 1000);
         const config = this.appconfig;
 
         if (!config) {
@@ -77,7 +76,7 @@ export class cool extends plugin {
                 if (imageUrl) {
                     try {
                         await bot.pickGroup(groupId).sendMsg(segment.image(imageUrl));
-                        _lastMsgTime[groupId] = moment().unix();
+                        _lastMsgTime[groupId] = Math.floor(Date.now() / 1000);
                     } catch (error) {
                         logger.error(`发送图片到群 ${groupId} 失败: ${error}`);
                         try {
@@ -89,12 +88,12 @@ export class cool extends plugin {
                             logger.error(`获取一言也失败了: ${fallbackError}`);
                             await bot.pickGroup(groupId).sendMsg('喵');
                         } finally {
-                            _lastMsgTime[groupId] = moment().unix();
+                            _lastMsgTime[groupId] = Math.floor(Date.now() / 1000);
                         }
                     }
                 } else {
                     logger.warn(`未能获取群 ${groupId} 的图片数据，API可能无响应或没有返回图片。`);
-                    _lastMsgTime[groupId] = moment().unix();
+                    _lastMsgTime[groupId] = Math.floor(Date.now() / 1000);
                 }
             }
         }
