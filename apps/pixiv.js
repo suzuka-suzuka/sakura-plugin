@@ -236,7 +236,10 @@ export class pixivSearch extends plugin {
       const result = await getRankingOverview(modeKey)
 
       if (result.images && result.images.length > 0) {
-        await this.sendRankingForward(e, result, modeKey)
+        const result = await this.sendRankingForward(e, result, modeKey)
+        if (!result||!result.message_id) {
+          await e.reply(`${modeKey}已经发送过了，请往上翻翻~，${modeKey}每天11刷新哦~`, 10, true)
+        }
       } else {
         await e.reply(`${modeKey}暂无数据，请稍后再试~`, 10, true)
       }
@@ -306,7 +309,7 @@ export class pixivSearch extends plugin {
       const item = await getRankingItemFromRedis(mode, rank)
 
       if (!item) {
-        return e.reply(`${modeKey}第${rank}名不存在，请先"#刷新${modeKey}"或检查排名是否超出范围~`, 10, true)
+        return e.reply(`${modeKey}第${rank}名不存在，请先发送"${modeKey}"或检查排名是否超出范围~`, 10, true)
       }
 
       // 直接从 Redis 缓存中取原图链接，无需再调 API
@@ -318,7 +321,7 @@ export class pixivSearch extends plugin {
       }
 
       if (pages.length === 0) {
-        return e.reply(`${modeKey}第${rank}名缓存中无图片链接，请先"#刷新${modeKey}"重新获取~`, 10, true)
+        return e.reply(`${modeKey}第${rank}名缓存中无图片链接，请先发送"${modeKey}"重新获取~`, 10, true)
       }
 
       // 构造 illust 对象（复用缓存数据）
