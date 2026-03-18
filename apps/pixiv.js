@@ -236,8 +236,8 @@ export class pixivSearch extends plugin {
       const result = await getRankingOverview(modeKey)
 
       if (result.images && result.images.length > 0) {
-        const result = await this.sendRankingForward(e, result, modeKey)
-        if (!result||!result.message_id) {
+        const sendResult = await this.sendRankingForward(e, result, modeKey)
+        if (!sendResult || !sendResult.message_id) {
           await e.reply(`${modeKey}已经发送过了，请往上翻翻~，${modeKey}每天11刷新哦~`, 10, true)
         }
       } else {
