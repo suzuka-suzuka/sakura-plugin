@@ -39,16 +39,7 @@ export class reminderTask extends plugin {
         continue
       }
 
-      const job = schedule.scheduleJob(cronExpression, async () => {
-        try {
-          await this.sendTaskMessage(task)
-        } catch (error) {
-          logger.error(`[reminderTask] 任务执行失败 ${task.id || 'unknown'}: ${error}`)
-        }
-      })
-
-      this.jobs.push(job)
-      this.jobMap.set(String(task.id || ''), job)
+      this.scheduleTaskJob(task)
     }
 
     logger.info(`[reminderTask] 已加载 ${this.jobs.length} 个重复提醒任务`)
@@ -133,6 +124,82 @@ export class reminderTask extends plugin {
     return e.reply(`已删除提醒序号 ${serial}。`, 10)
   })
 
+  开关提醒 = Command(/^#?(?:(开启|关闭|启用|停用)提醒)\s*(\d+)$/, async (e) => {
+    if (!(e.isMaster || e.isAdmin)) {
+      return false
+    }
+
+    const match = e.msg.match(/^#?(?:(开启|关闭|启用|停用)提醒)\s*(\d+)$/)
+    const action = String(match?.[1] || '').trim()
+    const serial = String(match?.[2] || '').trim()
+    if (!action || !serial) {
+      return false
+    }
+
+    const enable = action === '开启' || action === '启用'
+
+    const reminderConfig = this.appconfig || {}
+    const tasks = Array.isArray(reminderConfig.tasks) ? [...reminderConfig.tasks] : []
+    const taskIndex = tasks.findIndex((task) => String(task.id || '') === serial)
+
+    if (taskIndex < 0) {
+      return e.reply(`未找到序号为 ${serial} 的提醒任务。`, 10)
+    }
+
+    const task = tasks[taskIndex]
+    if (Number(e.group_id || 0) > 0 && Number(task.groupId || 0) > 0 && Number(task.groupId) !== Number(e.group_id)) {
+      return e.reply(`该序号不属于当前群，无法${enable ? '开启' : '关闭'}。`, 10)
+    }
+
+    if (Boolean(task.enable) === enable) {
+      return e.reply(`提醒序号 ${serial} 已经是${enable ? '开启' : '关闭'}状态。`, 10)
+    }
+
+    tasks[taskIndex] = {
+      ...task,
+      enable,
+    }
+
+    const ok = Setting.setConfig('reminderTask', {
+      ...reminderConfig,
+      tasks,
+    })
+
+    if (!ok) {
+      return e.reply(`${enable ? '开启' : '关闭'}失败：写入 reminderTask 配置失败。`, 10)
+    }
+
+    const job = this.jobMap.get(serial)
+    if (job) {
+      job.cancel()
+      this.jobMap.delete(serial)
+    }
+
+    return e.reply(`已${enable ? '开启' : '关闭'}提醒序号 ${serial}。`, 10)
+  })
+
+  scheduleTaskJob(task) {
+    const cronExpression = String(task?.cron || '').trim()
+    const content = String(task?.content || '').trim()
+    const id = String(task?.id || '')
+
+    if (!id || !this.isValidCron(cronExpression) || !content) {
+      return false
+    }
+
+    const job = schedule.scheduleJob(cronExpression, async () => {
+      try {
+        await this.sendTaskMessage(task)
+      } catch (error) {
+        logger.error(`[reminderTask] 任务执行失败 ${task.id || 'unknown'}: ${error}`)
+      }
+    })
+
+    this.jobs.push(job)
+    this.jobMap.set(id, job)
+    return true
+  }
+
   isValidCron(expression) {
     if (!expression) return false
     const parts = expression.split(/\s+/)
@@ -198,7 +265,6 @@ export class reminderTask extends plugin {
 
     return {
       content: [
-        `#${index}`,
         `序号：${serial}`,
         `状态：${enableText}`,
         `cron：${cron}`,
