@@ -64,13 +64,13 @@ export class reminderTask extends plugin {
     const tasks = this.filterVisibleTasks(e, allTasks)
 
     if (!tasks.length) {
-      return e.reply('当前范围内暂无重复提醒任务。', true)
+      return e.reply('当前范围内暂无重复提醒任务。', 10)
     }
 
     if (serial) {
       const target = tasks.find((task) => String(task.id || '') === serial)
       if (!target) {
-        return e.reply(`未找到序号为 ${serial} 的提醒任务。`, true)
+        return e.reply(`未找到序号为 ${serial} 的提醒任务。`, 10)
       }
 
       await e.sendForwardMsg([this.formatTaskNode(target, 1)], {
@@ -106,12 +106,12 @@ export class reminderTask extends plugin {
     const taskIndex = tasks.findIndex((task) => String(task.id || '') === serial)
 
     if (taskIndex < 0) {
-      return e.reply(`未找到序号为 ${serial} 的提醒任务。`, true)
+      return e.reply(`未找到序号为 ${serial} 的提醒任务。`,10)
     }
 
     const task = tasks[taskIndex]
     if (Number(e.group_id || 0) > 0 && Number(task.groupId || 0) > 0 && Number(task.groupId) !== Number(e.group_id)) {
-      return e.reply('该序号不属于当前群，无法删除。', true)
+      return e.reply('该序号不属于当前群，无法删除。', 10)
     }
 
     tasks.splice(taskIndex, 1)
@@ -121,7 +121,7 @@ export class reminderTask extends plugin {
     })
 
     if (!ok) {
-      return e.reply('删除失败：写入 reminderTask 配置失败。', true)
+      return e.reply('删除失败：写入 reminderTask 配置失败。', 10)
     }
 
     const job = this.jobMap.get(serial)
@@ -130,7 +130,7 @@ export class reminderTask extends plugin {
       this.jobMap.delete(serial)
     }
 
-    return e.reply(`已删除提醒序号 ${serial}。`, true)
+    return e.reply(`已删除提醒序号 ${serial}。`, 10)
   })
 
   isValidCron(expression) {
