@@ -403,6 +403,21 @@ export const TeatimeSchema = z.object({
     cron: cronString('0 15 * * *').describe('定时推送的时间表达式|#cron|5段格式: 分 时 日 月 周'),
 }).describe('下午茶推送');
 
+const ReminderTaskItemSchema = z.object({
+    id: z.string().default('').describe('任务ID|用于标识单条定时任务'),
+    enable: z.boolean().default(true).describe('启用任务|是否启用该定时提醒'),
+    cron: cronString('0 8 * * *').describe('Cron表达式|#cron|5段格式: 分 时 日 月 周'),
+    groupId: z.number().default(0).describe('目标群号|#groupSelect|填写后向该群推送，0 表示不使用群推送'),
+    qq: z.string().default('').describe('目标QQ|在群内可用于@某人；不填则仅发送文本'),
+    content: z.string().default('早安~').describe('提醒内容|#textarea|定时任务发送的文本内容'),
+    createdAt: z.string().default('').describe('创建时间|ISO 时间字符串'),
+    source: z.string().default('').describe('来源|任务来源标记'),
+}).describe('定时提醒项');
+
+export const ReminderTaskSchema = z.object({
+    tasks: z.array(ReminderTaskItemSchema).default([]).describe('提醒任务列表|#nameField:id|可配置多个重复提醒任务'),
+}).describe('重复提醒任务');
+
 
 
 export const pluginMeta = {
@@ -438,6 +453,7 @@ export const configSchema = {
     'SearchImage': SearchImageSchema,
     'summary': SummarySchema,
     'teatime': TeatimeSchema,
+    'reminderTask': ReminderTaskSchema,
 };
 
 
@@ -449,7 +465,7 @@ export const schemaCategories = {
     '戳一戳': ['poke'],
     '图片功能': ['r18', 'summary', 'SearchImage', 'cool', 'teatime', 'EmojiThief', 'EditImage', 'nai', 'pixiv'],
     '经济系统': ['economy'],
-    '其他功能': ['60sNews', 'AutoCleanup', 'forwardMessage', 'groupnotice', 'repeat', 'recall', 'bilicookie', 'VitsVoice', 'SoraVideo'],
+    '其他功能': ['60sNews', 'AutoCleanup', 'forwardMessage', 'groupnotice', 'repeat', 'recall', 'bilicookie', 'VitsVoice', 'SoraVideo', 'reminderTask'],
 };
 
 export const schemaLabels = {
@@ -479,6 +495,7 @@ export const schemaLabels = {
     'SearchImage': '统一搜图',
     'summary': '图片外显',
     'teatime': '下午茶推送',
+    'reminderTask': '重复提醒任务',
 };
 
 export const dynamicOptionsConfig = {
