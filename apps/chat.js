@@ -446,6 +446,7 @@ export class AIChat extends plugin {
           const maxToolCalls = this.appconfig.maxToolCalls ?? 20;
           if (toolCallCount >= maxToolCalls) {
             logger.warn(`[Chat] 工具调用次数超过上限(${maxToolCalls})，强行结束对话`);
+            await e.reply("⚠️ 工具调用次数过多，为防止死循环已强制中断对话。", 10, true);
             if (History) {
               await saveConversationHistory(e, truncateHistory(currentFullHistory), prefix);
             }

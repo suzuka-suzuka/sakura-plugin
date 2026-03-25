@@ -272,6 +272,7 @@ export class Mimic extends plugin {
           const maxToolCalls = config.maxToolCalls ?? 10;
           if (toolCallCount >= maxToolCalls) {
             logger.warn(`[Mimic] 工具调用次数超过上限(${maxToolCalls})，强行结束对话`);
+            await e.reply("⚠️ 工具调用次数过多，为防止死循环已强制中断对话。", 10, true);
             return false;
           }
 

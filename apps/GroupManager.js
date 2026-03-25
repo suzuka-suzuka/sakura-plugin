@@ -497,10 +497,10 @@ export class GroupManager extends plugin {
         : "remove";
 
       if (action === "set") {
-        await e.setGroupEssence(e.reply_id);
+        await e.group.setEssence(e.reply_id);
         await e.reply("✅ 已将该消息设为群精华！", 10);
       } else {
-        await e.deleteGroupEssence(e.reply_id);
+        await e.group.deleteEssence(e.reply_id);
         await e.reply("✅ 已取消该消息的精华状态。", 10);
       }
       return true;
