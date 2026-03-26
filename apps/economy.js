@@ -27,7 +27,7 @@ export default class Economy extends plugin {
     return groups.some((g) => String(g) === String(e.group_id));
   }
 
-  rob = Command(/^#?(打劫|抢[劫夺钱])\s*.*$/, async (e) => {
+  rob = Command(/^\s*#?(打劫|抢[劫夺钱])\s*$/i, async (e) => {
     if (!this.checkWhitelist(e)) return false;
     const targetId = e.at;
     if (!targetId) {
@@ -195,7 +195,7 @@ export default class Economy extends plugin {
     );
   }
 
-  counter = Command(/^#?(反击|复仇|神罚)\s*.*$/, async (e) => {
+  counter = Command(/^\s*#?(反击|复仇|神罚)\s*$/i, async (e) => {
     if (!this.checkWhitelist(e)) return false;
     const targetId = e.at;
     if (!targetId) {
