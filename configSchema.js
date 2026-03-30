@@ -16,7 +16,7 @@ function cronString(defaultValue = '0 * * * *') {
 }
 
 export const commandNames = {
-    "setuPlugin.handleApiRequest": "来张插画",
+    "setuPlugin.handleApiRequest": "来张涩图",
     "GetImagePlugin.handleImage": "来张萝莉图",
     "GrokImage.editImage": "gi（Grok图片编辑）",
     "GrokVideo.generateVideo": "gv（Grok视频生成）",
@@ -24,8 +24,8 @@ export const commandNames = {
     "KeywordReply.删除词条": "删除词条",
     "memesPlugin.memes": "表情包制作",
     "memesPlugin.randomMemes": "随机表情包",
-    "pixivSearch.getPixivByPid": "pid（P站搜图）",
-    "pixivSearch.searchPixiv": "涩图（P站搜图）",
+    "pixivSearch.getPixivByPid": "来张插画（P站搜图）",
+    "pixivSearch.searchPixiv": "来张插画（P站搜图）",
     "SoraVideo.generateVideo": "sv（Sora视频生成）",
     "VitsVoice.vitsSpeak": "xx说（语音合成）",
     "pixivSearch.viewRanking": "p站排行榜",
@@ -395,7 +395,6 @@ export const SearchImageSchema = z.object({
     defaultChannel: z.enum(['ascii2d', 'google', 'saucenao']).default('ascii2d').describe('默认搜图渠道|不带前缀的“搜图”指令默认使用的渠道'),
     maxResults: z.number().default(3).describe('结果条数|转发消息中展示的最大结果数量'),
     sauceNaoApiKey: z.string().default('').describe('SauceNAO API Key|SauceNAO 搜图使用的 API Key'),
-    googleCookie: z.string().default('').describe('谷歌搜图 Cookie|#textarea|用于绕过 Google 验证拦截'),
 }).describe('搜图');
 
 export const TeatimeSchema = z.object({
