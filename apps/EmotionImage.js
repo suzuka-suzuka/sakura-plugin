@@ -1,6 +1,5 @@
 import {
   imageEmbeddingManager,
-  describeImage,
 } from "../lib/AIUtils/ImageEmbedding.js";
 import { getImg } from "../lib/utils.js";
 import fs from "fs";
@@ -85,7 +84,7 @@ export class EmotionImage extends plugin {
             {
               nickname: nickname,
               user_id: e.user_id,
-              content: `📝 描述: ${checkResult.item.description}`,
+              content: `📝 描述: ${checkResult.item.description || "无"}`,
             },
             {
               nickname: nickname,
@@ -102,32 +101,8 @@ export class EmotionImage extends plugin {
         return true;
       }
 
-      let description;
-      try {
-        description = await describeImage({ imageUrl: imgUrls[0] });
-      } catch (err) {
-        if (
-          checkResult.fileInfo?.filepath &&
-          fs.existsSync(checkResult.fileInfo.filepath)
-        ) {
-          fs.unlinkSync(checkResult.fileInfo.filepath);
-        }
-        throw err;
-      }
-
-      if (!description) {
-        if (
-          checkResult.fileInfo?.filepath &&
-          fs.existsSync(checkResult.fileInfo.filepath)
-        ) {
-          fs.unlinkSync(checkResult.fileInfo.filepath);
-        }
-        throw new Error("识图失败");
-      }
-
       const result = await imageEmbeddingManager.addPreparedImage(
         checkResult.fileInfo,
-        description,
         {
           groupId: e.group_id,
           userId: e.user_id,
@@ -145,7 +120,7 @@ export class EmotionImage extends plugin {
           {
             nickname: nickname,
             user_id: e.user_id,
-            content: `📝 描述: ${result.description}`,
+            content: `📝 描述: ${result.description || "无"}`,
           },
           {
             nickname: nickname,
@@ -182,7 +157,7 @@ export class EmotionImage extends plugin {
     }
 
     try {
-      const results = await imageEmbeddingManager.searchImage(query, 3, 0.6);
+      const results = await imageEmbeddingManager.searchImage(query, 3, 0.4);
 
       if (!results || (Array.isArray(results) && results.length === 0)) {
         await e.reply(`没有找到"${query}"相关的表情`, 10);
@@ -209,7 +184,7 @@ export class EmotionImage extends plugin {
         {
           nickname: nickname,
           user_id: e.user_id,
-          content: `📝 描述: ${result.description}`,
+          content: `📝 描述: ${result.description || "无"}`,
         },
         {
           nickname: nickname,
@@ -263,11 +238,6 @@ export class EmotionImage extends plugin {
               {
                 nickname: nickname,
                 user_id: e.user_id,
-                content: `📝 描述: ${checkResult.item.description}`,
-              },
-              {
-                nickname: nickname,
-                user_id: e.user_id,
                 content: `🆔 ID: ${checkResult.item.id}`,
               },
             ],
@@ -316,11 +286,6 @@ export class EmotionImage extends plugin {
             {
               nickname: nickname,
               user_id: e.user_id,
-              content: `📝 描述: ${targetEmoji.description}`,
-            },
-            {
-              nickname: nickname,
-              user_id: e.user_id,
               content: `🆔 ID: ${targetId}`,
             },
           ],
@@ -336,6 +301,25 @@ export class EmotionImage extends plugin {
     } catch (error) {
       logger.error(`[删表情] 失败: ${error.message}`);
       await e.reply(`删除失败: ${error.message}`, 10);
+    }
+
+    return true;
+  });
+
+  clearEmoji = Command(/^#?清空表情库$/, "master", async (e) => {
+    try {
+      const count = imageEmbeddingManager.getCount();
+
+      if (count === 0) {
+        await e.reply("表情库已经是空的了");
+        return true;
+      }
+
+      const cleared = await imageEmbeddingManager.clearAll();
+      await e.reply(`✅ 已清空表情库，共删除 ${cleared} 个表情`);
+    } catch (error) {
+      logger.error(`[清空表情库] 失败: ${error.message}`);
+      await e.reply(`清空失败: ${error.message}`, 10);
     }
 
     return true;

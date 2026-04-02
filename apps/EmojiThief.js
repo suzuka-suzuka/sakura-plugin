@@ -1,7 +1,7 @@
 import setting from "../lib/setting.js";
 import fsp from "fs/promises";
 import _ from "lodash";
-import { imageEmbeddingManager, describeImage } from "../lib/AIUtils/ImageEmbedding.js";
+import { imageEmbeddingManager } from "../lib/AIUtils/ImageEmbedding.js";
 export class TextMsg extends plugin {
   constructor() {
     super({
@@ -24,21 +24,8 @@ export class TextMsg extends plugin {
         return false;
       }
 
-      let description;
-      try {
-        const buffer = await fsp.readFile(checkResult.fileInfo.filepath);
-        description = await describeImage({ buffer, mimeType: "image/gif" });
-      } catch (err) {
-        logger.warn(`[表情包小偷] 无法获取表情描述，跳过向量库存储: ${checkResult.fileInfo.hash}`);
-        if (checkResult.fileInfo.filepath) {
-          await fsp.rm(checkResult.fileInfo.filepath, { force: true }).catch(() => {});
-        }
-        return false;
-      }
-
       await imageEmbeddingManager.addPreparedImage(
         checkResult.fileInfo,
-        description,
         {
           groupId: groupId,
           userId: userId,
