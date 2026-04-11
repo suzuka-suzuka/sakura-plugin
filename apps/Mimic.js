@@ -1,7 +1,9 @@
 import fs from "fs";
-import path from "path";
-import { plugindata as data } from "../lib/path.js";
 import { getAI, getCurrentAndPreviousUserText } from "../lib/AIUtils/getAI.js";
+import {
+  findExistingMemoryFile,
+  getMemoryPathsFromEvent,
+} from "../lib/AIUtils/memoryStore.js";
 import { executeToolCalls } from "../lib/AIUtils/tools/tools.js";
 import {
   splitAndReplyMessages,
@@ -48,23 +50,32 @@ export class Mimic extends plugin {
     return mergedConfig;
   }
 
+  getLockKey(e) {
+    return this.getScopeKey(e.group_id || "private");
+  }
+
+  getMemoryFile(e) {
+    const { scopedFile } = getMemoryPathsFromEvent(e);
+    return scopedFile;
+  }
+
   Mimic = OnEvent("message.group", async (e) => {
     const config = this.getGroupConfig(e.group_id);
-    const groupIdStr = String(e.group_id);
+    const groupLockKey = this.getLockKey(e);
 
     if (config.enableGroupLock && e.group_id) {
-      if (this.activeLocks.has(groupIdStr)) {
+      if (this.activeLocks.has(groupLockKey)) {
         return false;
       }
-      this.activeLocks.add(groupIdStr);
-      setTimeout(() => this.activeLocks.delete(groupIdStr), 120 * 1000);
+      this.activeLocks.add(groupLockKey);
+      setTimeout(() => this.activeLocks.delete(groupLockKey), 120 * 1000);
     }
 
     try {
       return await this.doMimic(e);
     } finally {
       if (config.enableGroupLock && e.group_id) {
-        this.activeLocks.delete(groupIdStr);
+        this.activeLocks.delete(groupLockKey);
       }
     }
   });
@@ -186,18 +197,11 @@ export class Mimic extends plugin {
       shouldRecall = true;
     }
 
-    const groupId = e.group_id || "private";
     const userId = e.user_id;
     const userName = e.sender.card || e.sender.nickname || "";
+    const memoryFile = findExistingMemoryFile(getMemoryPathsFromEvent(e));
 
-    const memoryFile = path.join(
-      data,
-      "mimic",
-      String(groupId),
-      `${userId}.json`
-    );
-
-    if (fs.existsSync(memoryFile)) {
+    if (memoryFile) {
       try {
         const memories = JSON.parse(fs.readFileSync(memoryFile, "utf8"));
         if (memories && memories.length > 0) {

@@ -7,10 +7,12 @@ import {
 import { executeToolCalls } from "../lib/AIUtils/tools/tools.js";
 import { getQuoteContent } from "../lib/AIUtils/messaging.js";
 import { checkForNaiTags } from "../lib/AIUtils/naiHandler.js";
+import {
+  findExistingMemoryFile,
+  getMemoryPathsFromEvent,
+} from "../lib/AIUtils/memoryStore.js";
 import { randomReact, getImg, smartReplyMsg } from "../lib/utils.js";
 import fs from "fs";
-import path from "path";
-import { plugindata as data } from "../lib/path.js";
 import { checkAndClearStopFlag } from "../lib/AIUtils/stopFlag.js";
 
 export class AIChat extends plugin {
@@ -32,6 +34,31 @@ export class AIChat extends plugin {
   getSessionKey(e) {
     const scope = e.group_id ? `${e.group_id}:${e.user_id}` : `private:${e.user_id}`;
     return `sakura:chat:session:${scope}`;
+  }
+
+  getUserLockKey(e) {
+    const scope = e.group_id ? `${e.group_id}:${e.user_id}` : `private:${e.user_id}`;
+    return scope;
+  }
+
+  getMemoryFile(e) {
+    const { scopedFile } = getMemoryPathsFromEvent(e);
+    return scopedFile;
+  }
+
+  getSessionLabel(profile) {
+    return profile?.name || profile?.prefix;
+  }
+
+  getRolesConfig(e) {
+    return Setting.getConfig("roles", { selfId: e?.self_id });
+  }
+
+  getRolePrompt(roleName, e) {
+    const rolesConfig = this.getRolesConfig(e);
+    const roles = rolesConfig?.roles || [];
+    const role = roles.find((item) => item.name === roleName);
+    return role?.prompt || "";
   }
 
   async startSession(e, profile, Prompt) {
@@ -136,16 +163,14 @@ export class AIChat extends plugin {
       if (startProfile) {
         let StartPrompt = startProfile.Prompt;
         if (startProfile.name) {
-          const rolesConfig = Setting.getConfig("roles");
-          const roles = rolesConfig?.roles || [];
-          const role = roles.find((r) => r.name === startProfile.name);
-          if (role && role.prompt) StartPrompt = role.prompt;
+          const rolePrompt = this.getRolePrompt(startProfile.name, e);
+          if (rolePrompt) StartPrompt = rolePrompt;
         }
         const existingSession = await this.getSession(e);
         await this.startSession(e, startProfile, StartPrompt);
-        const newLabel = startProfile.name || startProfile.prefix;
+        const newLabel = this.getSessionLabel(startProfile);
         if (existingSession) {
-          const oldLabel = existingSession.profile?.name || existingSession.profile?.prefix;
+          const oldLabel = this.getSessionLabel(existingSession.profile);
           await e.reply(`已从【${oldLabel}】切换到【${newLabel}】的对话，发送「结束对话」或5分钟内无活动将自动结束。`, 10);
         } else {
           await e.reply(`已开始与【${newLabel}】的对话，发送「结束对话」或5分钟内无活动将自动结束。`, 10);
@@ -154,7 +179,7 @@ export class AIChat extends plugin {
       }
 
       // 未找到 prefix 匹配，尝试按角色名直接查找 roles.yaml
-      const rolesConfigForStart = Setting.getConfig("roles");
+      const rolesConfigForStart = this.getRolesConfig(e);
       const allRoles = rolesConfigForStart?.roles || [];
       const roleByName = allRoles.find((r) => r.name && afterCmd === r.name);
       if (roleByName) {
@@ -174,7 +199,7 @@ export class AIChat extends plugin {
         const existingSession = await this.getSession(e);
         await this.startSession(e, virtualProfile, virtualProfile.Prompt);
         if (existingSession) {
-          const oldLabel = existingSession.profile?.name || existingSession.profile?.prefix;
+          const oldLabel = this.getSessionLabel(existingSession.profile);
           await e.reply(`已从【${oldLabel}】切换到【${roleByName.name}】的对话，发送「结束对话」或5分钟内无活动将自动结束。`, 10);
         } else {
           await e.reply(`已开始与【${roleByName.name}】的对话，发送「结束对话」或5分钟内无活动将自动结束。`, 10);
@@ -206,7 +231,7 @@ export class AIChat extends plugin {
         if (!this.userLocks) this.userLocks = new Map();
         let sessionLockKey = null;
         if (config.enableUserLock) {
-          sessionLockKey = e.group_id ? `${e.group_id}:${e.user_id}` : `private:${e.user_id}`;
+          sessionLockKey = this.getUserLockKey(e);
           const now = Date.now();
           if (this.userLocks.has(sessionLockKey)) {
             const lockTime = this.userLocks.get(sessionLockKey);
@@ -234,11 +259,9 @@ export class AIChat extends plugin {
 
     let Prompt = matchedProfile.Prompt;
     if (matchedProfile.name) {
-      const rolesConfig = Setting.getConfig("roles");
-      const roles = rolesConfig?.roles || [];
-      const role = roles.find((r) => r.name === matchedProfile.name);
-      if (role && role.prompt) {
-        Prompt = role.prompt;
+      const rolePrompt = this.getRolePrompt(matchedProfile.name, e);
+      if (rolePrompt) {
+        Prompt = rolePrompt;
       }
     }
 
@@ -260,9 +283,7 @@ export class AIChat extends plugin {
 
     let lockKey = null;
     if (config.enableUserLock) {
-      lockKey = e.group_id
-        ? `${e.group_id}:${e.user_id}`
-        : `private:${e.user_id}`;
+      lockKey = this.getUserLockKey(e);
 
       const now = Date.now();
       if (this.userLocks.has(lockKey)) {
@@ -292,11 +313,10 @@ export class AIChat extends plugin {
 
     // 记忆注入：将用户长期记忆追加到 system prompt
     if (Memory) {
-      const groupId = e.group_id || "private";
       const userId = e.user_id;
       const userName = e.sender?.card || e.sender?.nickname || "";
-      const memoryFile = path.join(data, "mimic", String(groupId), `${userId}.json`);
-      if (fs.existsSync(memoryFile)) {
+      const memoryFile = findExistingMemoryFile(getMemoryPathsFromEvent(e));
+      if (memoryFile) {
         try {
           const memories = JSON.parse(fs.readFileSync(memoryFile, "utf8"));
           if (memories && memories.length > 0) {

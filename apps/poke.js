@@ -23,6 +23,10 @@ export class poke extends plugin {
     return Setting.getConfig("bot").botname;
   }
 
+  getScopedKey(selfId, ...parts) {
+    return ["Mz:poke", selfId || "default", ...parts].join(":");
+  }
+
   async checkCD(key, duration) {
     const exists = await redis.get(key);
     if (exists) return true;
@@ -30,43 +34,43 @@ export class poke extends plugin {
     return false;
   }
 
-  async setIgnore(userId, duration) {
+  async setIgnore(userId, duration, selfId = null) {
     await redis.set(
-      `Mz:poke:ignore:${userId}`,
+      this.getScopedKey(selfId, "ignore", userId),
       "1",
       "EX",
       Math.round(duration / 1000)
     );
   }
 
-  async checkIgnore(userId) {
-    return await redis.get(`Mz:poke:ignore:${userId}`);
+  async checkIgnore(userId, selfId = null) {
+    return await redis.get(this.getScopedKey(selfId, "ignore", userId));
   }
 
-  async setShouldReply(userId, duration) {
+  async setShouldReply(userId, duration, selfId = null) {
     await redis.set(
-      `Mz:poke:shouldReply:${userId}`,
+      this.getScopedKey(selfId, "shouldReply", userId),
       "1",
       "EX",
       Math.round(duration / 1000)
     );
   }
 
-  async checkShouldReply(userId) {
-    return await redis.get(`Mz:poke:shouldReply:${userId}`);
+  async checkShouldReply(userId, selfId = null) {
+    return await redis.get(this.getScopedKey(selfId, "shouldReply", userId));
   }
 
-  async setIgnorePoke(groupId, duration) {
+  async setIgnorePoke(groupId, duration, selfId = null) {
     await redis.set(
-      `Mz:poke:ignorePoke:${groupId}`,
+      this.getScopedKey(selfId, "ignorePoke", groupId),
       "1",
       "EX",
       Math.round(duration / 1000)
     );
   }
 
-  async checkIgnorePoke(groupId) {
-    return await redis.get(`Mz:poke:ignorePoke:${groupId}`);
+  async checkIgnorePoke(groupId, selfId = null) {
+    return await redis.get(this.getScopedKey(selfId, "ignorePoke", groupId));
   }
 
   sendImage(file) {
@@ -168,19 +172,19 @@ export class poke extends plugin {
       return false;
     }
 
-    if (await this.checkIgnorePoke(e.group_id)) {
+    if (await this.checkIgnorePoke(e.group_id, e.self_id)) {
       return false;
     }
 
-    if (await this.checkIgnore(e.user_id)) {
+    if (await this.checkIgnore(e.user_id, e.self_id)) {
       return false;
     }
 
-    if (await this.checkShouldReply(e.user_id)) {
+    if (await this.checkShouldReply(e.user_id, e.self_id)) {
       await e.reply("姑且还是理你一下吧...");
       await common.sleep(500);
       await e.reply(this.sendImage(this.getPokeImagePath("5.gif")));
-      await redis.del(`Mz:poke:shouldReply:${e.user_id}`);
+      await redis.del(this.getScopedKey(e.self_id, "shouldReply", e.user_id));
       return false;
     }
 
@@ -201,7 +205,7 @@ export class poke extends plugin {
   });
 
   async handlePokeMaster(e, pokeConfig) {
-    if (await this.checkCD(`Mz:poke:cd:master:${e.group_id}`, 60)) {
+    if (await this.checkCD(this.getScopedKey(e.self_id, "cd", "master", e.group_id), 60)) {
       return false;
     }
 
@@ -260,7 +264,7 @@ export class poke extends plugin {
   }
 
   async handlePokeBot(e, pokeConfig) {
-    if (await this.checkCD(`Mz:poke:cd:bot:${e.group_id}`, 3)) {
+    if (await this.checkCD(this.getScopedKey(e.self_id, "cd", "bot", e.group_id), 3)) {
       return false;
     }
 
@@ -272,14 +276,14 @@ export class poke extends plugin {
       (tomorrow.getTime() - Date.now()) / 1000
     );
 
-    let count = await redis.get(`Mz:pokecount:${e.group_id}`);
+    let count = await redis.get(this.getScopedKey(e.self_id, "count", e.group_id));
     count = count ? parseInt(count) + 1 : 1;
-    await redis.set(`Mz:pokecount:${e.group_id}`, count, "EX", exTime);
+    await redis.set(this.getScopedKey(e.self_id, "count", e.group_id), count, "EX", exTime);
 
-    let usercount = await redis.get(`Mz:pokecount:${e.group_id}:${e.user_id}`);
+    let usercount = await redis.get(this.getScopedKey(e.self_id, "count", e.group_id, e.user_id));
     usercount = usercount ? parseInt(usercount) + 1 : 1;
     await redis.set(
-      `Mz:pokecount:${e.group_id}:${e.user_id}`,
+      this.getScopedKey(e.self_id, "count", e.group_id, e.user_id),
       usercount,
       "EX",
       exTime
@@ -287,9 +291,9 @@ export class poke extends plugin {
 
     let exTime_A = 20 * 60;
 
-    let counter = await redis.get(`Mz:pokecount_A:${e.group_id}`);
+    let counter = await redis.get(this.getScopedKey(e.self_id, "countA", e.group_id));
     counter = counter ? parseInt(counter) + 1 : 1;
-    await redis.set(`Mz:pokecount_A:${e.group_id}`, counter, "EX", exTime_A);
+    await redis.set(this.getScopedKey(e.self_id, "countA", e.group_id), counter, "EX", exTime_A);
 
     switch (counter) {
       case 1:
@@ -318,8 +322,8 @@ export class poke extends plugin {
         await e.reply(this.sendImage(this.getPokeImagePath("4.gif")));
 
         const ignoreDuration = 60000 * usercount;
-        await this.setIgnore(e.user_id, ignoreDuration);
-        await this.setShouldReply(e.user_id, ignoreDuration + 600000);
+        await this.setIgnore(e.user_id, ignoreDuration, e.self_id);
+        await this.setShouldReply(e.user_id, ignoreDuration + 600000, e.self_id);
 
         return false;
       case 15:
@@ -390,7 +394,7 @@ export class poke extends plugin {
       case 30:
         await e.reply("被戳、戳晕了...");
         await e.reply(this.sendImage(this.getPokeImagePath("7.gif")));
-        await this.setIgnorePoke(e.group_id, 600000);
+        await this.setIgnorePoke(e.group_id, 600000, e.self_id);
         return false;
 
       case 31:
@@ -427,7 +431,7 @@ export class poke extends plugin {
         await e.reply(`${this.botname}彻底被玩坏了...`);
         await common.sleep(500);
         await e.reply("可能永远都不会醒来了...");
-        await this.setIgnorePoke(e.group_id, 1200000);
+        await this.setIgnorePoke(e.group_id, 1200000, e.self_id);
         return false;
     }
 

@@ -1,6 +1,6 @@
 
-const requestHashKey = (group_id) => `sakura:groupRequest:${group_id}`;
-const requestCounterKey = (group_id) => `sakura:groupRequest:${group_id}:counter`;
+const requestHashKey = (self_id, group_id) => `sakura:groupRequest:${self_id || "default"}:${group_id}`;
+const requestCounterKey = (self_id, group_id) => `sakura:groupRequest:${self_id || "default"}:${group_id}:counter`;
 const REQUEST_TTL = 7 * 24 * 60 * 60;
 
 export class groupRequestListener extends plugin {
@@ -14,10 +14,10 @@ export class groupRequestListener extends plugin {
     const info = await e.getStrangerInfo(e.user_id);
     const nickname = info?.nickname || e.user_id;
 
-    const markerId = await redis.incr(requestCounterKey(e.group_id));
-    await redis.expire(requestCounterKey(e.group_id), REQUEST_TTL);
-    await redis.hset(requestHashKey(e.group_id), markerId, e.flag);
-    await redis.expire(requestHashKey(e.group_id), REQUEST_TTL);
+    const markerId = await redis.incr(requestCounterKey(e.self_id, e.group_id));
+    await redis.expire(requestCounterKey(e.self_id, e.group_id), REQUEST_TTL);
+    await redis.hset(requestHashKey(e.self_id, e.group_id), markerId, e.flag);
+    await redis.expire(requestHashKey(e.self_id, e.group_id), REQUEST_TTL);
 
     const avatarUrl = `https://q1.qlogo.cn/g?b=qq&nk=${e.user_id}&s=100`;
     const message = [
@@ -42,7 +42,7 @@ export class groupRequestListener extends plugin {
       }
 
       const markerId = Number(e.msg.match(/^#?开门\s*(\d+)$/)[1]);
-      const flag = await redis.hget(requestHashKey(e.group_id), markerId);
+      const flag = await redis.hget(requestHashKey(e.self_id, e.group_id), markerId);
 
       if (!flag) {
         await e.reply(`门牌号${markerId}不存在`, 10);
@@ -51,7 +51,7 @@ export class groupRequestListener extends plugin {
 
       await e.reply(`好的，我这就开门`);
       await e.bot.setGroupAddRequest({ flag, approve: true });
-      await redis.hdel(requestHashKey(e.group_id), markerId);
+      await redis.hdel(requestHashKey(e.self_id, e.group_id), markerId);
 
       return true;
     }

@@ -11,8 +11,8 @@ const AI_PROMPT =
   "4. 当有成员离开时，可以根据聊天内容推测可能的原因，或者仅仅表达惋惜。\n" +
   "下面是具体的情景和聊天记录：";
 
-async function checkCD(groupId, cdSeconds = 30) {
-  const key = `sakura:group_notice:cd:${groupId}`;
+async function checkCD(selfId, groupId, cdSeconds = 30) {
+  const key = `sakura:group_notice:cd:${selfId || "default"}:${groupId}`;
   if (await redis.get(key)) {
     return false;
   }
@@ -34,7 +34,7 @@ export class GroupNotice extends plugin {
 
     const config = Setting.getConfig("groupnotice");
     if (!config.joinEnable) return;
-    if (!(await checkCD(e.group_id))) return;
+    if (!(await checkCD(e.self_id, e.group_id))) return;
 
     const memberInfo = await e
       .getGroupMemberInfo(e.group_id, e.user_id, true)
@@ -73,7 +73,7 @@ export class GroupNotice extends plugin {
 
     const config = Setting.getConfig("groupnotice");
     if (!config.leaveEnable) return;
-    if (!(await checkCD(e.group_id))) return;
+    if (!(await checkCD(e.self_id, e.group_id))) return;
 
     const strangerInfo = await e
       .getStrangerInfo(e.user_id)

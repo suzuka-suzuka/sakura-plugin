@@ -1,6 +1,8 @@
-import fs from "fs";
-import path from "path";
-import { plugindata as data } from "../lib/path.js";
+import {
+  getMemoryPathsFromEvent,
+  readMemories,
+  writeMemories,
+} from "../lib/AIUtils/memoryStore.js";
 
 const MEMORY_MAX = 30;
 
@@ -28,38 +30,18 @@ export class Memory extends plugin {
     }
 
     const memoryContent = fullText.replace(/^#添加记忆/, "").trim();
-    if (!memoryContent) {
-      return false;
-    }
+    if (!memoryContent) return false;
 
-    const groupId = e.group_id || "private";
-    const userId = e.user_id;
-
-    const memoryDir = path.join(
-      data,
-      "mimic",
-      String(groupId)
-    );
-    if (!fs.existsSync(memoryDir)) {
-      fs.mkdirSync(memoryDir, { recursive: true });
-    }
-    const memoryFile = path.join(memoryDir, `${userId}.json`);
-
-    let memories = [];
-    if (fs.existsSync(memoryFile)) {
-      try {
-        memories = JSON.parse(fs.readFileSync(memoryFile, "utf8"));
-      } catch (err) {
-        logger.error(`读取记忆文件失败: ${err}`);
-      }
-    }
+    const { scopedFile, candidates } = getMemoryPathsFromEvent(e);
+    const memories = readMemories(candidates);
 
     memories.push(memoryContent);
     let dropped = null;
     if (memories.length > MEMORY_MAX) {
       dropped = memories.shift();
     }
-    fs.writeFileSync(memoryFile, JSON.stringify(memories, null, 2));
+    writeMemories(scopedFile, memories);
+
     const dropNote = dropped ? `\n（已自动丢弃最旧记忆：${dropped}）` : "";
     await e.reply(`已添加记忆${dropNote}`, 10);
     return true;
@@ -68,32 +50,12 @@ export class Memory extends plugin {
   deleteMemory = Command(/^#删除记忆.*$/, async (e) => {
     const msg = e.msg || "";
     const match = msg.match(/^#删除记忆\s*(\d+)$/);
-    if (!match) {
-      return false;
-    }
+    if (!match) return false;
     const index = parseInt(match[1], 10);
 
-    const groupId = e.group_id || "private";
-    const userId = e.user_id;
-    const memoryFile = path.join(
-      data,
-      "mimic",
-      String(groupId),
-      `${userId}.json`
-    );
-
-    if (!fs.existsSync(memoryFile)) {
-      return false;
-    }
-
-    let memories = [];
-    try {
-      memories = JSON.parse(fs.readFileSync(memoryFile, "utf8"));
-    } catch (err) {
-      logger.error(`读取记忆文件失败: ${err}`);
-      await e.reply("读取记忆失败，请稍后再试", 10);
-      return true;
-    }
+    const { scopedFile, candidates } = getMemoryPathsFromEvent(e);
+    const memories = readMemories(candidates);
+    if (memories.length === 0) return false;
 
     if (index < 1 || index > memories.length) {
       await e.reply(`找不到第 ${index} 条记忆，请检查序号是否正确`, 10);
@@ -101,31 +63,17 @@ export class Memory extends plugin {
     }
 
     const deletedMemory = memories.splice(index - 1, 1);
-    fs.writeFileSync(memoryFile, JSON.stringify(memories, null, 2));
+    writeMemories(scopedFile, memories);
     await e.reply(`已删除第 ${index} 条记忆: ${deletedMemory[0]}`, 10);
     return true;
   });
 
   exportMemory = Command(/^#导出记忆$/, async (e) => {
-    const groupId = e.group_id || "private";
-    const userId = e.user_id;
-    const memoryFile = path.join(
-      data,
-      "mimic",
-      String(groupId),
-      `${userId}.json`
-    );
-
-    if (!fs.existsSync(memoryFile)) {
-      return false;
-    }
+    const { candidates } = getMemoryPathsFromEvent(e);
+    const memories = readMemories(candidates);
+    if (!memories || memories.length === 0) return false;
 
     try {
-      const memories = JSON.parse(fs.readFileSync(memoryFile, "utf8"));
-      if (!memories || memories.length === 0) {
-        return false;
-      }
-
       const nodes = memories.map((m, index) => ({
         user_id: e.user_id,
         nickname: e.sender.card || e.sender.nickname || "",

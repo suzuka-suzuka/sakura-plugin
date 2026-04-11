@@ -24,8 +24,10 @@ export class repeatPlugin extends plugin {
       return false;
     }
 
-    if (!msg[e.group_id]) {
-      msg[e.group_id] = {
+    const scopeKey = this.getScopeKey(e.group_id);
+
+    if (!msg[scopeKey]) {
+      msg[scopeKey] = {
         message: e.message,
         times: 1,
         lastSender: e.sender.user_id,
@@ -33,15 +35,15 @@ export class repeatPlugin extends plugin {
       return false;
     }
 
-    if (await this.isSameMessage(e.message, msg[e.group_id].message)) {
-      if (msg[e.group_id].lastSender === e.sender.user_id) return false;
-      msg[e.group_id].times++;
-      msg[e.group_id].lastSender = e.sender.user_id;
+    if (await this.isSameMessage(e.message, msg[scopeKey].message)) {
+      if (msg[scopeKey].lastSender === e.sender.user_id) return false;
+      msg[scopeKey].times++;
+      msg[scopeKey].lastSender = e.sender.user_id;
 
-      if (msg[e.group_id].times === 3) {
-        await e.reply(msg[e.group_id].message);
+      if (msg[scopeKey].times === 3) {
+        await e.reply(msg[scopeKey].message);
         return false;
-      } else if (msg[e.group_id].times === 5) {
+      } else if (msg[scopeKey].times === 5) {
         const breakMessages = [
           "复读机来了！",
           "复读一时爽，一直复读一直爽……才怪！",
@@ -52,8 +54,8 @@ export class repeatPlugin extends plugin {
 
         let randomAction;
         const isRepeatedMessageNonText =
-          Array.isArray(msg[e.group_id].message) &&
-          msg[e.group_id].message.some((m) => m.type !== "text");
+          Array.isArray(msg[scopeKey].message) &&
+          msg[scopeKey].message.some((m) => m.type !== "text");
 
         if (isRepeatedMessageNonText) {
           randomAction = _.sample([0, 2]);
@@ -77,8 +79,8 @@ export class repeatPlugin extends plugin {
           await e.reply(segment.image(fullImagePath));
         }
         return false;
-      } else if (msg[e.group_id].times === 7) {
-        const muteTargetId = msg[e.group_id].lastSender;
+      } else if (msg[scopeKey].times === 7) {
+        const muteTargetId = msg[scopeKey].lastSender;
         const muteDuration = 60;
         
         const botInfo = await e.getInfo(e.self_id);
@@ -98,9 +100,9 @@ export class repeatPlugin extends plugin {
         return false;
       }
     } else {
-      msg[e.group_id].message = e.message;
-      msg[e.group_id].times = 1;
-      msg[e.group_id].lastSender = e.sender.user_id;
+      msg[scopeKey].message = e.message;
+      msg[scopeKey].times = 1;
+      msg[scopeKey].lastSender = e.sender.user_id;
       return false;
     }
   });

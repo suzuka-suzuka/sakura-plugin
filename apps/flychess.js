@@ -15,28 +15,33 @@ export class Ludo extends plugin {
   async init() {
     await loadAssets()
   }
+
+  getGameKey(e) {
+    return this.getScopeKey(e.group_id)
+  }
   createLudoGame = Command(/^#创建飞行棋$/, async (e) => {
     if (!(e.isMaster || e.isAdmin)) {
       return false
     }
-    if (activeGames.has(e.group_id)) {
+    const gameKey = this.getGameKey(e)
+    if (activeGames.has(gameKey)) {
       await e.reply("本群已经有一局飞行棋正在进行中啦。")
       return true
     }
 
     const gameManager = new GameManager(e.group, () => {
-      activeGames.delete(e.group_id)
+      activeGames.delete(gameKey)
       logger.info(`[飞行棋] 群 ${e.group_id} 的游戏已结束并自动清理。`)
     })
     const response = gameManager.createGame()
-    activeGames.set(e.group_id, gameManager)
+    activeGames.set(gameKey, gameManager)
 
     await e.reply(response)
     return true
   });
 
   joinLudoGame = Command(/^#?加入飞行棋$/, async (e) => {
-    const gameManager = activeGames.get(e.group_id)
+    const gameManager = activeGames.get(this.getGameKey(e))
     if (!gameManager) {
       return false
     }
@@ -46,7 +51,7 @@ export class Ludo extends plugin {
   });
 
   startLudoGame = Command(/^#?开始飞行棋$/, async (e) => {
-    const gameManager = activeGames.get(e.group_id)
+    const gameManager = activeGames.get(this.getGameKey(e))
     if (!gameManager) {
       return false
     }
@@ -55,7 +60,7 @@ export class Ludo extends plugin {
   });
 
   selectPiece = Command(/^[1-4]$/, async (e) => {
-    const gameManager = activeGames.get(e.group_id)
+    const gameManager = activeGames.get(this.getGameKey(e))
     if (!gameManager || !gameManager.isStarted) {
       return false
     }
@@ -69,8 +74,9 @@ export class Ludo extends plugin {
     if (!(e.isMaster || e.isAdmin)) {
       return false
     }
-    if (activeGames.has(e.group_id)) {
-      activeGames.delete(e.group_id)
+    const gameKey = this.getGameKey(e)
+    if (activeGames.has(gameKey)) {
+      activeGames.delete(gameKey)
       await e.reply("飞行棋游戏已由管理员强制结束。")
     } else {
       await e.reply("本群当前没有正在进行的飞行棋游戏。")

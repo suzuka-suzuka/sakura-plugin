@@ -24,7 +24,7 @@ export class ActiveChatScheduler extends plugin {
     }
 
     try {
-      const historyDir = ConversationHistoryUtils.HISTORY_DIR;
+      const historyDir = ConversationHistoryUtils.getScopeDir();
       if (!fs.existsSync(historyDir)) return;
 
       const groupFolders = await fs.promises.readdir(historyDir);

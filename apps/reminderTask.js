@@ -2,6 +2,8 @@ import schedule from 'node-schedule'
 import { CronExpressionParser } from 'cron-parser'
 import Setting from '../lib/setting.js'
 import { renderReminderContentWithAI } from '../lib/AIUtils/reminder.js'
+import pluginConfigManager from '../../../src/core/pluginConfig.js'
+import { getBots, withBotContext } from '../../../src/api/client.js'
 
 export class reminderTask extends plugin {
   constructor() {
@@ -19,27 +21,42 @@ export class reminderTask extends plugin {
     return Setting.getConfig('reminderTask')
   }
 
+  getScopeIds() {
+    const configuredIds = pluginConfigManager.getConfiguredSelfIds('sakura-plugin')
+    const onlineIds = getBots()
+      .map((currentBot) => Number(currentBot.self_id))
+      .filter((selfId) => Number.isFinite(selfId))
+    return [...new Set([...configuredIds, ...onlineIds])]
+  }
+
+  getJobKey(selfId, taskId) {
+    return `${selfId}:${taskId}`
+  }
+
   async init() {
-    const tasks = Array.isArray(this.appconfig?.tasks) ? this.appconfig.tasks : []
+    const scopeIds = this.getScopeIds()
 
-    if (!tasks.length) return
+    for (const selfId of scopeIds) {
+      const config = Setting.getConfig('reminderTask', { selfId })
+      const tasks = Array.isArray(config?.tasks) ? config.tasks : []
 
-    for (const task of tasks) {
-      if (!task?.enable) continue
+      for (const task of tasks) {
+        if (!task?.enable) continue
 
-      const cronExpression = String(task.cron || '').trim()
-      if (!this.isValidCron(cronExpression)) {
-        logger.warn(`[reminderTask] 跳过无效 cron 任务: ${task.id || 'unknown'} -> ${cronExpression}`)
-        continue
+        const cronExpression = String(task.cron || '').trim()
+        if (!this.isValidCron(cronExpression)) {
+          logger.warn(`[reminderTask] 跳过无效 cron 任务: ${task.id || 'unknown'} -> ${cronExpression}`)
+          continue
+        }
+
+        const content = String(task.content || '').trim()
+        if (!content) {
+          logger.warn(`[reminderTask] 跳过空内容任务: ${task.id || 'unknown'}`)
+          continue
+        }
+
+        this.scheduleTaskJob(task, selfId)
       }
-
-      const content = String(task.content || '').trim()
-      if (!content) {
-        logger.warn(`[reminderTask] 跳过空内容任务: ${task.id || 'unknown'}`)
-        continue
-      }
-
-      this.scheduleTaskJob(task)
     }
 
     logger.info(`[reminderTask] 已加载 ${this.jobs.length} 个重复提醒任务`)
@@ -115,10 +132,10 @@ export class reminderTask extends plugin {
       return e.reply('删除失败：写入 reminderTask 配置失败。', 10)
     }
 
-    const job = this.jobMap.get(serial)
+    const job = this.jobMap.get(this.getJobKey(e.self_id, serial))
     if (job) {
       job.cancel()
-      this.jobMap.delete(serial)
+      this.jobMap.delete(this.getJobKey(e.self_id, serial))
     }
 
     return e.reply(`已删除提醒序号 ${serial}。`, 10)
@@ -169,16 +186,16 @@ export class reminderTask extends plugin {
       return e.reply(`${enable ? '开启' : '关闭'}失败：写入 reminderTask 配置失败。`, 10)
     }
 
-    const job = this.jobMap.get(serial)
+    const job = this.jobMap.get(this.getJobKey(e.self_id, serial))
     if (job) {
       job.cancel()
-      this.jobMap.delete(serial)
+      this.jobMap.delete(this.getJobKey(e.self_id, serial))
     }
 
     return e.reply(`已${enable ? '开启' : '关闭'}提醒序号 ${serial}。`, 10)
   })
 
-  scheduleTaskJob(task) {
+  scheduleTaskJob(task, selfId) {
     const cronExpression = String(task?.cron || '').trim()
     const content = String(task?.content || '').trim()
     const id = String(task?.id || '')
@@ -189,14 +206,14 @@ export class reminderTask extends plugin {
 
     const job = schedule.scheduleJob(cronExpression, async () => {
       try {
-        await this.sendTaskMessage(task)
+        await withBotContext(selfId, () => this.sendTaskMessage(task, selfId))
       } catch (error) {
         logger.error(`[reminderTask] 任务执行失败 ${task.id || 'unknown'}: ${error}`)
       }
     })
 
     this.jobs.push(job)
-    this.jobMap.set(id, job)
+    this.jobMap.set(this.getJobKey(selfId, id), job)
     return true
   }
 
@@ -213,8 +230,9 @@ export class reminderTask extends plugin {
     }
   }
 
-  async sendTaskMessage(task) {
-    if (!bot) {
+  async sendTaskMessage(task, selfId) {
+    const currentBot = this.getBot(selfId)
+    if (!currentBot) {
       logger.warn('[reminderTask] bot 不可用，跳过本次发送')
       return
     }
@@ -230,12 +248,12 @@ export class reminderTask extends plugin {
 
     if (groupId > 0) {
       const message = qq ? [segment.at(qq), segment.text(` ${content}`)] : content
-      await bot.pickGroup(groupId).sendMsg(message)
+      await currentBot.pickGroup(groupId).sendMsg(message)
       return
     }
 
     if (qq && /^\d{5,11}$/.test(qq)) {
-      await bot.pickFriend(Number(qq)).sendMsg(content)
+      await currentBot.pickFriend(Number(qq)).sendMsg(content)
       return
     }
 

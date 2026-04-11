@@ -2,6 +2,10 @@ import Setting from "../lib/setting.js"
 
 const msgStore = new Map()
 
+function getStoreKey(selfId, messageId) {
+  return `${selfId || "default"}:${messageId}`
+}
+
 export class handleRecall extends plugin {
   constructor() {
     super({
@@ -25,12 +29,13 @@ export class handleRecall extends plugin {
     if (!hasContentToRecord) {
       return false
     }
-    msgStore.set(e.message_id, {
+    const storeKey = getStoreKey(e.self_id, e.message_id)
+    msgStore.set(storeKey, {
       message: e.message,
     })
 
     setTimeout(() => {
-      msgStore.delete(e.message_id)
+      msgStore.delete(storeKey)
     }, 120 * 1000)
     return false
   });
@@ -42,7 +47,8 @@ export class handleRecall extends plugin {
     if (!e.message_id) {
       return false
     }
-    const recalledMsg = msgStore.get(e.message_id)
+    const storeKey = getStoreKey(e.self_id, e.message_id)
+    const recalledMsg = msgStore.get(storeKey)
     if (recalledMsg) {
       if (e.user_id === e.operator_id) {
         let nickname = e.user_id
@@ -60,7 +66,7 @@ export class handleRecall extends plugin {
         ]
         await e.sendForwardMsg(forwardMsg, { source: "防撤回", news: [{ text: `检测到${nickname}撤回了一条消息` }] })
       }
-      msgStore.delete(e.message_id)
+      msgStore.delete(storeKey)
     }
     return false
   });

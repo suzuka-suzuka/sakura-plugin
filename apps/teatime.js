@@ -1,35 +1,63 @@
 import { connect } from "puppeteer-real-browser"
+import schedule from "node-schedule"
 import Setting from "../lib/setting.js"
 import _ from "lodash"
+import pluginConfigManager from "../../../src/core/pluginConfig.js"
+import { getBots } from "../../../src/api/client.js"
 
 export class teatime extends plugin {
   constructor() {
     super({
       name: "teatime",
       priority: 1135,
-      configWatch: "teatime",  // 监听 teatime 配置变更，自动重载插件
+      configWatch: "teatime",
     })
   }
 
-  get appconfig() {
-    return Setting.getConfig("teatime")
+  getScopeIds() {
+    const configuredIds = pluginConfigManager.getConfiguredSelfIds("sakura-plugin")
+    const onlineIds = getBots()
+      .map((currentBot) => Number(currentBot.self_id))
+      .filter((selfId) => Number.isFinite(selfId))
+    return [...new Set([...configuredIds, ...onlineIds])]
   }
 
-  teatimeTask = Cron(this.appconfig?.cron ?? "0 15 * * *", async () => {
-    const config = this.appconfig
-    if (!config) {
+  async init() {
+    for (const selfId of this.getScopeIds()) {
+      const config = Setting.getConfig("teatime", { selfId })
+      const groups = Array.isArray(config?.Groups) ? config.Groups : []
+      if (!groups.length) {
+        continue
+      }
+
+      const cronExpression = String(config?.cron || "0 15 * * *").trim()
+      try {
+        const job = schedule.scheduleJob(cronExpression, async () => {
+          await this.runForSelf(selfId)
+        })
+        if (job) {
+          this.jobs.push(job)
+        }
+      } catch (error) {
+        logger.warn(`[teatime] 跳过无效 cron 配置: ${selfId} -> ${cronExpression} (${error.message})`)
+      }
+    }
+  }
+
+  async runForSelf(selfId) {
+    const config = Setting.getConfig("teatime", { selfId })
+    const groups = Array.isArray(config?.Groups) ? config.Groups : []
+    if (!groups.length) {
       return
     }
-    const Groups = config.Groups ?? []
 
-    if (Groups.length === 0) {
+    const currentBot = this.getBot(selfId)
+    if (!currentBot) {
       return
     }
 
-    if (!bot) return
-
-    for (const groupId of Groups) {
-      await bot.pickGroup(groupId).sendMsg("下午茶时间，来点萝莉")
+    for (const groupId of groups) {
+      await currentBot.pickGroup(groupId).sendMsg("下午茶时间到，来点萝莉")
 
       let browser
 
@@ -69,7 +97,7 @@ export class teatime extends plugin {
             const selectedUrls = _.sampleSize(imageUrls, 5)
             for (const imageUrl of selectedUrls) {
               try {
-                await bot.pickGroup(groupId).sendMsg(segment.image(imageUrl))
+                await currentBot.pickGroup(groupId).sendMsg(segment.image(imageUrl))
                 await new Promise(resolve => setTimeout(resolve, 1000))
               } catch (sendError) {
                 logger.error(`[teatime]向群 ${groupId} 发送图片消息失败: ${imageUrl}`, sendError)
@@ -92,5 +120,5 @@ export class teatime extends plugin {
         }
       }
     }
-  })
+  }
 }

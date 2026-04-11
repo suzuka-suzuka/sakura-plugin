@@ -252,6 +252,10 @@ export default class Fishing extends plugin {
     return groups.some(g => String(g) === String(e.group_id));
   }
 
+  buildFishingStateKey(groupId, userId) {
+    return this.getScopeKey("fishing", groupId, userId);
+  }
+
   startFishing = Command(/^#?钓鱼$/, async (e) => {
     if (!this.checkWhitelist(e)) return false;
     const groupId = e.group_id;
@@ -286,7 +290,9 @@ export default class Fishing extends plugin {
       return true;
     }
 
-    if (fishingState[`${groupId}:${userId}`]) {
+    const stateKey = this.buildFishingStateKey(groupId, userId);
+
+    if (fishingState[stateKey]) {
       await e.reply("一心不可二用！你已经在钓鱼啦，专心盯着浮漂~", 10);
       return true;
     }
@@ -318,8 +324,6 @@ export default class Fishing extends plugin {
       `🎣 挥动【${rodConfig.name}】挂上【${baitConfig.name}】伴随着优美的抛物线，鱼钩落入水中...耐心等待浮漂的动静吧...${luckyMsg}`
     );
 
-    const stateKey = `${groupId}:${userId}`;
-
     const cleanupState = (key) => {
       const state = fishingState[key];
       if (state) {
@@ -347,7 +351,7 @@ export default class Fishing extends plugin {
     state.totalTimer = setTimeout(() => {
       if (fishingState[stateKey]) {
         cleanupState(stateKey);
-        this.finish("handleFishing", stateKey);
+        this.finish("handleFishing", true);
       }
     }, 5 * 60 * 1000);
 
@@ -372,13 +376,13 @@ export default class Fishing extends plugin {
         ], false, true);
 
         currentState.isOverweight = false;
-        this.setContext("handleFishing", stateKey, 60);
+        this.setContext("handleFishing", true, 60);
 
         currentState.confirmTimer = setTimeout(() => {
           const s = fishingState[stateKey];
           if (s && s.phase === "weight_check") {
             cleanupState(stateKey);
-            this.finish("handleFishing", stateKey);
+            this.finish("handleFishing", true);
             e.reply(`⏰ 错过时机了... 鱼跑掉了！`, false, true);
           }
         }, 60 * 1000);
@@ -391,13 +395,13 @@ export default class Fishing extends plugin {
         ], false, true);
 
         currentState.isOverweight = true;
-        this.setContext("handleFishing", stateKey, 60);
+        this.setContext("handleFishing", true, 60);
 
         currentState.confirmTimer = setTimeout(() => {
           const s = fishingState[stateKey];
           if (s && s.phase === "weight_check") {
             cleanupState(stateKey);
-            this.finish("handleFishing", stateKey);
+            this.finish("handleFishing", true);
             e.reply(`⏰ 犹豫太久了... 鱼挣脱跑掉了！`, false, true);
           }
         }, 60 * 1000);
@@ -408,13 +412,13 @@ export default class Fishing extends plugin {
         ], false, true);
 
         currentState.isOverweight = false;
-        this.setContext("handleFishing", stateKey, 60);
+        this.setContext("handleFishing", true, 60);
 
         currentState.confirmTimer = setTimeout(() => {
           const s = fishingState[stateKey];
           if (s && s.phase === "weight_check") {
             cleanupState(stateKey);
-            this.finish("handleFishing", stateKey);
+            this.finish("handleFishing", true);
             e.reply(`⏰ 错过时机了... 鱼跑掉了！`, false, true);
           }
         }, 60 * 1000);
@@ -431,7 +435,7 @@ export default class Fishing extends plugin {
     const userId = e.user_id;
     const msg = e.msg?.trim();
 
-    const stateKey = `${groupId}:${userId}`;
+    const stateKey = this.buildFishingStateKey(groupId, userId);
     const state = fishingState[stateKey];
     if (!state) {
       return;
@@ -444,7 +448,7 @@ export default class Fishing extends plugin {
 
     if (state.phase === "weight_check") {
       if (/^放弃$/.test(msg)) {
-        this.finish("handleFishing", stateKey);
+        this.finish("handleFishing", true);
         if (state.cleanup) state.cleanup();
         await e.reply(`🎣 放生了这条鱼，期待下次相遇~`);
         return;
@@ -482,7 +486,7 @@ export default class Fishing extends plugin {
           `😱 鱼雷爆炸引发恐慌！接下来1小时内鱼价1.5倍！`
         ]);
 
-        this.finish("handleFishing", stateKey);
+        this.finish("handleFishing", true);
         if (state.cleanup) state.cleanup();
         await this.setCooldownAndIncrement(groupId, userId);
         return;
@@ -514,7 +518,7 @@ export default class Fishing extends plugin {
             `🧵 【${lineConfig.name}】牺牲了...${damageResult.msg}`,
           ]);
 
-          this.finish("handleFishing", stateKey);
+          this.finish("handleFishing", true);
           if (state.cleanup) state.cleanup();
           await this.setCooldownAndIncrement(groupId, userId);
           return;
@@ -540,7 +544,7 @@ export default class Fishing extends plugin {
             `🧵 失去了【${lineConfig.name}】${damageResult.msg}`,
           ]);
 
-          this.finish("handleFishing", stateKey);
+          this.finish("handleFishing", true);
           if (state.cleanup) state.cleanup();
           await this.setCooldownAndIncrement(groupId, userId);
           return;
@@ -555,7 +559,7 @@ export default class Fishing extends plugin {
             `😭 你的【${rodConfig.name}】...`,
           ]);
 
-          this.finish("handleFishing", stateKey);
+          this.finish("handleFishing", true);
           if (state.cleanup) state.cleanup();
           await this.setCooldownAndIncrement(groupId, userId);
           return;
@@ -576,12 +580,12 @@ export default class Fishing extends plugin {
           `  「溜鱼」- 和它比拼耐力！`,
         ]);
 
-        this.setContext("handleFishing", stateKey, 30);
+        this.setContext("handleFishing", true, 30);
         state.confirmTimer = setTimeout(() => {
           const s = fishingState[stateKey];
           if (s && s.phase === "difficulty_check") {
             if (s.cleanup) s.cleanup();
-            this.finish("handleFishing", stateKey);
+            this.finish("handleFishing", true);
             e.reply(`⏰ 犹豫太久... 鱼挣脱了！`, false, true);
           }
         }, 30 * 1000);
@@ -615,7 +619,7 @@ export default class Fishing extends plugin {
           fishingManager.recordCatch(userId, 0, fish.id, false);
           fishingManager.increaseRodMastery(userId, rodConfig.id);
 
-          this.finish("handleFishing", stateKey);
+          this.finish("handleFishing", true);
           if (state.cleanup) state.cleanup();
           await this.setCooldownAndIncrement(groupId, userId);
           return;
@@ -636,7 +640,7 @@ export default class Fishing extends plugin {
         state.totalTimer = setTimeout(() => {
           if (fishingState[stateKey]) {
             if (state.cleanup) state.cleanup();
-            this.finish("handleFishing", stateKey);
+            this.finish("handleFishing", true);
             e.reply("🌊 僵持太久了！鱼儿趁你松懈的瞬间，猛地一甩尾逃回了深水区...", false, true);
           }
         }, 60 * 1000);
@@ -654,7 +658,7 @@ export default class Fishing extends plugin {
           `\n⚠️ 只有 60 秒时间，速战速决！`,
         ]);
 
-        this.setContext("handleFishing", stateKey, 65);
+        this.setContext("handleFishing", true, 65);
         return;
       }
 
@@ -688,7 +692,7 @@ export default class Fishing extends plugin {
             ]);
             fishingManager.recordCatch(userId, 0, fish.id, false);
 
-            this.finish("handleFishing", stateKey);
+            this.finish("handleFishing", true);
             if (state.cleanup) state.cleanup();
             await this.setCooldownAndIncrement(groupId, userId);
             return;
@@ -709,7 +713,7 @@ export default class Fishing extends plugin {
           fishingManager.recordCatch(userId, 0, fish.id, false);
           fishingManager.increaseRodMastery(userId, rodConfig.id);
 
-          this.finish("handleFishing", stateKey);
+          this.finish("handleFishing", true);
           if (state.cleanup) state.cleanup();
           await this.setCooldownAndIncrement(groupId, userId);
           return;
@@ -730,7 +734,7 @@ export default class Fishing extends plugin {
 
           fishingManager.recordCatch(userId, 0, fish.id, false);
           fishingManager.increaseRodMastery(userId, rodConfig.id);
-          this.finish("handleFishing", stateKey);
+          this.finish("handleFishing", true);
           if (state.cleanup) state.cleanup();
           await this.setCooldownAndIncrement(groupId, userId);
           return;
@@ -746,7 +750,7 @@ export default class Fishing extends plugin {
           `⚡ 张力：${tensionBar}${damageHint}`,
         ]);
 
-        this.setContext("handleFishing", stateKey, 65, false);
+        this.setContext("handleFishing", true, 65, false);
         return;
       }
 
@@ -767,7 +771,7 @@ export default class Fishing extends plugin {
           ]);
 
           fishingManager.recordCatch(userId, 0, fish.id, false);
-          this.finish("handleFishing", stateKey);
+          this.finish("handleFishing", true);
           if (state.cleanup) state.cleanup();
           await this.setCooldownAndIncrement(groupId, userId);
           return;
@@ -782,7 +786,7 @@ export default class Fishing extends plugin {
           `⚡ 张力：${tensionBar}`,
         ]);
 
-        this.setContext("handleFishing", stateKey, 65, false);
+        this.setContext("handleFishing", true, 65, false);
         return;
       }
 
@@ -816,10 +820,10 @@ export default class Fishing extends plugin {
   async finishSuccess(e, state, fishingManager) {
     const groupId = e.group_id;
     const userId = e.user_id;
-    const stateKey = `${groupId}:${userId}`;
+    const stateKey = this.buildFishingStateKey(groupId, userId);
     const { fish, rodConfig, lineConfig } = state;
 
-    this.finish("handleFishing", stateKey);
+    this.finish("handleFishing", true);
     if (state.cleanup) state.cleanup();
 
     const rarity = RARITY_CONFIG[fish.rarity] || { color: "⚪", level: 0 };
