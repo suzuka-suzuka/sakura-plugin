@@ -1,5 +1,14 @@
 import { z } from 'zod';
 import { CronExpressionParser } from 'cron-parser';
+import {
+    DEFAULT_TAVILY_MAX_RESULTS,
+    DEFAULT_TAVILY_MCP_URL,
+    DEFAULT_TAVILY_SEARCH_DEPTH,
+    MAX_TAVILY_SEARCH_RESULTS,
+    TAVILY_SEARCH_DEPTH_OPTIONS,
+    TAVILY_RAW_CONTENT_OPTIONS,
+    normalizeTavilyRawContent,
+} from './lib/AIUtils/tavilyConfig.js';
 
 function cronString(defaultValue = '0 * * * *') {
     return z.string().default(defaultValue).refine((val) => {
@@ -50,14 +59,20 @@ const ProfileSchema = z.object({
     Channel: z.string().default('default').describe('使用渠道|#channelSelect|选择使用的AI渠道'),
     GroupContext: z.boolean().default(false).describe('群组上下文|是否读取群聊上下文'),
     History: z.boolean().default(true).describe('历史记录|是否保存对话历史'),
-    Tool: z.boolean().default(true).describe('工具调用|是否允许AI使用工具'),
+    Tool: z.preprocess(val => typeof val === 'boolean' ? '' : val, z.string().default('')).describe('工具组|#toolGroupSelect|选择此角色使用的工具组'),
     Memory: z.boolean().default(false).describe('用户记忆|是否将用户长期记忆注入到系统提示中'),
     enableNaiPainting: z.boolean().default(false).describe('NAI绘图|是否启用NAI绘图功能'),
     naiPrompt: z.string().default('').describe('NAI绘图提示词|#textarea|附加到生成的NAI绘图指令后的提示词'),
 });
 
+const ToolGroupSchema = z.object({
+    name: z.string().default('').describe('工具组名称'),
+    tools: z.array(z.string()).default([]).describe('工具列表|#toolMultiSelect|选择此组包含的工具'),
+});
+
 export const AISchema = z.object({
     profiles: z.array(ProfileSchema).default([]).describe('AI角色列表|#nameField:prefix|配置多个AI角色，每个角色可以有不同的前缀和设置'),
+    toolGroups: z.array(ToolGroupSchema).default([]).describe('工具组|#nameField:name|自定义工具组合，每个角色可绑定一个工具组'),
     groupContextLength: z.number().default(20).describe('群上下文长度|群聊上下文记忆的消息条数'),
     chatHistoryLength: z.number().default(20).describe('对话历史长度|保留的对话历史消息条数'),
     enableUserLock: z.boolean().default(false).describe('用户锁定|同一用户同时只能进行一个对话'),
@@ -65,61 +80,22 @@ export const AISchema = z.object({
     appschannel: z.string().default('default').describe('应用渠道|#channelSelect'),
     defaultchannel: z.string().default('default').describe('默认渠道|#channelSelect'),
     retryCount: z.number().int().min(0).default(1).describe('渠道重试次数|请求失败时对当前渠道的最大重试次数，等待时间线性回退（5s、10s、15s…），耗尽后再回退至默认渠道'),
-    githubToken: z.string().default('').describe('GitHub Token|#textarea|MCP GitHub 工具使用的 Personal Access Token'),
     maxToolCalls: z.number().default(20).describe('最大工具调用次数|每次对话允许AI连续调用工具的最大次数，超过后将强制结束'),
-    enabledTools: z.object({
-        GroupAdmin: z.boolean().default(true).describe('群组管理'),
-        MessageContentAnalyzer: z.boolean().default(true).describe('消息分析'),
-        WebSearch: z.boolean().default(true).describe('网页搜索'),
-        SearchMusic: z.boolean().default(true).describe('音乐搜索'),
-        ImageGenerator: z.boolean().default(true).describe('图片生成'),
-        SendMusic: z.boolean().default(true).describe('音乐发送'),
-        Illustration: z.boolean().default(true).describe('插画工具'),
-        Reminder: z.boolean().default(true).describe('提醒工具'),
-        BlackList: z.boolean().default(true).describe('黑名单'),
-        Economy: z.boolean().default(true).describe('经济系统'),
-        Emoji: z.boolean().default(true).describe('表情包'),
-        Nai: z.boolean().default(true).describe('NAI绘画'),
-        SearchFiles: z.boolean().default(true).describe('文件搜索'),
-        RunCommand: z.boolean().default(true).describe('命令执行'),
-        RunPython: z.boolean().default(true).describe('Python执行'),
-        ReadLog: z.boolean().default(true).describe('日志读取'),
-        Memory: z.boolean().default(true).describe('记忆工具'),
-        ImageSearch: z.boolean().default(true).describe('图片搜索'),
-    }).default({
-        GroupAdmin: true,
-        MessageContentAnalyzer: true,
-        WebSearch: true,
-        SearchMusic: true,
-        ImageGenerator: true,
-        SendMusic: true,
-        Illustration: true,
-        Reminder: true,
-        BlackList: true,
-        Economy: true,
-        Emoji: true,
-        Nai: true,
-        SearchFiles: true,
-        RunCommand: true,
-        RunPython: true,
-        ReadLog: true,
-        Memory: true,
-        ImageSearch: true,
-    }).describe('工具开关'),
-    enabledMCPs: z.object({
-        filesystem: z.boolean().default(true).describe('文件系统'),
-        puppeteer: z.boolean().default(true).describe('网页自动化'),
-        github: z.boolean().default(true).describe('GitHub'),
-        fetch: z.boolean().default(true).describe('网络请求'),
-        memory: z.boolean().default(true).describe('知识记忆'),
-    }).default({
-        filesystem: true,
-        puppeteer: true,
-        github: true,
-        fetch: true,
-        memory: true,
-    }).describe('MCP开关'),
+    trustAICommand: z.boolean().default(false).describe('完全信任AI|开启后AI调用的全部命令均直接执行，无需用户确认且无视白名单'),
 }).describe('AI 对话设定');
+
+export const TavilyMCPSchema = z.object({
+    apiKey: z.string().default('').describe('API Key|#textarea|Tavily Remote MCP API Key'),
+    baseURL: z.string().default(DEFAULT_TAVILY_MCP_URL).describe('Remote MCP URL|通常保持默认即可'),
+    includeFavicon: z.boolean().default(true).describe('默认返回图标|作为 Tavily MCP 的默认参数'),
+    includeImages: z.boolean().default(false).describe('默认返回图片|作为 Tavily MCP 的默认参数'),
+    includeRawContent: z.preprocess(
+        (val) => normalizeTavilyRawContent(val),
+        z.enum(TAVILY_RAW_CONTENT_OPTIONS).default('false')
+    ).describe('正文返回模式|false=不返回, markdown=返回Markdown正文, text=返回纯文本正文'),
+    searchDepth: z.enum(TAVILY_SEARCH_DEPTH_OPTIONS).default(DEFAULT_TAVILY_SEARCH_DEPTH).describe('默认搜索深度|basic/advanced/fast/ultra-fast'),
+    maxResults: z.number().int().min(1).max(MAX_TAVILY_SEARCH_RESULTS).default(DEFAULT_TAVILY_MAX_RESULTS).describe('默认结果数量|当前 Tavily 搜索结果上限为 20'),
+}).describe('Tavily MCP');
 
 export const ActiveChatSchema = z.object({
     Groups: z.array(z.number()).default([]).describe('主动聊天群号|#groupSelect|在这些群中启用主动聊天功能'),
@@ -269,6 +245,7 @@ const GroupConfigSchema = z.object({
     alternatePromptProbability: z.number().default(0.1).describe('反差人格概率|#step:0.01|0-1之间'),
     recalltime: z.number().default(10).describe('撤回时间(秒)|自动撤回消息的秒数'),
     Channel: z.string().default('2.5').describe('使用渠道|#channelSelect'),
+    Tool: z.preprocess(val => typeof val === 'boolean' ? '' : val, z.string().default('')).describe('工具组|#toolGroupSelect|选择此群使用的工具组'),
     enableGroupLock: z.boolean().default(false).describe('群锁定|是否锁定只在此群生效'),
     splitMessage: z.boolean().default(true).describe('拆分消息|是否拆分长消息'),
     maxToolCalls: z.number().default(10).describe('最大工具调用次数|允许AI连续调用工具的最大次数'),
@@ -283,6 +260,7 @@ export const MimicSchema = z.object({
     alternatePromptProbability: z.number().default(0.1).describe('反差人格概率|#step:0.01'),
     recalltime: z.number().default(10).describe('撤回时间(秒)'),
     Channel: z.string().default('2.5').describe('使用渠道|#channelSelect'),
+    Tool: z.preprocess(val => typeof val === 'boolean' ? '' : val, z.string().default('')).describe('工具组|#toolGroupSelect|选择伪人使用的工具组'),
     enableGroupLock: z.boolean().default(false).describe('群锁定'),
     splitMessage: z.boolean().default(true).describe('拆分消息'),
     maxToolCalls: z.number().default(10).describe('最大工具调用次数|允许AI连续调用工具的最大次数'),
@@ -376,7 +354,7 @@ const RoleSchema = z.object({
     Channel: z.string().default('').describe('使用渠道|#channelSelect|留空则使用系统默认渠道'),
     GroupContext: z.boolean().default(false).describe('群组上下文|是否读取群聊上下文'),
     History: z.boolean().default(true).describe('历史记录|是否保存对话历史'),
-    Tool: z.boolean().default(false).describe('工具调用|是否允许AI使用工具'),
+    Tool: z.preprocess(val => typeof val === 'boolean' ? '' : val, z.string().default('')).describe('工具组|#toolGroupSelect|选择此角色使用的工具组'),
     Memory: z.boolean().default(false).describe('用户记忆|是否将用户长期记忆注入到系统提示中'),
     enableNaiPainting: z.boolean().default(false).describe('NAI绘图|是否启用NAI绘图功能'),
     naiPrompt: z.string().default('').describe('NAI绘图提示词|#textarea|附加到生成的NAI绘图指令后的提示词'),
@@ -429,6 +407,7 @@ export const configSchema = {
     'bot': BotSchema,
     '60sNews': News60sSchema,
     'AI': AISchema,
+    'TavilyMCP': TavilyMCPSchema,
     'ActiveChat': ActiveChatSchema,
     'AutoCleanup': AutoCleanupSchema,
     'Channels': ChannelsSchema,
@@ -460,7 +439,7 @@ export const schemaCategories = {
     '基础设定': ['bot'],
     'AI渠道': ['Channels'],
     'AI角色': ['roles'],
-    'AI设定': ['AI', 'mimic', 'ActiveChat'],
+    'AI设定': ['AI', 'TavilyMCP', 'mimic', 'ActiveChat'],
     '戳一戳': ['poke'],
     '图片功能': ['r18', 'summary', 'SearchImage', 'cool', 'teatime', 'EmojiThief', 'EditImage', 'nai', 'pixiv'],
     '经济系统': ['economy'],
@@ -468,6 +447,7 @@ export const schemaCategories = {
 };
 
 export const schemaLabels = {
+    'TavilyMCP': 'Tavily MCP',
     'bot': '机器人基础设定',
     '60sNews': '60秒新闻推送',
     'AI': 'AI 对话设定',
@@ -526,6 +506,12 @@ export const dynamicOptionsConfig = {
             { module: 'Channels', path: 'gemini', valueKey: 'name' },
             { module: 'Channels', path: 'openai', valueKey: 'name' },
             { module: 'Channels', path: 'grok', valueKey: 'name' },
+        ],
+    },
+    toolGroupSelect: {
+        label: '工具组',
+        sources: [
+            { module: 'AI', path: 'toolGroups', valueKey: 'name' },
         ],
     },
 };

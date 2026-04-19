@@ -3,9 +3,7 @@ import crypto from "crypto"
 import https from "https"
 import fs from "fs"
 import path from "path"
-import { fileURLToPath } from "url"
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+import { pluginConfigDir } from "../lib/path.js"
 
 
 const CLIENT_ID = "MOBrBDS8blbauoSck0ZfDbtuzpyT"
@@ -200,8 +198,7 @@ async function main() {
 
 
         try {
-            const configDir = path.join(__dirname, "../../../config/sakura-plugin")
-            const configFile = path.join(configDir, "pixiv.yaml")
+            const configFile = path.join(pluginConfigDir, "pixiv.yaml")
 
             if (fs.existsSync(configFile)) {
                 let content = fs.readFileSync(configFile, "utf-8")

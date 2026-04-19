@@ -4,7 +4,7 @@ import {
   loadConversationHistory,
   saveConversationHistory,
 } from "../lib/AIUtils/ConversationHistory.js";
-import { executeToolCalls } from "../lib/AIUtils/tools/tools.js";
+import { executeToolCalls, resolveToolConfirmation } from "../lib/AIUtils/tools/tools.js";
 import { getQuoteContent } from "../lib/AIUtils/messaging.js";
 import { checkForNaiTags } from "../lib/AIUtils/naiHandler.js";
 import {
@@ -13,7 +13,11 @@ import {
 } from "../lib/AIUtils/memoryStore.js";
 import { randomReact, getImg, smartReplyMsg } from "../lib/utils.js";
 import fs from "fs";
-import { checkAndClearStopFlag } from "../lib/AIUtils/stopFlag.js";
+import {
+  checkAndClearStopFlag,
+  finishAiTask,
+  startAiTask,
+} from "../lib/AIUtils/stopFlag.js";
 
 export class AIChat extends plugin {
   constructor() {
@@ -115,6 +119,13 @@ export class AIChat extends plugin {
     let contentParts = [];
     if (e.message && Array.isArray(e.message) && e.message.length > 0) {
       e.message.forEach((msgPart) => {
+        if (msgPart.type === "file") {
+          const seq = e.message_id || e.message_seq;
+          const fileName = msgPart.data?.name || "未命名文件";
+          contentParts.push(`[文件:${fileName}]${seq ? `(seq:${seq})` : ""}`);
+          return;
+        }
+
         switch (msgPart.type) {
           case "text":
             contentParts.push(msgPart.data?.text || "");
@@ -191,7 +202,7 @@ export class AIChat extends plugin {
           Channel: roleByName.Channel || config.defaultchannel || "default",
           GroupContext: roleByName.GroupContext ?? false,
           History: roleByName.History ?? true,
-          Tool: roleByName.Tool ?? false,
+          Tool: roleByName.Tool ?? '',
           Memory: roleByName.Memory ?? false,
           enableNaiPainting: roleByName.enableNaiPainting ?? false,
           naiPrompt: roleByName.naiPrompt || "",
@@ -359,6 +370,7 @@ export class AIChat extends plugin {
     let finalResponseText = "";
     let currentFullHistory = [];
     let toolCallCount = 0;
+    const taskId = startAiTask(e);
 
     try {
       if (History) {
@@ -407,34 +419,8 @@ export class AIChat extends plugin {
         currentFullHistory.push({ role: "user", parts: historyParts });
       }
 
-      const truncateHistory = (history) => history.map((item) => {
-        if (item.role === "function" && item.parts) {
-          return {
-            ...item,
-            parts: item.parts.map((part) => {
-              if (part.functionResponse?.response) {
-                const responseStr = JSON.stringify(part.functionResponse.response);
-                if (responseStr.length > 2000) {
-                  return {
-                    ...part,
-                    functionResponse: {
-                      ...part.functionResponse,
-                      response: {
-                        message: responseStr.substring(0, 2000) + "...(已截断)",
-                      },
-                    },
-                  };
-                }
-              }
-              return part;
-            }),
-          };
-        }
-        return item;
-      });
-
       while (true) {
-        if (checkAndClearStopFlag(e)) {
+        if (checkAndClearStopFlag(taskId)) {
           logger.info(`[Chat] 用户 ${e.user_id} 触发了强制停止`);
           break;
         }
@@ -468,7 +454,7 @@ export class AIChat extends plugin {
             logger.warn(`[Chat] 工具调用次数超过上限(${maxToolCalls})，强行结束对话`);
             await e.reply("⚠️ 工具调用次数过多，为防止死循环已强制中断对话。", 10, true);
             if (History) {
-              await saveConversationHistory(e, truncateHistory(currentFullHistory), prefix);
+              await saveConversationHistory(e, currentFullHistory, prefix);
             }
             return true;
           }
@@ -479,7 +465,7 @@ export class AIChat extends plugin {
             // 中间回复也走 smartReply
             await this.smartReply(e, cleanedTextContent, 0, true);
           }
-          const executedResults = await executeToolCalls(e, functionCalls);
+          const executedResults = await executeToolCalls(e, functionCalls, this);
           currentFullHistory.push(...executedResults);
 
           currentAIResponse = await getAI(
@@ -504,7 +490,7 @@ export class AIChat extends plugin {
       }
 
       if (History) {
-        await saveConversationHistory(e, truncateHistory(currentFullHistory), prefix);
+        await saveConversationHistory(e, currentFullHistory, prefix);
       }
 
       finalResponseText = await checkForNaiTags(finalResponseText, e, naiPrompt);
@@ -514,6 +500,12 @@ export class AIChat extends plugin {
     } catch (err) {
       logger.error(`[Chat] 处理出错: ${err.message}`);
       await e.reply("出错啦！请稍后再试。");
+    } finally {
+      finishAiTask(e, taskId);
     }
+  }
+
+  async handleToolConfirmCallback() {
+    resolveToolConfirmation(this);
   }
 }

@@ -4,13 +4,17 @@ import {
   findExistingMemoryFile,
   getMemoryPathsFromEvent,
 } from "../lib/AIUtils/memoryStore.js";
-import { executeToolCalls } from "../lib/AIUtils/tools/tools.js";
+import { executeToolCalls, resolveToolConfirmation } from "../lib/AIUtils/tools/tools.js";
 import {
   splitAndReplyMessages,
   parseAtMessage,
   getQuoteContent,
 } from "../lib/AIUtils/messaging.js";
-import { checkAndClearStopFlag } from "../lib/AIUtils/stopFlag.js";
+import {
+  checkAndClearStopFlag,
+  finishAiTask,
+  startAiTask,
+} from "../lib/AIUtils/stopFlag.js";
 import Setting from "../lib/setting.js";
 import { randomReact, smartReplyMsg } from "../lib/utils.js";
 
@@ -90,6 +94,13 @@ export class Mimic extends plugin {
     let contentParts = [];
     if (e.message && Array.isArray(e.message) && e.message.length > 0) {
       e.message.forEach((msgPart) => {
+        if (msgPart.type === "file") {
+          const seq = e.seq || e.message_seq;
+          const fileName = msgPart.data?.name || "未命名文件";
+          contentParts.push(`[文件:${fileName}]${seq ? `(seq:${seq})` : ""}`);
+          return;
+        }
+
         switch (msgPart.type) {
           case "text":
             contentParts.push(msgPart.data?.text || "");
@@ -220,6 +231,8 @@ export class Mimic extends plugin {
     let currentFullHistory = [];
     let toolCallCount = 0;
     const Channel = config.Channel;
+    const toolGroup = config.Tool || '';
+    const taskId = startAiTask(e);
     try {
       const queryParts = [{ text: query }];
       const lockedVectorContext = getCurrentAndPreviousUserText(queryParts, currentFullHistory);
@@ -230,7 +243,7 @@ export class Mimic extends plugin {
         queryParts,
         selectedPresetPrompt,
         true,
-        true,
+        toolGroup,
         currentFullHistory,
         lockedVectorContext
       );
@@ -244,7 +257,7 @@ export class Mimic extends plugin {
       let currentGeminiResponse = geminiInitialResponse;
 
       while (true) {
-        if (checkAndClearStopFlag(e)) {
+        if (checkAndClearStopFlag(taskId)) {
           logger.info(`[Mimic] 用户 ${e.user_id} 触发了强制停止`);
           break;
         }
@@ -284,7 +297,7 @@ export class Mimic extends plugin {
             const cleanedTextContent = textContent.replace(/\n+$/, "");
             await smartReplyMsg(e, cleanedTextContent, { quote: true });
           }
-          const executedResults = await executeToolCalls(e, functionCalls);
+          const executedResults = await executeToolCalls(e, functionCalls, this);
           currentFullHistory.push(...executedResults);
           currentGeminiResponse = await getAI(
             Channel,
@@ -292,7 +305,7 @@ export class Mimic extends plugin {
             "",
             selectedPresetPrompt,
             true,
-            true,
+            toolGroup,
             currentFullHistory,
             lockedVectorContext
           );
@@ -320,7 +333,13 @@ export class Mimic extends plugin {
     } catch (error) {
       logger.error(`处理过程中出现错误: ${error.message}`);
       return false;
+    } finally {
+      finishAiTask(e, taskId);
     }
     return false;
+  }
+
+  async handleToolConfirmCallback() {
+    resolveToolConfirmation(this);
   }
 }

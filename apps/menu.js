@@ -3,8 +3,7 @@ import fs from "fs";
 import yaml from "js-yaml";
 import path from "path";
 import template from "art-template";
-
-const _path = process.cwd();
+import { pluginresources } from "../lib/path.js";
 
 export class SakuraMenu extends plugin {
     constructor() {
@@ -16,14 +15,7 @@ export class SakuraMenu extends plugin {
     }
 
     showMenu = Command(/^#?(sakura|樱花)?(菜单|帮助)$/, async (e) => {
-        const yamlPath = path.join(
-            _path,
-            "plugins",
-            "sakura-plugin",
-            "resources",
-            "menu",
-            "menu.yaml"
-        );
+        const yamlPath = path.join(pluginresources, "menu", "menu.yaml");
 
         let menuData = [];
         let title = "🌸 Sakura 菜单 🌸";
@@ -41,14 +33,7 @@ export class SakuraMenu extends plugin {
             );
         }
         e.react(124)
-        const htmlPath = path.join(
-            _path,
-            "plugins",
-            "sakura-plugin",
-            "resources",
-            "menu",
-            "menu.html"
-        );
+        const htmlPath = path.join(pluginresources, "menu", "menu.html");
 
         let htmlContent;
         try {

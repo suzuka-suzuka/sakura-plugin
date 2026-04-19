@@ -257,7 +257,7 @@
 
     <script>
         let configData = { title: "", subtitle: "", menu: [] };
-        const token = localStorage.getItem('sakura_token');
+        const token = sessionStorage.getItem('sakura_token') || localStorage.getItem('sakura_token');
 
         function goBack() { window.location.href = '/'; }
 
