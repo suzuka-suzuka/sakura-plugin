@@ -43,6 +43,7 @@ export class SearchImage extends plugin {
     try {
       const result = await searchImageByUrl(imgs[0], {
         channel,
+        googleLogin: this.appconfig.googleLogin,
         sauceNaoApiKey: this.appconfig.sauceNaoApiKey,
       })
 

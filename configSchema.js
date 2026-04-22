@@ -373,6 +373,7 @@ export const SummarySchema = z.object({
 export const SearchImageSchema = z.object({
     defaultChannel: z.enum(['ascii2d', 'google', 'saucenao']).default('ascii2d').describe('默认搜图渠道|不带前缀的“搜图”指令默认使用的渠道'),
     maxResults: z.number().default(3).describe('结果条数|转发消息中展示的最大结果数量'),
+    googleLogin: z.boolean().default(true).describe('Google 登录|检测到未登录时是否等待手动登录；已有 google-lens-profile 时始终复用登录态'),
     sauceNaoApiKey: z.string().default('').describe('SauceNAO API Key|SauceNAO 搜图使用的 API Key'),
 }).describe('搜图');
 
