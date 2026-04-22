@@ -143,6 +143,7 @@ const EditTaskSchema = z.object({
 });
 
 export const EditImageSchema = z.object({
+    provider: z.enum(['gemini', 'openai_compat']).default('gemini').describe('图片服务商|gemini 或 openai_compat'),
     model: z.string().default('gemini-3-pro-image-preview').describe('编辑模型'),
     api: z.string().default('').describe('API Key'),
     baseURL: z.string().default('').describe('自定义URL'),
