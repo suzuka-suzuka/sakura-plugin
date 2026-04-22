@@ -1,7 +1,6 @@
 import { grokRequest } from "../lib/AIUtils/GrokClient.js";
 import { getImg } from "../lib/utils.js";
 import Setting from "../lib/setting.js";
-import EconomyManager from "../lib/economy/EconomyManager.js";
 export class GrokImage extends plugin {
   constructor() {
     super({
@@ -19,7 +18,6 @@ export class GrokImage extends plugin {
     if (!prompt) {
       return false;
     }
-    const economyManager = new EconomyManager(e);
     const imgBase64List = await getImg(e, true, true);
 
     const channelsConfig = Setting.getConfig("Channels");
