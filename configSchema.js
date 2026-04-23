@@ -120,6 +120,22 @@ const OpenAIChannelSchema = z.object({
     model: z.string().default('gpt-4').describe('模型名称'),
 });
 
+const ImageGeminiChannelSchema = z.object({
+    name: z.string().default('gemini-image').describe('渠道名称'),
+    model: z.string().default('gemini-3-pro-image-preview').describe('生图模型'),
+    api: z.string().default('').describe('API Key|#textarea'),
+    baseURL: z.string().default('').describe('自定义URL|留空使用默认地址'),
+    vertex: z.boolean().default(false).describe('Vertex AI'),
+    vertexApi: z.string().default('').describe('备用 Vertex API Key|#textarea|普通 Gemini 请求失败后可回退到 Vertex'),
+});
+
+const ImageOpenAIChannelSchema = z.object({
+    name: z.string().default('openai-image').describe('渠道名称'),
+    baseURL: z.string().default('https://api.openai.com/v1').describe('API地址'),
+    api: z.string().default('').describe('API Key|#textarea'),
+    model: z.string().default('gpt-image-2').describe('生图模型'),
+});
+
 const GrokChannelSchema = z.object({
     name: z.string().default('grok').describe('渠道名称'),
     model: z.string().default('grok-2').describe('模型名称'),
@@ -133,9 +149,14 @@ const GrokChannelSchema = z.object({
 
 export const ChannelsSchema = z.object({
     gemini: z.array(GeminiChannelSchema).default([]).describe('Gemini 渠道列表|配置Google Gemini API渠道'),
-    openai: z.array(OpenAIChannelSchema).default([]).describe('OpenAI 渠道列表|配置OpenAI兼容API渠道'),
+    openai: z.array(OpenAIChannelSchema).default([]).describe('OpenAI 渠道列表|配置 OpenAI API 渠道'),
     grok: z.array(GrokChannelSchema).default([]).describe('Grok 渠道列表|配置Grok网页渠道'),
 }).describe('AI 渠道管理');
+
+export const ImageChannelsSchema = z.object({
+    gemini: z.array(ImageGeminiChannelSchema).default([ImageGeminiChannelSchema.parse({})]).describe('Gemini 生图渠道|配置 Google Gemini 图片生成渠道'),
+    openai: z.array(ImageOpenAIChannelSchema).default([ImageOpenAIChannelSchema.parse({})]).describe('OpenAI 生图渠道|配置 OpenAI 图片生成渠道'),
+}).describe('生图渠道管理');
 
 const EditTaskSchema = z.object({
     trigger: z.string().default('').describe('触发词|图片编辑触发词'),
@@ -143,12 +164,7 @@ const EditTaskSchema = z.object({
 });
 
 export const EditImageSchema = z.object({
-    provider: z.enum(['gemini', 'openai_compat']).default('gemini').describe('图片服务商|gemini 或 openai_compat'),
-    model: z.string().default('gemini-3-pro-image-preview').describe('编辑模型'),
-    api: z.string().default('').describe('API Key'),
-    baseURL: z.string().default('').describe('自定义URL'),
-    vertex: z.boolean().default(false).describe('Vertex AI'),
-    vertexApi: z.string().default('').describe('Vertex API Key'),
+    imageChannel: z.string().default('').describe('生图渠道|#imageChannelSelect|从生图渠道管理中选择'),
     tasks: z.array(EditTaskSchema).default([]).describe('编辑指令列表|配置自定义的图片编辑指令'),
 }).describe('图片编辑');
 
@@ -413,6 +429,7 @@ export const configSchema = {
     'ActiveChat': ActiveChatSchema,
     'AutoCleanup': AutoCleanupSchema,
     'Channels': ChannelsSchema,
+    'ImageChannels': ImageChannelsSchema,
     'EditImage': EditImageSchema,
     'EmojiThief': EmojiThiefSchema,
     'SoraVideo': SoraVideoSchema,
@@ -443,7 +460,7 @@ export const schemaCategories = {
     'AI角色': ['roles'],
     'AI设定': ['AI', 'TavilyMCP', 'mimic', 'ActiveChat'],
     '戳一戳': ['poke'],
-    '图片功能': ['r18', 'summary', 'SearchImage', 'cool', 'teatime', 'EmojiThief', 'EditImage', 'nai', 'pixiv'],
+    '图片功能': ['ImageChannels', 'EditImage', 'nai', 'pixiv', 'r18', 'summary', 'SearchImage', 'cool', 'teatime', 'EmojiThief'],
     '经济系统': ['economy'],
     '其他功能': ['60sNews', 'AutoCleanup', 'forwardMessage', 'groupnotice', 'repeat', 'recall', 'bilicookie', 'VitsVoice', 'SoraVideo', 'reminderTask'],
 };
@@ -456,6 +473,7 @@ export const schemaLabels = {
     'ActiveChat': '主动聊天',
     'AutoCleanup': '自动清理',
     'Channels': 'AI 渠道管理',
+    'ImageChannels': '生图渠道管理',
     'EditImage': '图片编辑',
     'EmojiThief': '表情偷取',
     'SoraVideo': 'Sora 视频生成',
@@ -508,6 +526,13 @@ export const dynamicOptionsConfig = {
             { module: 'Channels', path: 'gemini', valueKey: 'name' },
             { module: 'Channels', path: 'openai', valueKey: 'name' },
             { module: 'Channels', path: 'grok', valueKey: 'name' },
+        ],
+    },
+    imageChannelSelect: {
+        label: '生图渠道',
+        sources: [
+            { module: 'ImageChannels', path: 'gemini', valueKey: 'name' },
+            { module: 'ImageChannels', path: 'openai', valueKey: 'name' },
         ],
     },
     toolGroupSelect: {
