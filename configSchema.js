@@ -118,6 +118,7 @@ const OpenAIChannelSchema = z.object({
     baseURL: z.string().default('https://api.openai.com/v1').describe('API地址'),
     api: z.string().default('').describe('API Key'),
     model: z.string().default('gpt-4').describe('模型名称'),
+    enable_thinking: z.boolean().default(false).describe('思考模式|开启后向 OpenAI 兼容接口传入 enable_thinking'),
 });
 
 const ImageGeminiChannelSchema = z.object({
