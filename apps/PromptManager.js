@@ -60,6 +60,17 @@ export class profileManager extends plugin {
     return allChannels
   }
 
+  getToolGroupNames() {
+    const toolGroups = this.appconfig?.toolGroups
+    if (!Array.isArray(toolGroups)) {
+      return []
+    }
+
+    return toolGroups
+      .map(group => group?.name)
+      .filter(name => typeof name === "string" && name.trim())
+  }
+
   async startAddRoleSetting(e) {
     const data = {
       step: "role_awaiting_name",
@@ -248,21 +259,42 @@ export class profileManager extends plugin {
 
         state.data.Channel = userInput
         state.step = "awaiting_settings"
+        const toolGroupNames = this.getToolGroupNames()
+        const toolGroupText = toolGroupNames.length > 0
+          ? `\n当前可用工具组：${toolGroupNames.join("、")}`
+          : "\n当前没有配置工具组，如不使用工具请填 0。"
         await e.reply(
-          `渠道已设定为：${state.data.Channel}\n现在，请一次性输入以下三个功能的开关（1为是，0为否），用空格隔开：\n1. 是否【启用群聊上下文】\n2. 是否【启用历史记录】\n3. 是否【启用工具】\n\n例如，输入 "1 1 0" 表示开启前两项，关闭第三项。`,
+          `渠道已设定为：${state.data.Channel}\n现在，请一次性输入以下设置，用空格隔开：\n1. 是否【启用群聊上下文】（1为是，0为否）\n2. 是否【启用历史记录】（1为是，0为否）\n3. 【工具组名称】（不使用工具填 0）\n4. 是否【启用用户记忆】（1为是，0为否）${toolGroupText}\n\n例如：1 1 默认工具组 0`,
         )
         break
 
       case "awaiting_settings":
         const settings = userInput.split(/\s+/).filter(s => s)
-        if (settings.length !== 3 || settings.some(s => s !== "1" && s !== "0")) {
-          await e.reply("输入格式不正确，请输入三个由空格隔开的1或0。\n例如: 1 1 0\n请重新输入。")
+        if (
+          settings.length !== 4 ||
+          settings[0] !== "1" && settings[0] !== "0" ||
+          settings[1] !== "1" && settings[1] !== "0" ||
+          settings[3] !== "1" && settings[3] !== "0"
+        ) {
+          await e.reply("输入格式不正确，请输入四项设置：群上下文 历史记录 工具组 记忆。\n例如: 1 1 默认工具组 0\n不使用工具组请将第三项填 0。")
+          return
+        }
+
+        const noToolValues = new Set(["0", "无", "不启用", "关闭", "空", "-"])
+        const toolGroupName = noToolValues.has(settings[2]) ? "" : settings[2]
+        const toolGroupNamesForValidate = this.getToolGroupNames()
+        if (toolGroupName && !toolGroupNamesForValidate.includes(toolGroupName)) {
+          const availableText = toolGroupNamesForValidate.length > 0
+            ? `当前可用工具组：${toolGroupNamesForValidate.join("、")}`
+            : "当前没有配置工具组。"
+          await e.reply(`工具组 "${toolGroupName}" 不存在，请重新输入。\n${availableText}\n不使用工具组请填 0。`)
           return
         }
 
         state.data.GroupContext = settings[0] === "1"
         state.data.History = settings[1] === "1"
-        state.data.Tool = settings[2] === "1"
+        state.data.Tool = toolGroupName
+        state.data.Memory = settings[3] === "1"
 
         this.finish("handleProfileAdd", !!e.group_id)
         const finalConfig = this.appconfig

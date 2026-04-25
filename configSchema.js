@@ -254,7 +254,7 @@ export const GroupnoticeSchema = z.object({
 
 
 const GroupConfigSchema = z.object({
-    group: z.number().default(0).describe('群号'),
+    group: z.number().default(0).describe('群号|#groupSelect|选择此独立配置生效的群'),
     name: z.string().default('小叶').describe('角色|#roleSelect'),
     alternateName: z.string().default('雌小鬼').describe('反差角色|#roleSelect'),
     replyProbability: z.number().default(0.05).describe('回复概率|#step:0.01|0-1之间的小数'),
