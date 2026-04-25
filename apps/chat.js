@@ -26,7 +26,10 @@ export class AIChat extends plugin {
       event: "message",
       priority: 1135,
     });
+    this.userLocks = new Map();
   }
+
+  LOCK_TTL_MS = 120 * 1000;
 
   get appconfig() {
     return Setting.getConfig("AI");
@@ -43,6 +46,42 @@ export class AIChat extends plugin {
   getUserLockKey(e) {
     const scope = e.group_id ? `${e.group_id}:${e.user_id}` : `private:${e.user_id}`;
     return scope;
+  }
+
+  acquireUserLock(lockKey) {
+    const now = Date.now();
+    const currentLock = this.userLocks.get(lockKey);
+    if (currentLock && now - currentLock.startedAt < this.LOCK_TTL_MS) {
+      return null;
+    }
+
+    if (currentLock?.timeout) {
+      clearTimeout(currentLock.timeout);
+    }
+
+    const lock = {
+      startedAt: now,
+      timeout: null,
+    };
+    lock.timeout = setTimeout(() => {
+      if (this.userLocks.get(lockKey) === lock) {
+        this.userLocks.delete(lockKey);
+      }
+    }, this.LOCK_TTL_MS);
+
+    this.userLocks.set(lockKey, lock);
+    return lock;
+  }
+
+  releaseUserLock(lockKey, lock) {
+    if (!lock || this.userLocks.get(lockKey) !== lock) {
+      return;
+    }
+
+    if (lock.timeout) {
+      clearTimeout(lock.timeout);
+    }
+    this.userLocks.delete(lockKey);
   }
 
   getMemoryFile(e) {
@@ -239,24 +278,20 @@ export class AIChat extends plugin {
 
         await this.refreshSession(e);
 
-        if (!this.userLocks) this.userLocks = new Map();
         let sessionLockKey = null;
+        let sessionLock = null;
         if (config.enableUserLock) {
           sessionLockKey = this.getUserLockKey(e);
-          const now = Date.now();
-          if (this.userLocks.has(sessionLockKey)) {
-            const lockTime = this.userLocks.get(sessionLockKey);
-            if (now - lockTime < 120 * 1000) {
-              logger.info(`[Chat] 用户 ${e.user_id} 的上一条消息仍在处理中，本次触发已忽略。`);
-              return false;
-            }
+          sessionLock = this.acquireUserLock(sessionLockKey);
+          if (!sessionLock) {
+            logger.info(`[Chat] 用户 ${e.user_id} 的上一条消息仍在处理中，本次触发已忽略。`);
+            return false;
           }
-          this.userLocks.set(sessionLockKey, now);
         }
         try {
           return await this.doChat(e, { ...session.profile, Prompt: session.Prompt }, sessionQuery);
         } finally {
-          if (sessionLockKey) this.userLocks.delete(sessionLockKey);
+          this.releaseUserLock(sessionLockKey, sessionLock);
         }
       }
       return false;
@@ -287,35 +322,23 @@ export class AIChat extends plugin {
       query = `(${quoteContent.trim()}) ${query}`;
     }
 
-    // 使用内存 Map 替代 Redis 锁，降低依赖
-    if (!this.userLocks) {
-      this.userLocks = new Map();
-    }
-
     let lockKey = null;
+    let userLock = null;
     if (config.enableUserLock) {
       lockKey = this.getUserLockKey(e);
-
-      const now = Date.now();
-      if (this.userLocks.has(lockKey)) {
-        const lockTime = this.userLocks.get(lockKey);
-        // 锁超时检查 (120秒)，防止死锁
-        if (now - lockTime < 120 * 1000) {
-          logger.info(
-            `[Chat] 用户 ${e.user_id} 的上一条消息仍在处理中，本次触发已忽略。`
-          );
-          return false;
-        }
+      userLock = this.acquireUserLock(lockKey);
+      if (!userLock) {
+        logger.info(
+          `[Chat] 用户 ${e.user_id} 的上一条消息仍在处理中，本次触发已忽略。`
+        );
+        return false;
       }
-      this.userLocks.set(lockKey, now);
     }
 
     try {
       return await this.doChat(e, { ...matchedProfile, Prompt }, query);
     } finally {
-      if (lockKey) {
-        this.userLocks.delete(lockKey);
-      }
+      this.releaseUserLock(lockKey, userLock);
     }
   });
 

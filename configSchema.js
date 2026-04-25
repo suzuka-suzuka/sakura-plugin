@@ -264,7 +264,7 @@ const GroupConfigSchema = z.object({
     recalltime: z.number().default(10).describe('撤回时间(秒)|自动撤回消息的秒数'),
     Channel: z.string().default('2.5').describe('使用渠道|#channelSelect'),
     Tool: z.preprocess(val => typeof val === 'boolean' ? '' : val, z.string().default('')).describe('工具组|#toolGroupSelect|选择此群使用的工具组'),
-    enableGroupLock: z.boolean().default(false).describe('群锁定|是否锁定只在此群生效'),
+    enableGroupLock: z.boolean().default(false).describe('群锁定|是否开启群流程锁'),
     splitMessage: z.boolean().default(true).describe('拆分消息|是否拆分长消息'),
     maxToolCalls: z.number().default(10).describe('最大工具调用次数|允许AI连续调用工具的最大次数'),
 });

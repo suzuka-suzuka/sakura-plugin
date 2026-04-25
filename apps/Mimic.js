@@ -25,8 +25,10 @@ export class Mimic extends plugin {
       event: "message.group",
       priority: Infinity,
     });
-    this.activeLocks = new Set();
+    this.activeLocks = new Map();
   }
+
+  LOCK_TTL_MS = 120 * 1000;
 
   get appconfig() {
     return Setting.getConfig("mimic");
@@ -58,6 +60,42 @@ export class Mimic extends plugin {
     return this.getScopeKey(e.group_id || "private");
   }
 
+  acquireLock(lockKey) {
+    const now = Date.now();
+    const currentLock = this.activeLocks.get(lockKey);
+    if (currentLock && now - currentLock.startedAt < this.LOCK_TTL_MS) {
+      return null;
+    }
+
+    if (currentLock?.timeout) {
+      clearTimeout(currentLock.timeout);
+    }
+
+    const lock = {
+      startedAt: now,
+      timeout: null,
+    };
+    lock.timeout = setTimeout(() => {
+      if (this.activeLocks.get(lockKey) === lock) {
+        this.activeLocks.delete(lockKey);
+      }
+    }, this.LOCK_TTL_MS);
+
+    this.activeLocks.set(lockKey, lock);
+    return lock;
+  }
+
+  releaseLock(lockKey, lock) {
+    if (!lock || this.activeLocks.get(lockKey) !== lock) {
+      return;
+    }
+
+    if (lock.timeout) {
+      clearTimeout(lock.timeout);
+    }
+    this.activeLocks.delete(lockKey);
+  }
+
   getMemoryFile(e) {
     const { scopedFile } = getMemoryPathsFromEvent(e);
     return scopedFile;
@@ -66,20 +104,20 @@ export class Mimic extends plugin {
   Mimic = OnEvent("message.group", async (e) => {
     const config = this.getGroupConfig(e.group_id);
     const groupLockKey = this.getLockKey(e);
+    let groupLock = null;
 
     if (config.enableGroupLock && e.group_id) {
-      if (this.activeLocks.has(groupLockKey)) {
+      groupLock = this.acquireLock(groupLockKey);
+      if (!groupLock) {
         return false;
       }
-      this.activeLocks.add(groupLockKey);
-      setTimeout(() => this.activeLocks.delete(groupLockKey), 120 * 1000);
     }
 
     try {
       return await this.doMimic(e);
     } finally {
       if (config.enableGroupLock && e.group_id) {
-        this.activeLocks.delete(groupLockKey);
+        this.releaseLock(groupLockKey, groupLock);
       }
     }
   });
