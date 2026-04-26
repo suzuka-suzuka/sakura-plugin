@@ -1,20 +1,15 @@
 import fs from "fs";
-import { getAI, getCurrentAndPreviousUserText } from "../lib/AIUtils/getAI.js";
+import { runAgentLoop } from "../lib/AIUtils/AgentRunner.js";
 import {
   findExistingMemoryFile,
   getMemoryPathsFromEvent,
 } from "../lib/AIUtils/memoryStore.js";
-import { executeToolCalls, resolveToolConfirmation } from "../lib/AIUtils/tools/tools.js";
+import { resolveToolConfirmation } from "../lib/AIUtils/tools/tools.js";
 import {
   splitAndReplyMessages,
   parseAtMessage,
   getQuoteContent,
 } from "../lib/AIUtils/messaging.js";
-import {
-  checkAndClearStopFlag,
-  finishAiTask,
-  startAiTask,
-} from "../lib/AIUtils/stopFlag.js";
 import Setting from "../lib/setting.js";
 import { randomReact, smartReplyMsg } from "../lib/utils.js";
 
@@ -265,101 +260,38 @@ export class Mimic extends plugin {
 
     logger.info(`mimic触发`);
     await randomReact(e);
-    let finalResponseText = "";
-    let currentFullHistory = [];
-    let toolCallCount = 0;
+    const currentFullHistory = [];
     const Channel = config.Channel;
     const toolGroup = config.Tool || '';
-    const taskId = startAiTask(e);
     try {
       const queryParts = [{ text: query }];
-      const lockedVectorContext = getCurrentAndPreviousUserText(queryParts, currentFullHistory);
-
-      const geminiInitialResponse = await getAI(
-        Channel,
+      const agentResult = await runAgentLoop({
+        label: "Mimic",
         e,
+        channel: Channel,
         queryParts,
-        selectedPresetPrompt,
-        true,
+        prompt: selectedPresetPrompt,
+        groupContext: true,
         toolGroup,
-        currentFullHistory,
-        lockedVectorContext
-      );
+        history: currentFullHistory,
+        pluginInstance: this,
+        onIntermediateText: async (text) => {
+          await smartReplyMsg(e, text, { quote: true });
+        },
+      });
 
-      if (typeof geminiInitialResponse === "string") {
+      if (agentResult.status === "model_error") {
         return false;
       }
 
-      currentFullHistory.push({ role: "user", parts: queryParts });
-
-      let currentGeminiResponse = geminiInitialResponse;
-
-      while (true) {
-        if (checkAndClearStopFlag(taskId)) {
-          logger.info(`[Mimic] 用户 ${e.user_id} 触发了强制停止`);
-          break;
-        }
-
-        const textContent = currentGeminiResponse.text;
-        const functionCalls = currentGeminiResponse.functionCalls;
-        const rawParts = currentGeminiResponse.rawParts;
-        let modelResponseParts = [];
-
-        if (rawParts && rawParts.length > 0) {
-          modelResponseParts = rawParts;
-        } else {
-          if (textContent) {
-            modelResponseParts.push({ text: textContent });
-          }
-          if (functionCalls && functionCalls.length > 0) {
-            for (const fc of functionCalls) {
-              modelResponseParts.push({ functionCall: fc });
-            }
-          }
-        }
-
-        if (modelResponseParts.length > 0) {
-          currentFullHistory.push({ role: "model", parts: modelResponseParts });
-        }
-
-        if (functionCalls && functionCalls.length > 0) {
-          toolCallCount++;
-          const maxToolCalls = config.maxToolCalls ?? 10;
-          if (toolCallCount >= maxToolCalls) {
-            logger.warn(`[Mimic] 工具调用次数超过上限(${maxToolCalls})，强行结束对话`);
-            await e.reply("⚠️ 工具调用次数过多，为防止死循环已强制中断对话。", 10, true);
-            return false;
-          }
-
-          if (textContent) {
-            const cleanedTextContent = textContent.replace(/\n+$/, "");
-            await smartReplyMsg(e, cleanedTextContent, { quote: true });
-          }
-          const executedResults = await executeToolCalls(e, functionCalls, this);
-          currentFullHistory.push(...executedResults);
-          currentGeminiResponse = await getAI(
-            Channel,
-            e,
-            "",
-            selectedPresetPrompt,
-            true,
-            toolGroup,
-            currentFullHistory,
-            lockedVectorContext
-          );
-
-          if (typeof currentGeminiResponse === "string") {
-            return false;
-          }
-        } else if (textContent) {
-          finalResponseText = textContent;
-          break;
-        }
+      if (agentResult.status === "tool_limit") {
+        await e.reply("⚠️ 工具调用次数过多，为防止死循环已强制中断对话。", 10, true);
+        return false;
       }
 
       const recalltime = config.recalltime;
 
-      await smartReplyMsg(e, finalResponseText, {
+      await smartReplyMsg(e, agentResult.finalText, {
         textReplyFn: async (t) => {
           if (config.splitMessage) {
             await splitAndReplyMessages(e, t, shouldRecall, recalltime);
@@ -371,8 +303,6 @@ export class Mimic extends plugin {
     } catch (error) {
       logger.error(`处理过程中出现错误: ${error.message}`);
       return false;
-    } finally {
-      finishAiTask(e, taskId);
     }
     return false;
   }

@@ -266,7 +266,6 @@ const GroupConfigSchema = z.object({
     Tool: z.preprocess(val => typeof val === 'boolean' ? '' : val, z.string().default('')).describe('工具组|#toolGroupSelect|选择此群使用的工具组'),
     enableGroupLock: z.boolean().default(false).describe('群锁定|是否开启群流程锁'),
     splitMessage: z.boolean().default(true).describe('拆分消息|是否拆分长消息'),
-    maxToolCalls: z.number().default(10).describe('最大工具调用次数|允许AI连续调用工具的最大次数'),
 });
 
 export const MimicSchema = z.object({
@@ -281,7 +280,6 @@ export const MimicSchema = z.object({
     Tool: z.preprocess(val => typeof val === 'boolean' ? '' : val, z.string().default('')).describe('工具组|#toolGroupSelect|选择伪人使用的工具组'),
     enableGroupLock: z.boolean().default(false).describe('群锁定'),
     splitMessage: z.boolean().default(true).describe('拆分消息'),
-    maxToolCalls: z.number().default(10).describe('最大工具调用次数|允许AI连续调用工具的最大次数'),
     Groups: z.array(z.number()).default([]).describe('启用群号|#groupSelect'),
     GroupConfigs: z.array(GroupConfigSchema).default([]).describe('群独立配置|为每个群设置不同的模拟人参数'),
 }).describe('伪人配置');

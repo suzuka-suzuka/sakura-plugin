@@ -1,10 +1,10 @@
 import Setting from "../lib/setting.js";
-import { getAI, getCurrentAndPreviousUserText } from "../lib/AIUtils/getAI.js";
+import { runAgentLoop } from "../lib/AIUtils/AgentRunner.js";
 import {
   loadConversationHistory,
   saveConversationHistory,
 } from "../lib/AIUtils/ConversationHistory.js";
-import { executeToolCalls, resolveToolConfirmation } from "../lib/AIUtils/tools/tools.js";
+import { resolveToolConfirmation } from "../lib/AIUtils/tools/tools.js";
 import { getQuoteContent } from "../lib/AIUtils/messaging.js";
 import { checkForNaiTags } from "../lib/AIUtils/naiHandler.js";
 import {
@@ -13,11 +13,6 @@ import {
 } from "../lib/AIUtils/memoryStore.js";
 import { randomReact, getImg, smartReplyMsg } from "../lib/utils.js";
 import fs from "fs";
-import {
-  checkAndClearStopFlag,
-  finishAiTask,
-  startAiTask,
-} from "../lib/AIUtils/stopFlag.js";
 
 export class AIChat extends plugin {
   constructor() {
@@ -390,10 +385,7 @@ export class AIChat extends plugin {
     `;
     }
 
-    let finalResponseText = "";
     let currentFullHistory = [];
-    let toolCallCount = 0;
-    const taskId = startAiTask(e);
 
     try {
       if (History) {
@@ -419,112 +411,49 @@ export class AIChat extends plugin {
         ];
       }
       const { prefix } = matchedProfile;
-      const lockedVectorContext = getCurrentAndPreviousUserText(queryParts, currentFullHistory);
 
-      let currentAIResponse = await getAI(
-        Channel,
+      const agentResult = await runAgentLoop({
+        label: "Chat",
         e,
+        channel: Channel,
         queryParts,
-        Prompt,
-        GroupContext,
-        Tool,
-        currentFullHistory,
-        lockedVectorContext
-      );
+        prompt: Prompt,
+        groupContext: GroupContext,
+        toolGroup: Tool,
+        history: currentFullHistory,
+        pluginInstance: this,
+        onIntermediateText: async (text) => {
+          const cleanedTextContent = await checkForNaiTags(text, e, naiPrompt);
+          await this.smartReply(e, cleanedTextContent, 0, true);
+        },
+      });
 
-      if (typeof currentAIResponse === "string") {
-        await e.reply(currentAIResponse, 10, true);
+      currentFullHistory = agentResult.history;
+
+      if (agentResult.status === "model_error") {
+        await e.reply(agentResult.error, 10, true);
         return true;
       }
 
-      const historyParts = queryParts.filter((part) => !part.inlineData);
-      if (historyParts.length > 0) {
-        currentFullHistory.push({ role: "user", parts: historyParts });
-      }
-
-      while (true) {
-        if (checkAndClearStopFlag(taskId)) {
-          logger.info(`[Chat] 用户 ${e.user_id} 触发了强制停止`);
-          break;
+      if (agentResult.status === "tool_limit") {
+        await e.reply("⚠️ 工具调用次数过多，为防止死循环已强制中断对话。", 10, true);
+        if (History) {
+          await saveConversationHistory(e, currentFullHistory, prefix);
         }
-
-        const textContent = currentAIResponse.text;
-        const functionCalls = currentAIResponse.functionCalls;
-        const rawParts = currentAIResponse.rawParts;
-        let modelResponseParts = [];
-
-        if (rawParts && rawParts.length > 0) {
-          modelResponseParts = rawParts;
-        } else {
-          if (textContent) {
-            modelResponseParts.push({ text: textContent });
-          }
-          if (functionCalls && functionCalls.length > 0) {
-            for (const fc of functionCalls) {
-              modelResponseParts.push({ functionCall: fc });
-            }
-          }
-        }
-
-        if (modelResponseParts.length > 0) {
-          currentFullHistory.push({ role: "model", parts: modelResponseParts });
-        }
-
-        if (functionCalls && functionCalls.length > 0) {
-          toolCallCount++;
-          const maxToolCalls = this.appconfig.maxToolCalls ?? 20;
-          if (toolCallCount >= maxToolCalls) {
-            logger.warn(`[Chat] 工具调用次数超过上限(${maxToolCalls})，强行结束对话`);
-            await e.reply("⚠️ 工具调用次数过多，为防止死循环已强制中断对话。", 10, true);
-            if (History) {
-              await saveConversationHistory(e, currentFullHistory, prefix);
-            }
-            return true;
-          }
-
-          if (textContent) {
-            let cleanedTextContent = textContent.replace(/\n+$/, "");
-            cleanedTextContent = await checkForNaiTags(cleanedTextContent, e, naiPrompt);
-            // 中间回复也走 smartReply
-            await this.smartReply(e, cleanedTextContent, 0, true);
-          }
-          const executedResults = await executeToolCalls(e, functionCalls, this);
-          currentFullHistory.push(...executedResults);
-
-          currentAIResponse = await getAI(
-            Channel,
-            e,
-            "",
-            Prompt,
-            GroupContext,
-            Tool,
-            currentFullHistory,
-            lockedVectorContext
-          );
-
-          if (typeof currentAIResponse === "string") {
-            await e.reply(currentAIResponse, 10, true);
-            return true;
-          }
-        } else if (textContent) {
-          finalResponseText = textContent;
-          break;
-        }
+        return true;
       }
 
       if (History) {
         await saveConversationHistory(e, currentFullHistory, prefix);
       }
 
-      finalResponseText = await checkForNaiTags(finalResponseText, e, naiPrompt);
+      const finalResponseText = await checkForNaiTags(agentResult.finalText, e, naiPrompt);
       // 最后回复也走 smartReply
       await this.smartReply(e, finalResponseText);
       return true;
     } catch (err) {
       logger.error(`[Chat] 处理出错: ${err.message}`);
       await e.reply("出错啦！请稍后再试。");
-    } finally {
-      finishAiTask(e, taskId);
     }
   }
 
