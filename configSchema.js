@@ -79,6 +79,8 @@ export const AISchema = z.object({
     toolschannel: z.string().default('default').describe('工具渠道|#channelSelect'),
     appschannel: z.string().default('default').describe('应用渠道|#channelSelect'),
     defaultchannel: z.string().default('default').describe('默认渠道|#channelSelect'),
+    gcsBucket: z.string().default('').describe('GCS Bucket|Vertex 视频分析上传的 Cloud Storage bucket'),
+    gcsPrefix: z.string().default('sakura-message-videos').describe('GCS Prefix|Vertex 视频分析临时文件目录'),
     retryCount: z.number().int().min(0).default(1).describe('渠道重试次数|请求失败时对当前渠道的最大重试次数，等待时间线性回退（5s、10s、15s…），耗尽后再回退至默认渠道'),
     maxToolCalls: z.number().default(20).describe('最大工具调用次数|每次对话允许AI连续调用工具的最大次数，超过后将强制结束'),
     trustAICommand: z.boolean().default(false).describe('完全信任AI|开启后AI调用的全部命令均直接执行，无需用户确认且无视白名单'),

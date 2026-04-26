@@ -5,6 +5,7 @@
   "author": "suzuka",
   "dependencies": {
     "@book000/pixivts": "^0.45.69",
+    "@google-cloud/storage": "^7.19.0",
     "@google/genai": "^1.50.1",
     "@mapbox/node-pre-gyp": "^2.0.3",
     "@modelcontextprotocol/sdk": "^1.27.1",
