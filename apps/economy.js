@@ -27,6 +27,38 @@ export default class Economy extends plugin {
     return groups.some((g) => String(g) === String(e.group_id));
   }
 
+  addCoinsToOther = Command(/^\s*#?(添加|增加|给予)[樱桜]花币\s*(\d+)$/i, "master",  async (e) => {
+
+    const targetId = e.at;
+    if (!targetId) {
+      return false
+    }
+
+    const amount = parseInt(e.msg.replace(/[^0-9]/ig, ""), 10);
+    if (!amount || amount <= 0) {
+      return false;
+    }
+
+    const economyManager = new EconomyManager(e);
+    economyManager.addCoins(
+      { user_id: targetId, group_id: e.group_id },
+      amount
+    );
+
+    let targetName = targetId;
+    try {
+      if (e.getInfo) {
+        const info = await e.getInfo(targetId);
+        if (info) {
+          targetName = info.card || info.nickname || targetId;
+        }
+      }
+    } catch (err) {}
+
+    await e.reply(`🌸 伟大的神明已恩赐，成功为 ${targetName} 增加了 ${amount} 樱花币！`);
+    return true;
+  });
+
   rob = Command(/^\s*#?(打劫|抢[劫夺钱])\s*$/i, async (e) => {
     if (!this.checkWhitelist(e)) return false;
     const targetId = e.at;
