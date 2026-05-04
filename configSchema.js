@@ -10,6 +10,8 @@ import {
     normalizeTavilyRawContent,
 } from './lib/AIUtils/tavilyConfig.js';
 
+const OPENAI_REASONING_EFFORT_OPTIONS = ['', 'none', 'minimal', 'low', 'medium', 'high', 'xhigh'];
+
 function cronString(defaultValue = '0 * * * *') {
     return z.string().default(defaultValue).refine((val) => {
         if (!val || !val.trim()) return false;
@@ -123,6 +125,7 @@ const OpenAIChannelSchema = z.object({
     api: z.string().default('').describe('API Key'),
     model: z.string().default('gpt-4').describe('模型名称'),
     enable_thinking: z.boolean().default(false).describe('思考模式|开启后向 OpenAI 兼容接口传入 enable_thinking'),
+    reasoning_effort: z.enum(OPENAI_REASONING_EFFORT_OPTIONS).default('').describe('推理强度|留空则不传；OpenAI reasoning_effort，可选 none/minimal/low/medium/high/xhigh'),
 });
 
 const ImageGeminiChannelSchema = z.object({
