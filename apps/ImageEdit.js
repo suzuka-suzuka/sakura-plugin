@@ -18,7 +18,7 @@ const VALID_ASPECT_RATIOS = [
 export class EditImage extends plugin {
   constructor() {
     super({
-      name: "AI\u56fe\u50cf\u7f16\u8f91",
+      name: "AI图像编辑",
       event: "message",
       priority: 1135,
     });
@@ -65,7 +65,7 @@ export class EditImage extends plugin {
     let imageSize = null;
     let promptText = msg;
 
-    promptText = promptText.replace(/\uFF1A/g, ":");
+    promptText = promptText.replace(/：/g, ":");
 
     const ratioRegex = new RegExp(`(${VALID_ASPECT_RATIOS.join("|")})`);
     const ratioMatch = promptText.match(ratioRegex);
@@ -150,7 +150,7 @@ export class EditImage extends plugin {
 
     if (!promptText) {
       await e.reply(
-        "\u8bf7\u544a\u8bc9\u6211\u4f60\u60f3\u5982\u4f55\u4fee\u6539\u56fe\u7247\u3002",
+        "请告诉我你想如何修改图片。",
         10,
         true
       );
@@ -164,7 +164,7 @@ export class EditImage extends plugin {
   }
 
   async _processAndCallAPI(e, promptText, inputImages, options = {}) {
-    const canProceed = Setting.payForCommand(e, "AI\u56fe\u7247\u7f16\u8f91");
+    const canProceed = Setting.payForCommand(e, "AI图片编辑");
     if (!canProceed) {
       return false;
     }
@@ -187,7 +187,7 @@ export class EditImage extends plugin {
         await e.reply(segment.image(imageBuffers[0]));
       } else {
         await e.reply(
-          "\u672a\u80fd\u751f\u6210\u56fe\u7247\uff0c\u53ef\u80fd\u88ab\u5b89\u5168\u7b56\u7565\u62e6\u622a\u3002",
+          "未能生成图片，可能被安全策略拦截。",
           10,
           true
         );
@@ -195,7 +195,7 @@ export class EditImage extends plugin {
     } catch (error) {
       logger.error("[EditImage] image generation failed:", error);
       await e.reply(
-        "\u521b\u4f5c\u5931\u8d25\uff0c\u53ef\u80fd\u662f\u7f51\u7edc\u95ee\u9898\u6216\u8bf7\u6c42\u8d85\u9650\u3002",
+        "创作失败，可能是网络问题或请求超限。",
         10,
         true
       );
