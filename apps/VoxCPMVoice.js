@@ -20,6 +20,7 @@ const VOXCPM_NORMALIZE = true;
 const VOXCPM_DENOISE = false;
 const VOXCPM_TIMEOUT_MS = 180000;
 const MAX_TEXT_LENGTH = 180;
+const MAX_REFERENCE_AUDIO_SECONDS = 30;
 const DEFAULT_ROLE = {
   name: "默认",
   prompt: "年轻女性，语气自然",
@@ -123,6 +124,38 @@ function convertToWav(inputPath, outputPath) {
   });
 
   return result.status === 0 && fs.existsSync(outputPath);
+}
+
+function getAudioDurationSeconds(filePath) {
+  const result = spawnSync("ffprobe", [
+    "-v",
+    "error",
+    "-show_entries",
+    "format=duration",
+    "-of",
+    "default=noprint_wrappers=1:nokey=1",
+    filePath,
+  ], {
+    encoding: "utf8",
+  });
+
+  if (result.status !== 0) {
+    return NaN;
+  }
+
+  return Number.parseFloat(String(result.stdout || "").trim());
+}
+
+function formatDuration(seconds) {
+  const value = Number(seconds);
+  if (!Number.isFinite(value)) {
+    return "未知";
+  }
+  return `${value.toFixed(1).replace(/\.0$/, "")} 秒`;
+}
+
+function escapeConcatPath(filePath) {
+  return path.resolve(filePath).replace(/\\/g, "/").replace(/'/g, "'\\''");
 }
 
 async function fetchBuffer(url, timeoutMs) {
@@ -348,12 +381,14 @@ export class VoxCPMVoice extends plugin {
     this.setContext("handleAddVoiceRole", !!e.group_id, 60, true, {
       roleName,
       prompt,
+      audioParts: [],
+      totalDuration: 0,
     });
 
     await e.reply(
       prompt
-        ? `已收到「${roleName}」的声音描述。请发送一条语音或音频文件作为固定参考音色；不需要的话发送「跳过」。`
-        : `请发送一条语音或音频文件作为「${roleName}」的固定参考音色；发送「跳过」取消。`,
+        ? `已收到「${roleName}」的声音描述。可连续发送多条语音/音频文件，发送「完成」保存；不需要参考语音发送「跳过」。`
+        : `请连续发送一条或多条语音/音频文件作为「${roleName}」的固定参考音色，发送「完成」保存；发送「跳过」取消。`,
       60,
       false
     );
@@ -376,34 +411,94 @@ export class VoxCPMVoice extends plugin {
 
     const existingPrompt = cleanText(data.prompt);
     const hasExistingPrompt = Boolean(existingPrompt);
+    const audioParts = Array.isArray(data.audioParts) ? data.audioParts : [];
+    const totalDuration = Number(data.totalDuration) || 0;
     const incomingText = cleanText(e.msg);
     const skip = /^(跳过|无|不用|不需要|no)$/i.test(incomingText);
-    const prompt = existingPrompt || (skip ? "" : incomingText);
-    let referenceAudioPath = "";
+    const finish = /^(完成|保存|done|finish)$/i.test(incomingText);
+    const prompt = existingPrompt;
 
-    const record = skip ? null : await this.getReferenceRecord(e, VOXCPM_TIMEOUT_MS);
-
-    if (record) {
-      referenceAudioPath = this.saveRoleAudio(roleName, record);
-    }
-
-    if (!hasExistingPrompt && skip) {
+    if (skip) {
       this.finish("handleAddVoiceRole", !!e.group_id);
-      await e.reply(`已取消添加语音角色「${roleName}」。`, 10, true);
+      if (!hasExistingPrompt) {
+        await e.reply(`已取消添加语音角色「${roleName}」。`, 10, true);
+        return;
+      }
+
+      await this.finalizeVoiceRole(e, {
+        roleName,
+        prompt,
+        audioParts: [],
+      });
       return;
     }
 
-    if (hasExistingPrompt && !skip && !referenceAudioPath) {
+    if (finish) {
+      if (audioParts.length === 0 && !hasExistingPrompt) {
+        this.setContext("handleAddVoiceRole", !!e.group_id, 60, true, data);
+        await e.reply("还没有收到参考语音，请先发送语音/音频文件，或发送「跳过」取消。", 20, true);
+        return;
+      }
+
+      this.finish("handleAddVoiceRole", !!e.group_id);
+      await this.finalizeVoiceRole(e, {
+        roleName,
+        prompt,
+        audioParts,
+      });
+      return;
+    }
+
+    const record = await this.getReferenceRecord(e, VOXCPM_TIMEOUT_MS);
+    if (!record) {
       this.setContext("handleAddVoiceRole", !!e.group_id, 60, true, data);
+      await e.reply("请发送语音/音频文件；可以连续发送多条，发送「完成」保存，发送「跳过」取消。", 20, true);
       return;
     }
 
-    if (!prompt && !referenceAudioPath) {
+    let part;
+    try {
+      part = this.prepareRoleAudioPart(roleName, record, audioParts.length + 1);
+    } catch (error) {
       this.setContext("handleAddVoiceRole", !!e.group_id, 60, true, data);
+      await e.reply(`参考语音处理失败：${error.message}`, 20, true);
       return;
     }
 
-    this.finish("handleAddVoiceRole", !!e.group_id);
+    const nextTotalDuration = totalDuration + part.duration;
+    if (nextTotalDuration > MAX_REFERENCE_AUDIO_SECONDS) {
+      this.finish("handleAddVoiceRole", !!e.group_id);
+      await e.reply(
+        `添加语音角色「${roleName}」失败：参考语音总长度 ${formatDuration(nextTotalDuration)}，超过 ${MAX_REFERENCE_AUDIO_SECONDS} 秒限制。`,
+        20,
+        true
+      );
+      return;
+    }
+
+    const nextData = {
+      ...data,
+      audioParts: [...audioParts, part],
+      totalDuration: nextTotalDuration,
+    };
+    this.setContext("handleAddVoiceRole", !!e.group_id, 60, true, nextData);
+    await e.reply(
+      `已收到第 ${nextData.audioParts.length} 条参考语音，当前总长 ${formatDuration(nextTotalDuration)}。可继续发送，或发送「完成」保存。`,
+      20,
+      true
+    );
+  };
+
+  async finalizeVoiceRole(e, { roleName, prompt, audioParts }) {
+    let referenceAudioPath = "";
+    try {
+      if (audioParts.length > 0) {
+        referenceAudioPath = this.mergeRoleAudioParts(roleName, audioParts);
+      }
+    } catch (error) {
+      await e.reply(`语音角色「${roleName}」保存失败：${error.message}`, 20, true);
+      return;
+    }
 
     const saved = this.upsertRole({
       name: roleName,
@@ -417,9 +512,11 @@ export class VoxCPMVoice extends plugin {
       return;
     }
 
-    const audioText = referenceAudioPath ? "，已绑定参考语音" : "";
+    const audioText = referenceAudioPath
+      ? `，已合并 ${audioParts.length} 条参考语音（总长 ${formatDuration(audioParts.reduce((sum, item) => sum + (Number(item.duration) || 0), 0))}）`
+      : "";
     await e.reply(`语音角色「${roleName}」已保存${audioText}。`, 20, true);
-  };
+  }
 
   listVoiceRoles = Command(LIST_ROLE_REG, async (e) => {
     const roles = this.roles;
@@ -612,22 +709,96 @@ export class VoxCPMVoice extends plugin {
     };
   }
 
-  saveRoleAudio(roleName, audio) {
+  prepareRoleAudioPart(roleName, audio, index) {
     ensureRoleAudioDir();
     const ext = detectAudioExt(audio.buffer, path.extname(audio.fileName || "") || ".wav");
-    const baseName = `${sanitizeRoleName(roleName)}_${Date.now()}`;
-    const sourcePath = path.join(ROLE_AUDIO_DIR, `${baseName}${ext}`);
+    const random = Math.random().toString(36).slice(2, 8);
+    const baseName = `${sanitizeRoleName(roleName)}_${Date.now()}_${index}_${random}`;
+    const sourcePath = path.join(ROLE_AUDIO_DIR, `${baseName}_source${ext}`);
+    const wavPath = path.join(ROLE_AUDIO_DIR, `${baseName}.wav`);
     fs.writeFileSync(sourcePath, audio.buffer);
 
-    if (ext !== ".wav") {
-      const wavPath = path.join(ROLE_AUDIO_DIR, `${baseName}.wav`);
-      if (convertToWav(sourcePath, wavPath)) {
-        removeRoleAudioFile(sourcePath);
-        return wavPath;
+    try {
+      if (!convertToWav(sourcePath, wavPath)) {
+        throw new Error("音频格式转换失败");
       }
+
+      const duration = getAudioDurationSeconds(wavPath);
+      if (!Number.isFinite(duration) || duration <= 0) {
+        throw new Error("无法读取音频时长");
+      }
+
+      return {
+        buffer: fs.readFileSync(wavPath),
+        duration,
+      };
+    } finally {
+      removeRoleAudioFile(sourcePath);
+      removeRoleAudioFile(wavPath);
+    }
+  }
+
+  mergeRoleAudioParts(roleName, audioParts) {
+    ensureRoleAudioDir();
+    if (!Array.isArray(audioParts) || audioParts.length === 0) {
+      return "";
     }
 
-    return sourcePath;
+    const baseName = `${sanitizeRoleName(roleName)}_${Date.now()}`;
+    const outputPath = path.join(ROLE_AUDIO_DIR, `${baseName}.wav`);
+
+    if (audioParts.length === 1) {
+      fs.writeFileSync(outputPath, audioParts[0].buffer);
+      return outputPath;
+    }
+
+    const partPaths = audioParts.map((part, index) => {
+      const partPath = path.join(ROLE_AUDIO_DIR, `${baseName}_part${index + 1}.wav`);
+      fs.writeFileSync(partPath, part.buffer);
+      return partPath;
+    });
+    const listPath = path.join(ROLE_AUDIO_DIR, `${baseName}_concat.txt`);
+    fs.writeFileSync(
+      listPath,
+      partPaths.map((item) => `file '${escapeConcatPath(item)}'`).join("\n"),
+      "utf8"
+    );
+
+    let merged = false;
+    try {
+      const result = spawnSync("ffmpeg", [
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        listPath,
+        "-c",
+        "copy",
+        outputPath,
+      ], {
+        encoding: "utf8",
+      });
+
+      if (result.status !== 0 || !fs.existsSync(outputPath)) {
+        throw new Error("参考语音合并失败");
+      }
+
+      merged = true;
+      return outputPath;
+    } finally {
+      if (!merged) {
+        removeRoleAudioFile(outputPath);
+      }
+      removeRoleAudioFile(listPath);
+      for (const partPath of partPaths) {
+        removeRoleAudioFile(partPath);
+      }
+    }
   }
 
   async loadAudioSource(source, timeoutMs) {
