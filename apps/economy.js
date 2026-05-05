@@ -146,11 +146,18 @@ export default class Economy extends plugin {
       const robPercent = _.random(1, 20);
       const robAmount = Math.round((targetCoins * robPercent) / 100);
 
-      economyManager.reduceCoins(
-        { user_id: targetId, group_id: e.group_id },
-        robAmount
-      );
-      economyManager.addCoins(e, robAmount);
+      if (robAmount > 0) {
+        const transferSuccess = economyManager.transferCoins(
+          { user_id: targetId, group_id: e.group_id },
+          e,
+          robAmount
+        );
+
+        if (!transferSuccess) {
+          await e.reply(`抢夺失败！${targetName} 的樱花币已经不够了~`, 10);
+          return true;
+        }
+      }
 
       const counterKey = `sakura:economy:rob:counter:${e.group_id}:${targetId}`;
       const counterData = JSON.stringify({
@@ -189,11 +196,13 @@ export default class Economy extends plugin {
       const jailHours = 50 - attackerCoins;
       const jailSeconds = jailHours * 60 * 60;
 
-      economyManager.reduceCoins(e, attackerCoins);
-      economyManager.addCoins(
-        { user_id: e.self_id, group_id: e.group_id },
-        attackerCoins
-      );
+      if (attackerCoins > 0) {
+        economyManager.transferCoins(
+          e,
+          { user_id: e.self_id, group_id: e.group_id },
+          attackerCoins
+        );
+      }
 
       await redis.set(
         cooldownKey,
@@ -209,8 +218,8 @@ export default class Economy extends plugin {
     }
 
     const penalty = 50;
-    economyManager.reduceCoins(e, penalty);
-    economyManager.addCoins(
+    economyManager.transferCoins(
+      e,
       { user_id: e.self_id, group_id: e.group_id },
       penalty
     );
@@ -280,11 +289,18 @@ export default class Economy extends plugin {
       });
       const actualAmount = Math.min(counterAmount, targetCoins);
 
-      economyManager.reduceCoins(
-        { user_id: targetId, group_id: e.group_id },
-        actualAmount
-      );
-      economyManager.addCoins(e, actualAmount);
+      if (actualAmount > 0) {
+        const transferSuccess = economyManager.transferCoins(
+          { user_id: targetId, group_id: e.group_id },
+          e,
+          actualAmount
+        );
+
+        if (!transferSuccess) {
+          await e.reply(`反击失败！${targetName} 的樱花币已经不够了~`, 10);
+          return true;
+        }
+      }
 
       await e.reply(
         `⚔️ 反击成功！\n${attackerName} 用岩浆烫伤了 ${targetName}！\n夺回并获得了 ${actualAmount} 樱花币！`
@@ -421,7 +437,7 @@ export default class Economy extends plugin {
       return false;
     }
 
-    if (targetId === e.user_id) {
+    if (String(targetId) === String(e.user_id)) {
       return false;
     }
 
@@ -448,13 +464,25 @@ export default class Economy extends plugin {
       actualFee = amount;
     }
 
-    economyManager.reduceCoins(e, amount);
+    const creditEntries = [];
     if (actualTransfer > 0) {
-      economyManager.addCoins({ user_id: targetId, group_id: e.group_id }, actualTransfer);
+      creditEntries.push({
+        e: { user_id: targetId, group_id: e.group_id },
+        amount: actualTransfer,
+      });
     }
-    
+
     if (actualFee > 0) {
-      economyManager.addCoins({ user_id: e.self_id, group_id: e.group_id }, actualFee);
+      creditEntries.push({
+        e: { user_id: e.self_id, group_id: e.group_id },
+        amount: actualFee,
+      });
+    }
+
+    const transferSuccess = economyManager.spendCoins(e, amount, creditEntries);
+    if (!transferSuccess) {
+      await e.reply(`余额不足！无法投喂~`, 10);
+      return true;
     }
 
     const senderCoins = economyManager.getCoins(e);

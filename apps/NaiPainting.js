@@ -5,7 +5,6 @@ import {
 } from "../lib/nai/naiApi.js";
 import { getImg } from "../lib/utils.js";
 import { saveVibe, getVibe, deleteVibe as removeVibe, listVibes as getAllVibes } from "../lib/nai/vibeStore.js";
-import Setting from "../lib/setting.js";
 
 export class NaiPainting extends plugin {
     constructor() {
@@ -76,14 +75,12 @@ export class NaiPainting extends plugin {
         return true;
     });
 
-    naiParams = Command(/^#?绘图\s*(.*)$/, async (e) => {
-        let rawMsg = e.msg.replace(/^#?绘图\s*/, "").trim();
-
+    parseNaiRequest(rawMsg) {
         // 尝试匹配画风名称
         let vibeData = null;
         const allVibes = getAllVibes();
         // 按名称长度降序排列，优先匹配最长的名称
-        const sortedVibes = allVibes.sort((a, b) => b.name.length - a.name.length);
+        const sortedVibes = [...allVibes].sort((a, b) => b.name.length - a.name.length);
         for (const v of sortedVibes) {
             if (rawMsg.startsWith(v.name)) {
                 vibeData = getVibe(v.name);
@@ -154,9 +151,46 @@ export class NaiPainting extends plugin {
 
         prompt = prompt.replace(/\s+/g, " ").replace(/^,+|,+$/g, "");
 
-        if (!prompt && characters.length === 0 && !vibeData) {
+        return {
+            rawMsg,
+            vibeData,
+            characters,
+            prompt,
+            width,
+            height,
+            isValid: Boolean(prompt || characters.length > 0 || vibeData),
+        };
+    }
+
+    preflightNaiParams(e) {
+        const parsed = this.parseNaiRequest(e.msg.replace(/^#?绘图\s*/, "").trim());
+        if (!parsed.isValid) {
             return false;
         }
+
+        e._naiPreflight = parsed;
+
+        return {
+            accepted: true,
+            command: "绘图",
+            charge: !e.isWhite,
+            refundOnFalse: true,
+        };
+    }
+
+    naiParams = Command(/^#?绘图\s*(.*)$/, {
+        economy: {
+            command: "绘图",
+            preflight: "preflightNaiParams",
+            refundOnFalse: true,
+        },
+    }, async (e) => {
+        const parsed = e._naiPreflight || this.parseNaiRequest(e.msg.replace(/^#?绘图\s*/, "").trim());
+        if (!parsed.isValid) {
+            return false;
+        }
+
+        const { vibeData, characters, prompt, width, height } = parsed;
 
         let imageBase64 = null;
         try {
@@ -167,7 +201,7 @@ export class NaiPainting extends plugin {
         } catch (err) {
             logger.error(`[NaiPainting] Failed to get image: ${err.message}`);
         }
-        if (!e.isWhite && !Setting.payForCommand(e, "绘图")) return false;
+
         const currentQueueLength = getQueueLength();
         if (getIsProcessing()) {
             await e.reply(

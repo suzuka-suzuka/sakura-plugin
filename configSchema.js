@@ -35,20 +35,19 @@ export const commandNames = {
     "KeywordReply.删除词条": "删除词条",
     "memesPlugin.memes": "表情包制作",
     "memesPlugin.randomMemes": "随机表情包",
-    "pixivSearch.getPixivByPid": "来张插画（P站搜图）",
-    "pixivSearch.searchPixiv": "来张插画（P站搜图）",
-    "SoraVideo.generateVideo": "sv（Sora视频生成）",
-    "VitsVoice.vitsSpeak": "xx说（语音合成）",
+    "pixivSearch.getPixivByPid": "pid（P站搜图）",
+    "pixivSearch.searchPixiv": "来张插画",
+    "AIChat.Chat": "AI聊天",
+    "EditImage.dispatchHandler": "AI图片编辑",
+    "NaiPainting.naiParams": "绘图",
+    "Mimic.Mimic": "伪人",
+    "VoxCPMVoice.generateVoice": "语音生成",
     "pixivSearch.viewRanking": "p站排行榜",
     "pixivSearch.getRankingItem": "p站排行榜详情",
     "SearchImage.imageSearch": "搜图",
 };
 
 export const manualCommandNames = [
-    "AI图片编辑",
-    "AI聊天",
-    "伪人",
-    "绘图",
 ];
 
 export const News60sSchema = z.object({
@@ -186,9 +185,19 @@ export const SoraVideoSchema = z.object({
     access_token: z.string().default('').describe('Access Token|#textarea|Sora视频生成的访问令牌'),
 }).describe('Sora 视频生成');
 
-export const VitsVoiceSchema = z.object({
-    defaultSpeaker: z.string().default('派蒙').describe('默认语音角色|TTS语音合成使用的默认角色'),
-}).describe('语音合成');
+const VoxCPMVoiceRoleSchema = z.object({
+    name: z.string().default('少女').describe('角色名|触发方式：角色名说 内容，可加 # 前缀'),
+    prompt: z.string().default('一个可爱的少女').describe('声音描述|#textarea|作为 VoxCPM 的 Control Instruction，可留空仅使用参考语音'),
+    referenceAudioPath: z.string().default('').describe('参考语音路径|添加角色时可自动保存到 data/voxcpm-voice/roles'),
+});
+
+export const VoxCPMVoiceSchema = z.object({
+    defaultRole: z.string().default('少女').describe('默认角色名|#voiceRoleSelect|未指定角色时使用，例如“说 内容”；从角色列表中读取同名配置'),
+    aiDefaultRole: z.string().default('少女').describe('AI默认角色名|#voiceRoleSelect|AI工具发送语音时固定使用；从角色列表中读取同名配置'),
+    roles: z.array(VoxCPMVoiceRoleSchema).default([
+        { name: '少女', prompt: '一个可爱的少女', referenceAudioPath: '' },
+    ]).describe('角色列表|#nameField:name|配置“角色名说 内容”的角色声音描述；未指定角色时可用“说 内容”'),
+}).describe('VoxCPM 语音生成');
 
 export const BilicookieSchema = z.object({
     cookie: z.string().default('').describe('B站Cookie|#textarea|用于解析B站链接的Cookie'),
@@ -209,7 +218,7 @@ export const NaiSchema = z.object({
 
 const CommandCostSchema = z.object({
     command: z.string().describe('指令名称'),
-    cost: z.number().default(0).describe('消耗樱花币'),
+    cost: z.number().int().min(0).default(0).describe('消耗樱花币'),
 });
 
 const defaultCommandCosts = [
@@ -222,9 +231,7 @@ const defaultCommandCosts = [
     { command: "表情包制作", cost: 5 },
     { command: "随机表情包", cost: 5 },
     { command: "pid（P站搜图）", cost: 5 },
-    { command: "涩图（P站搜图）", cost: 5 },
-    { command: "sv（Sora视频生成）", cost: 20 },
-    { command: "xx说（语音合成）", cost: 5 },
+    { command: "语音生成", cost: 5 },
     { command: "AI图片编辑", cost: 20 },
     { command: "AI聊天", cost: 10 },
     { command: "伪人", cost: 10 },
@@ -439,7 +446,7 @@ export const configSchema = {
     'EditImage': EditImageSchema,
     'EmojiThief': EmojiThiefSchema,
     'SoraVideo': SoraVideoSchema,
-    'VitsVoice': VitsVoiceSchema,
+    'VoxCPMVoice': VoxCPMVoiceSchema,
     'bilicookie': BilicookieSchema,
     'cool': CoolSchema,
     'economy': EconomySchema,
@@ -468,7 +475,7 @@ export const schemaCategories = {
     '戳一戳': ['poke'],
     '图片功能': ['ImageChannels', 'EditImage', 'nai', 'pixiv', 'r18', 'summary', 'SearchImage', 'cool', 'teatime', 'EmojiThief'],
     '经济系统': ['economy'],
-    '其他功能': ['60sNews', 'AutoCleanup', 'forwardMessage', 'groupnotice', 'repeat', 'recall', 'bilicookie', 'VitsVoice', 'SoraVideo', 'reminderTask'],
+    '其他功能': ['60sNews', 'AutoCleanup', 'forwardMessage', 'groupnotice', 'repeat', 'recall', 'bilicookie', 'VoxCPMVoice', 'SoraVideo', 'reminderTask'],
 };
 
 export const schemaLabels = {
@@ -483,7 +490,7 @@ export const schemaLabels = {
     'EditImage': '图片编辑',
     'EmojiThief': '表情偷取',
     'SoraVideo': 'Sora 视频生成',
-    'VitsVoice': '语音合成',
+    'VoxCPMVoice': 'VoxCPM 语音生成',
     'bilicookie': 'B站解析',
     'cool': '随机冷却',
     'economy': '经济系统',
@@ -545,6 +552,12 @@ export const dynamicOptionsConfig = {
         label: '工具组',
         sources: [
             { module: 'AI', path: 'toolGroups', valueKey: 'name' },
+        ],
+    },
+    voiceRoleSelect: {
+        label: '语音角色',
+        sources: [
+            { module: 'VoxCPMVoice', path: 'roles', valueKey: 'name' },
         ],
     },
 };

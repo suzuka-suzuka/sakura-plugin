@@ -28,7 +28,77 @@ export class EditImage extends plugin {
     return Setting.getConfig("EditImage");
   }
 
-  dispatchHandler = OnEvent("message", async (e) => {
+  findDynamicTask(msg) {
+    const tasks =
+      this.task?.tasks || (Array.isArray(this.task) ? this.task : []);
+    if (!tasks || !Array.isArray(tasks)) {
+      return null;
+    }
+
+    for (const task of tasks) {
+      if (!task.trigger) {
+        continue;
+      }
+
+      try {
+        const reg = new RegExp(task.trigger);
+        const match = reg.exec(msg);
+        if (match && match.index === 0) {
+          return { task, match };
+        }
+      } catch (error) {
+        logger.error(`[EditImage] invalid trigger regex: ${task.trigger}`, error);
+      }
+    }
+
+    return null;
+  }
+
+  async preflightImageEdit(e) {
+    if (!e.msg) {
+      return false;
+    }
+
+    if (/^#i/.test(e.msg)) {
+      const msg = e.msg.replace(/^#i/, "").trim();
+      const { promptText } = this.parseArgs(msg);
+      return {
+        accepted: true,
+        command: "AI图片编辑",
+        charge: Boolean(promptText),
+        refundOnFalse: true,
+      };
+    }
+
+    const dynamicMatch = this.findDynamicTask(e.msg);
+    if (!dynamicMatch) {
+      return false;
+    }
+
+    const inputImages = await getImg(e, true, true);
+    if (!inputImages || inputImages.length === 0) {
+      return false;
+    }
+
+    e._editImagePreflight = {
+      ...dynamicMatch,
+      inputImages,
+    };
+
+    return {
+      accepted: true,
+      command: "AI图片编辑",
+      refundOnFalse: true,
+    };
+  }
+
+  dispatchHandler = OnEvent("message", {
+    economy: {
+      command: "AI图片编辑",
+      preflight: "preflightImageEdit",
+      refundOnFalse: true,
+    },
+  }, async (e) => {
     if (!e.msg) {
       return false;
     }
@@ -37,24 +107,14 @@ export class EditImage extends plugin {
       return this.editImageHandler(e);
     }
 
-    const tasks =
-      this.task?.tasks || (Array.isArray(this.task) ? this.task : []);
-    if (tasks && Array.isArray(tasks)) {
-      for (const task of tasks) {
-        if (!task.trigger) {
-          continue;
-        }
+    const cachedMatch = e._editImagePreflight;
+    if (cachedMatch?.task && cachedMatch?.match) {
+      return this.dynamicImageHandler(e, cachedMatch.task, cachedMatch.match, cachedMatch.inputImages);
+    }
 
-        try {
-          const reg = new RegExp(task.trigger);
-          const match = reg.exec(e.msg);
-          if (match && match.index === 0) {
-            return this.dynamicImageHandler(e, task, match);
-          }
-        } catch (error) {
-          logger.error(`[EditImage] invalid trigger regex: ${task.trigger}`, error);
-        }
-      }
+    const dynamicMatch = this.findDynamicTask(e.msg);
+    if (dynamicMatch) {
+      return this.dynamicImageHandler(e, dynamicMatch.task, dynamicMatch.match);
     }
 
     return false;
@@ -84,8 +144,8 @@ export class EditImage extends plugin {
     return { aspectRatio, imageSize, promptText };
   }
 
-  async dynamicImageHandler(e, matchedTask, match) {
-    const inputImages = await getImg(e, true, true);
+  async dynamicImageHandler(e, matchedTask, match, cachedInputImages = null) {
+    const inputImages = cachedInputImages || await getImg(e, true, true);
 
     if (!inputImages || inputImages.length === 0) {
       return false;
@@ -149,12 +209,7 @@ export class EditImage extends plugin {
     const imageSize = parsedSize || "1K";
 
     if (!promptText) {
-      await e.reply(
-        "请告诉我你想如何修改图片。",
-        10,
-        true
-      );
-      return true;
+      return false;
     }
 
     return this._processAndCallAPI(e, promptText, inputImages, {
@@ -164,11 +219,6 @@ export class EditImage extends plugin {
   }
 
   async _processAndCallAPI(e, promptText, inputImages, options = {}) {
-    const canProceed = Setting.payForCommand(e, "AI图片编辑");
-    if (!canProceed) {
-      return false;
-    }
-
     await e.react(124);
 
     try {

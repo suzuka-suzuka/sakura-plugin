@@ -96,7 +96,97 @@ export class Mimic extends plugin {
     return scopedFile;
   }
 
-  Mimic = OnEvent("message.group", async (e) => {
+  buildMessageText(e) {
+    const contentParts = [];
+    if (e.message && Array.isArray(e.message) && e.message.length > 0) {
+      e.message.forEach((msgPart) => {
+        if (msgPart.type === "file") {
+          const seq = e.seq || e.message_seq;
+          const fileName = msgPart.data?.name || "未命名文件";
+          contentParts.push(`[文件:${fileName}]${seq ? `(seq:${seq})` : ""}`);
+          return;
+        }
+
+        switch (msgPart.type) {
+          case "text":
+            contentParts.push(msgPart.data?.text || "");
+            break;
+          case "at":
+            contentParts.push(`@${msgPart.data?.qq}`);
+            break;
+          case "image": {
+            const seq = e.seq || e.message_seq;
+            contentParts.push(`[图片]${seq ? `(seq:${seq})` : ""}`);
+            break;
+          }
+        }
+      });
+    }
+    return contentParts.join("").trim();
+  }
+
+  async preflightMimic(e) {
+    if (!(this.appconfig.Groups || []).includes(e.group_id)) {
+      return false;
+    }
+
+    const config = this.getGroupConfig(e.group_id);
+    const messageText = this.buildMessageText(e);
+    let query = messageText;
+
+    const quoteContent = await getQuoteContent(e);
+    if (quoteContent) {
+      query = `(${quoteContent.trim()}) ${query}`;
+    }
+
+    if (!query.trim()) {
+      return false;
+    }
+
+    const isAt =
+      e.message &&
+      e.message.some(
+        (msg) => msg.type === "at" && String(msg.data?.qq) === String(e.self_id)
+      );
+
+    const hasKeyword = (config.triggerWords || []).some((word) =>
+      messageText.includes(word)
+    );
+
+    const mustReply = Boolean((config.enableAtReply && isAt) || hasKeyword);
+    if (!mustReply && Math.random() > config.replyProbability) {
+      return false;
+    }
+
+    e._mimicPreflight = {
+      config,
+      query,
+      messageText,
+      isAt,
+      hasKeyword,
+      mustReply,
+    };
+
+    const shouldCharge =
+      !e.isMaster &&
+      e.group_id &&
+      (hasKeyword || (config.enableAtReply && isAt));
+
+    return {
+      accepted: true,
+      command: "伪人",
+      charge: shouldCharge,
+      refundOnFalse: true,
+    };
+  }
+
+  Mimic = OnEvent("message.group", {
+    economy: {
+      command: "伪人",
+      preflight: "preflightMimic",
+      refundOnFalse: true,
+    },
+  }, async (e) => {
     const config = this.getGroupConfig(e.group_id);
     const groupLockKey = this.getLockKey(e);
     let groupLock = null;
@@ -118,77 +208,16 @@ export class Mimic extends plugin {
   });
 
   async doMimic(e) {
-    if (!this.appconfig.Groups.includes(e.group_id)) {
-      return false;
-    }
-
-    const config = this.getGroupConfig(e.group_id);
-
-    let contentParts = [];
-    if (e.message && Array.isArray(e.message) && e.message.length > 0) {
-      e.message.forEach((msgPart) => {
-        if (msgPart.type === "file") {
-          const seq = e.seq || e.message_seq;
-          const fileName = msgPart.data?.name || "未命名文件";
-          contentParts.push(`[文件:${fileName}]${seq ? `(seq:${seq})` : ""}`);
-          return;
-        }
-
-        switch (msgPart.type) {
-          case "text":
-            contentParts.push(msgPart.data?.text || "");
-            break;
-          case "at":
-            contentParts.push(`@${msgPart.data?.qq}`);
-            break;
-          case "image":
-            const seq = e.seq || e.message_seq;
-            contentParts.push(`[图片]${seq ? `(seq:${seq})` : ""}`);
-            break;
-        }
-      });
-    }
-    const messageText = contentParts.join("").trim();
-
-    let query = messageText;
-
-    const quoteContent = await getQuoteContent(e);
-    if (quoteContent) {
-      query = `(${quoteContent.trim()}) ${query}`;
-    }
-
-    if (!query.trim()) {
-      return false;
-    }
-
-    const isAt =
-      e.message &&
-      e.message.some(
-        (msg) => msg.type === "at" && String(msg.data?.qq) === String(e.self_id)
-      );
-
-    const hasKeyword = config.triggerWords.some((word) =>
-      messageText.includes(word)
-    );
-
-    if (
-      !e.isMaster &&
-      e.group_id &&
-      (hasKeyword || (config.enableAtReply && isAt))
-    ) {
-      if (!Setting.payForCommand(e, "伪人")) {
+    if (!e._mimicPreflight) {
+      const decision = await this.preflightMimic(e);
+      if (!decision || decision.accepted === false) {
         return false;
       }
     }
 
-    let mustReply = false;
-    if (config.enableAtReply && isAt) {
-      mustReply = true;
-    } else if (hasKeyword) {
-      mustReply = true;
-    }
+    const { config, query } = e._mimicPreflight;
 
-    if (!mustReply && Math.random() > config.replyProbability) {
+    if (!query?.trim()) {
       return false;
     }
 
@@ -281,12 +310,12 @@ export class Mimic extends plugin {
       });
 
       if (agentResult.status === "model_error") {
-        return false;
+        return true;
       }
 
       if (agentResult.status === "tool_limit") {
         await e.reply("⚠️ 工具调用次数过多，为防止死循环已强制中断对话。", 10, true);
-        return false;
+        return true;
       }
 
       const recalltime = config.recalltime;
@@ -302,9 +331,9 @@ export class Mimic extends plugin {
       });
     } catch (error) {
       logger.error(`处理过程中出现错误: ${error.message}`);
-      return false;
+      return true;
     }
-    return false;
+    return true;
   }
 
   async handleToolConfirmCallback() {

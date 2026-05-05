@@ -144,13 +144,8 @@ export class AIChat extends plugin {
     return await smartReplyMsg(e, text, { quote, at });
   }
 
-  Chat = OnEvent("message", async (e) => {
-    const config = this.appconfig;
-    if (!config || !config.profiles || config.profiles.length === 0) {
-      return false;
-    }
-
-    let contentParts = [];
+  buildMessageText(e) {
+    const contentParts = [];
     if (e.message && Array.isArray(e.message) && e.message.length > 0) {
       e.message.forEach((msgPart) => {
         if (msgPart.type === "file") {
@@ -167,18 +162,18 @@ export class AIChat extends plugin {
           case "at":
             contentParts.push(`@${msgPart.data?.qq}`);
             break;
-          case "image":
+          case "image": {
             const seq = e.message_id || e.message_seq;
             contentParts.push(`[图片]${seq ? `(seq:${seq})` : ""}`);
             break;
+          }
         }
       });
     }
-    let messageText = contentParts.join("").trim();
-    if (!messageText) {
-      return false;
-    }
+    return contentParts.join("").trim();
+  }
 
+  getTextToMatch(e, messageText) {
     let textToMatch = messageText;
     if (e.message?.[0]?.type === "at") {
       const atText = `@${e.message[0].data?.qq}`;
@@ -186,6 +181,77 @@ export class AIChat extends plugin {
         textToMatch = textToMatch.substring(atText.length).trim();
       }
     }
+    return textToMatch;
+  }
+
+  async preflightChat(e) {
+    const config = this.appconfig;
+    if (!config || !config.profiles || config.profiles.length === 0) {
+      return false;
+    }
+
+    const messageText = this.buildMessageText(e);
+    if (!messageText) {
+      return false;
+    }
+
+    const textToMatch = this.getTextToMatch(e, messageText);
+    e._chatPreflight = { messageText, textToMatch };
+
+    if (textToMatch === "结束对话") {
+      return { accepted: true, command: "AI聊天", charge: false };
+    }
+
+    const START_CMD = "开始对话";
+    if (textToMatch.startsWith(START_CMD)) {
+      const afterCmd = textToMatch.substring(START_CMD.length).trim();
+      const startProfile = config.profiles.find((p) =>
+        p.prefix && (afterCmd === p.prefix || afterCmd.startsWith(p.prefix))
+      );
+      const rolesConfigForStart = this.getRolesConfig(e);
+      const allRoles = rolesConfigForStart?.roles || [];
+      const roleByName = allRoles.find((r) => r.name && afterCmd === r.name);
+      if (startProfile || roleByName) {
+        return { accepted: true, command: "AI聊天", charge: false };
+      }
+    }
+
+    const matchedProfile = config.profiles.find((p) =>
+      textToMatch.startsWith(p.prefix)
+    );
+
+    if (matchedProfile) {
+      const query = textToMatch.substring(matchedProfile.prefix.length).trim();
+      return query ? { accepted: true, command: "AI聊天", refundOnFalse: true } : false;
+    }
+
+    const session = await this.getSession(e);
+    if (session && textToMatch.trim()) {
+      e._chatPreflight.session = session;
+      return { accepted: true, command: "AI聊天", refundOnFalse: true };
+    }
+
+    return false;
+  }
+
+  Chat = OnEvent("message", {
+    economy: {
+      command: "AI聊天",
+      preflight: "preflightChat",
+      refundOnFalse: true,
+    },
+  }, async (e) => {
+    const config = this.appconfig;
+    if (!config || !config.profiles || config.profiles.length === 0) {
+      return false;
+    }
+
+    let messageText = e._chatPreflight?.messageText || this.buildMessageText(e);
+    if (!messageText) {
+      return false;
+    }
+
+    let textToMatch = e._chatPreflight?.textToMatch || this.getTextToMatch(e, messageText);
 
     // === 连续对话会话管理 ===
 
@@ -259,10 +325,8 @@ export class AIChat extends plugin {
 
     if (!matchedProfile) {
       // 检查是否有活跃会话（无前缀聊天）
-      const session = await this.getSession(e);
+      const session = e._chatPreflight?.session || await this.getSession(e);
       if (session) {
-        if (!Setting.payForCommand(e, "AI聊天")) return false;
-
         let sessionQuery = textToMatch;
         if (!sessionQuery) return false;
 
@@ -289,10 +353,6 @@ export class AIChat extends plugin {
           this.releaseUserLock(sessionLockKey, sessionLock);
         }
       }
-      return false;
-    }
-
-    if (!Setting.payForCommand(e, "AI聊天")) {
       return false;
     }
 
