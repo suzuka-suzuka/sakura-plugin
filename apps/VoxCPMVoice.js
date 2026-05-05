@@ -291,7 +291,7 @@ export class VoxCPMVoice extends plugin {
     }
 
     if (request.tooLong) {
-      await e.reply(`文本太长了，当前上限 ${request.maxTextLength} 字。`, 10, true);
+      await e.reply(`文本太长了，当前上限 ${request.maxTextLength} 字。`, 10, false);
       return true;
     }
 
@@ -345,7 +345,7 @@ export class VoxCPMVoice extends plugin {
       return false;
     }
 
-    this.setContext("handleAddVoiceRole", !!e.group_id, 180, true, {
+    this.setContext("handleAddVoiceRole", !!e.group_id, 60, true, {
       roleName,
       prompt,
     });
@@ -355,7 +355,7 @@ export class VoxCPMVoice extends plugin {
         ? `已收到「${roleName}」的声音描述。请发送一条语音或音频文件作为固定参考音色；不需要的话发送「跳过」。`
         : `请发送一条语音或音频文件作为「${roleName}」的固定参考音色；发送「跳过」取消。`,
       60,
-      true
+      false
     );
     return true;
   });
@@ -394,14 +394,12 @@ export class VoxCPMVoice extends plugin {
     }
 
     if (hasExistingPrompt && !skip && !referenceAudioPath) {
-      await e.reply("请发送一条语音/音频文件，或发送「跳过」。", 30, true);
-      this.setContext("handleAddVoiceRole", !!e.group_id, 180, true, data);
+      this.setContext("handleAddVoiceRole", !!e.group_id, 60, true, data);
       return;
     }
 
     if (!prompt && !referenceAudioPath) {
-      await e.reply("请发送一条语音/音频文件，或发送「跳过」取消。", 30, true);
-      this.setContext("handleAddVoiceRole", !!e.group_id, 180, true, data);
+      this.setContext("handleAddVoiceRole", !!e.group_id, 60, true, data);
       return;
     }
 
