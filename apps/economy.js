@@ -95,7 +95,7 @@ export default class Economy extends plugin {
 
     const title = String(targetId) === String(e.user_id)
       ? `你的樱花币流水（第 ${page} 页）`
-      : `${targetName} 的樱花币流水（第 ${page} 页）`;
+      : `${targetName}的樱花币流水（第 ${page} 页）`;
     const generator = new EconomyImageGenerator();
     const image = await generator.generateTransactionImage({
       title,
@@ -147,7 +147,7 @@ export default class Economy extends plugin {
 
     const isSelf = String(targetId) === String(e.user_id);
     const rangeTitle = range === "week" ? "本周流水分析" : "今日流水分析";
-    const title = isSelf ? `你的${rangeTitle}` : `${targetName} 的${rangeTitle}`;
+    const title = isSelf ? `你的${rangeTitle}` : `${targetName}的${rangeTitle}`;
     const generator = new EconomyImageGenerator();
     const image = await generator.generateTransactionAnalysisImage({
       title,
