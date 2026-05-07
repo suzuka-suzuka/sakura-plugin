@@ -68,12 +68,7 @@ export class SakuraMenu extends plugin {
     const filterId = wantsFullMenu ? null : resolveMenuFilter(filterText);
 
     if (filterText && !filterId && !wantsFullMenu) {
-      await e.reply(
-        "没有找到这个菜单分类，可用：AI、创作、图片、表情、经济、钓鱼、群管、主人、维护、工具、自动。",
-        10,
-        true
-      );
-      return true;
+      return false
     }
 
     const economyConfig = Setting.getConfig("economy");

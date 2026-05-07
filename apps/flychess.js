@@ -20,7 +20,7 @@ export class Ludo extends plugin {
     return this.getScopeKey(e.group_id)
   }
   createLudoGame = Command(/^#创建飞行棋$/, async (e) => {
-    if (!(e.isMaster || e.isAdmin)) {
+    if (!(e.isWhite || e.isAdmin)) {
       return false
     }
     const gameKey = this.getGameKey(e)
@@ -71,7 +71,7 @@ export class Ludo extends plugin {
   });
 
   endLudoGame = Command(/^#结束飞行棋$/, async (e) => {
-    if (!(e.isMaster || e.isAdmin)) {
+    if (!(e.isWhite || e.isAdmin)) {
       return false
     }
     const gameKey = this.getGameKey(e)
