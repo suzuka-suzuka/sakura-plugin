@@ -29,6 +29,10 @@ export class profileManager extends plugin {
     await this.listRoleSettings(e)
   });
 
+  listAiSettingsCmd = Command(/^#列出AI设定$/i, async (e) => {
+    await this.listAiSettings(e)
+  });
+
   listChannelCmd = Command(/^#列出渠道$/, "master", async (e) => {
     await this.listChannels(e)
   });
@@ -329,6 +333,27 @@ export class profileManager extends plugin {
     await e.sendForwardMsg(nodes, {
       source: "当前可用渠道列表",
       prompt: "查看可用模型渠道",
+    })
+  }
+
+  async listAiSettings(e) {
+    const config = this.appconfig
+    const profiles = config?.profiles || []
+
+    if (profiles.length === 0) {
+      await e.reply("当前没有任何 AI 设定。")
+      return
+    }
+
+    const nodes = profiles.map(profile => ({
+      user_id: e.bot.self_id,
+      nickname: e.bot.nickname,
+      content: `前缀：${profile.prefix || "未设置"}\n绑定角色：${profile.name || "未设置"}`,
+    }))
+
+    await e.sendForwardMsg(nodes, {
+      source: "AI设定列表",
+      prompt: "查看前缀绑定角色",
     })
   }
 
