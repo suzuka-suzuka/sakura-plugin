@@ -1,5 +1,4 @@
 import { plugindata } from "../lib/path.js";
-import EconomyManager from "../lib/economy/EconomyManager.js";
 import fsp from "fs/promises";
 import fs from "fs";
 import path from "path";
@@ -219,8 +218,6 @@ export class KeywordReply extends plugin {
       return false;
     }
 
-    const economyManager = new EconomyManager(e);
-
     const groupData = await this.loadGroupData(e.group_id);
 
     const newReply = {
@@ -304,8 +301,6 @@ export class KeywordReply extends plugin {
       await e.reply(`词条「${keywordDesc}」不存在`, 10, true);
       return true;
     }
-
-    const economyManager = new EconomyManager(e);
 
     await this.deleteAllRepliesImages(groupData[keywordKey], e.group_id);
 
