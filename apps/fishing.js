@@ -858,7 +858,7 @@ export default class Fishing extends plugin {
             if (stolenAmount1 > currentCoins1) {
               stolenAmount1 = currentCoins1;
             }
-            economyManager.reduceCoins(e, stolenAmount1);
+            economyManager.reduceCoins(e, stolenAmount1, { type: "支出", note: "钓鱼事件：偷钱鱼人" });
             punishmentMsg = `💸 趁你手忙脚乱之时，它偷走了你 ${stolenAmount1} 樱花币！`;
           }
           break;
@@ -877,7 +877,7 @@ export default class Fishing extends plugin {
             if (stolenAmount2 < 1 && currentCoins2 > 0) {
               stolenAmount2 = 1;
             }
-            economyManager.reduceCoins(e, stolenAmount2);
+            economyManager.reduceCoins(e, stolenAmount2, { type: "支出", note: "钓鱼事件：虚空吞噬者" });
             punishmentMsg = `🌑 它吞噬了你的财富... 你丢失了 ${stolenAmount2} 樱花币！`;
           }
           break;
@@ -931,7 +931,7 @@ export default class Fishing extends plugin {
       fishingManager.increaseRodMastery(userId, rodConfig.id);
       const newMastery = fishingManager.getRodMastery(userId, rodConfig.id);
 
-      economyManager.addCoins(e, fish.base_price);
+      economyManager.addCoins(e, fish.base_price, { type: "收入", note: `钓鱼获得 ${fish.name}` });
       await this.setCooldownAndIncrement(groupId, userId);
 
       await e.reply([
@@ -982,7 +982,7 @@ export default class Fishing extends plugin {
     const merchantMultiplier = fishingManager.getMerchantCoinMultiplier(userId);
     const finalPrice = Math.round(price * buffMultiplier * merchantMultiplier);
 
-    economyManager.addCoins(e, finalPrice);
+    economyManager.addCoins(e, finalPrice, { type: "收入", note: `钓鱼出售 ${fish.name}` });
     fishingManager.recordCatch(userId, finalPrice, fish.id, true);
 
     fishingManager.increaseRodMastery(userId, rodConfig.id);

@@ -27,6 +27,142 @@ export default class Economy extends plugin {
     return groups.some((g) => String(g) === String(e.group_id));
   }
 
+  cleanupTransactionLogs = Cron("0 4 * * *", async () => {
+    const deleted = EconomyManager.cleanupTransactions(7);
+    if (deleted > 0) {
+      logger.info(`[经济系统] 已清理 ${deleted} 条 7 天前的流水记录`);
+    }
+  });
+
+  getStartOfToday() {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    return date.getTime();
+  }
+
+  getStartOfWeek() {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    const day = date.getDay() || 7;
+    date.setDate(date.getDate() - day + 1);
+    return date.getTime();
+  }
+
+  formatTransactionTime(timestamp) {
+    return new Date(Number(timestamp)).toLocaleString("zh-CN", {
+      timeZone: "Asia/Shanghai",
+      year: "2-digit",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  }
+
+  formatTransactionAction(row) {
+    if (row.note) return row.note;
+    if (row.target_user_id) return `${row.type}：${row.target_user_id}`;
+    return row.type;
+  }
+
+  transactionLog = Command(/^#?(?:查)?流水(?:.*)$/i, async (e) => {
+    if (!this.checkWhitelist(e)) return false;
+
+    const targetId = e.at && e.isMaster ? String(e.at) : String(e.user_id);
+    const text = String(e.msg || "").replace(/\[CQ:at[^\]]+\]/g, "").trim();
+    const pageMatch = text.match(/(?:第)?(\d+)(?:页)?\s*$/);
+    const page = Math.max(1, Number(pageMatch?.[1]) || 1);
+    const pageSize = 20;
+
+    const economyManager = new EconomyManager(e);
+    const rows = economyManager.getTransactions(e, {
+      userId: targetId,
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+    });
+
+    if (rows.length === 0) {
+      await e.reply(page > 1 ? `第 ${page} 页没有流水记录。` : "当前没有流水记录。", 10);
+      return true;
+    }
+
+    let targetName = targetId;
+    try {
+      const info = await e.getInfo(targetId);
+      if (info) {
+        targetName = info.card || info.nickname || targetId;
+      }
+    } catch (err) {}
+
+    const title = String(targetId) === String(e.user_id)
+      ? `你的樱花币流水（第 ${page} 页）`
+      : `${targetName} 的樱花币流水（第 ${page} 页）`;
+    const generator = new EconomyImageGenerator();
+    const image = await generator.generateTransactionImage({
+      title,
+      subtitle: "按时间倒序显示，最多 20 条记录",
+      footer: "时间 / 事件 / 增减",
+      records: rows.map(row => ({
+        time: this.formatTransactionTime(row.created_at),
+        action: this.formatTransactionAction(row),
+        amount: row.amount,
+      })),
+    });
+
+    await e.reply(segment.image(image));
+    return true;
+  });
+
+  todayTransactionAnalysis = Command(/^#?今日流水分析$/i, async (e) => {
+    return await this.sendTransactionAnalysis(e, "today");
+  });
+
+  weekTransactionAnalysis = Command(/^#?本周流水分析$/i, async (e) => {
+    return await this.sendTransactionAnalysis(e, "week");
+  });
+
+  async sendTransactionAnalysis(e, range) {
+    if (!this.checkWhitelist(e)) return false;
+
+    const targetId = e.at && e.isMaster ? String(e.at) : String(e.user_id);
+    const since = range === "week" ? this.getStartOfWeek() : this.getStartOfToday();
+    const until = Date.now();
+
+    const economyManager = new EconomyManager(e);
+    const analysis = economyManager.getTransactionAnalysis(e, {
+      userId: targetId,
+      since,
+      until,
+    });
+
+    if (analysis.count === 0) {
+      await e.reply(range === "week" ? "本周还没有流水记录。" : "今天还没有流水记录。", 10);
+      return true;
+    }
+
+    let targetName = targetId;
+    try {
+      const info = await e.getInfo(targetId);
+      if (info) {
+        targetName = info.card || info.nickname || targetId;
+      }
+    } catch (err) {}
+
+    const isSelf = String(targetId) === String(e.user_id);
+    const rangeTitle = range === "week" ? "本周流水分析" : "今日流水分析";
+    const title = isSelf ? `你的${rangeTitle}` : `${targetName} 的${rangeTitle}`;
+    const generator = new EconomyImageGenerator();
+    const image = await generator.generateTransactionAnalysisImage({
+      title,
+      subtitle: range === "week" ? "统计本周一至当前时间" : "统计今日 0 点至当前时间",
+      ...analysis,
+    });
+
+    await e.reply(segment.image(image));
+    return true;
+  }
+
   addCoinsToOther = Command(/^\s*#?(添加|增加|给予)[樱桜]花币\s*(\d+)$/i, "master",  async (e) => {
 
     const targetId = e.at;
@@ -42,7 +178,8 @@ export default class Economy extends plugin {
     const economyManager = new EconomyManager(e);
     economyManager.addCoins(
       { user_id: targetId, group_id: e.group_id },
-      amount
+      amount,
+      { type: "收入", note: "主人添加樱花币", targetUserId: e.user_id }
     );
 
     let targetName = targetId;
@@ -150,7 +287,8 @@ export default class Economy extends plugin {
         const transferSuccess = economyManager.transferCoins(
           { user_id: targetId, group_id: e.group_id },
           e,
-          robAmount
+          robAmount,
+          { type: "打劫损失", creditType: "打劫收入", note: "打劫" }
         );
 
         if (!transferSuccess) {
@@ -200,7 +338,8 @@ export default class Economy extends plugin {
         economyManager.transferCoins(
           e,
           { user_id: e.self_id, group_id: e.group_id },
-          attackerCoins
+          attackerCoins,
+          { type: "罚款支出", creditType: "罚款收入", note: "打劫失败罚款" }
         );
       }
 
@@ -221,7 +360,8 @@ export default class Economy extends plugin {
     economyManager.transferCoins(
       e,
       { user_id: e.self_id, group_id: e.group_id },
-      penalty
+      penalty,
+      { type: "罚款支出", creditType: "罚款收入", note: "打劫失败罚款" }
     );
 
     await redis.set(
@@ -293,7 +433,8 @@ export default class Economy extends plugin {
         const transferSuccess = economyManager.transferCoins(
           { user_id: targetId, group_id: e.group_id },
           e,
-          actualAmount
+          actualAmount,
+          { type: "反击损失", creditType: "反击收入", note: "打劫反击" }
         );
 
         if (!transferSuccess) {
@@ -479,7 +620,15 @@ export default class Economy extends plugin {
       });
     }
 
-    const transferSuccess = economyManager.spendCoins(e, amount, creditEntries);
+    const transferSuccess = economyManager.spendCoins(e, amount, creditEntries.map((entry) => ({
+      ...entry,
+      type: String(entry.e.user_id) === String(targetId) ? "转账收入" : "手续费收入",
+      note: String(entry.e.user_id) === String(targetId) ? "转账" : "转账手续费",
+    })), {
+      type: "转账支出",
+      note: actualFee > 0 ? `转账，手续费 ${actualFee}` : "转账",
+      targetUserId: targetId,
+    });
     if (!transferSuccess) {
       await e.reply(`余额不足！无法投喂~`, 10);
       return true;
@@ -565,7 +714,7 @@ export default class Economy extends plugin {
       fishingManager.clearEquippedRod(e.user_id, itemId);
     }
 
-    new EconomyManager(e).addCoins(e, sellPrice);
+    new EconomyManager(e).addCoins(e, sellPrice, { type: "收入", note: `出售 ${item.name}` });
 
     await e.reply(
       `💰 成功出售【${item.name}】${durabilityMsg}！\n💵 获得 ${sellPrice} 樱花币`
@@ -673,7 +822,7 @@ export default class Economy extends plugin {
       return false;
     }
 
-    economyManager.addCoins(e, 100);
+    economyManager.addCoins(e, 100, { type: "收入", note: "领取复活币" });
 
     const now = new Date();
     const tomorrow = new Date(now);

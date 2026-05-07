@@ -118,7 +118,7 @@ export default class DailySign extends plugin {
 
     const newExperience = _.random(5, 15);
 
-    economyManager.addCoins(e, newCoins);
+    economyManager.addCoins(e, newCoins, { type: "收入", note: "签到" });
     economyManager.addExperience(e, newExperience);
 
     const totalCoins = economyManager.getCoins(e);
