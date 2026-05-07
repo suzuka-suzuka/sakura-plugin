@@ -100,7 +100,7 @@ export default class Economy extends plugin {
     const image = await generator.generateTransactionImage({
       title,
       subtitle: "按时间倒序显示，最多 20 条记录",
-      footer: "时间 / 事件 / 增减",
+      footer: "仅保留最近 7 天流水，正数为收入，负数为支出",
       records: rows.map(row => ({
         time: this.formatTransactionTime(row.created_at),
         action: this.formatTransactionAction(row),
