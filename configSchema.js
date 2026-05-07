@@ -147,10 +147,10 @@ const GrokChannelSchema = z.object({
     name: z.string().default('grok').describe('渠道名称'),
     model: z.string().default('grok-2').describe('模型名称'),
     sso: z.string().default('').describe('SSO Token|#textarea'),
+    supersso: z.string().default('').describe('SuperSSO Token|#textarea|可填写包含 sso-rw 或 supersso-rw 的完整 Cookie'),
     cf_clearance: z.string().default('').describe('CF Clearance|#textarea'),
     x_statsig_id: z.string().default('').describe('Statsig ID|#textarea'),
     temporary: z.boolean().default(true).describe('临时会话'),
-    dynamic_statsig: z.boolean().default(true).describe('动态Statsig'),
     dynamic_statsig: z.boolean().default(true).describe('动态Statsig'),
 });
 
@@ -181,9 +181,6 @@ export const EmojiThiefSchema = z.object({
     vectorRate: z.number().default(0.1).describe('矢量概率|#step:0.01|学习表情的概率'),
 }).describe('表情包学习');
 
-export const SoraVideoSchema = z.object({
-    access_token: z.string().default('').describe('Access Token|#textarea|Sora视频生成的访问令牌'),
-}).describe('Sora 视频生成');
 
 const VoxCPMVoiceRoleSchema = z.object({
     name: z.string().default('少女').describe('角色名|触发方式：角色名说 内容，可加 # 前缀'),
@@ -222,7 +219,7 @@ const CommandCostSchema = z.object({
 });
 
 const defaultCommandCosts = [
-    { command: "来张插画", cost: 5 },
+    { command: "来张涩图", cost: 5 },
     { command: "来张萝莉图", cost: 5 },
     { command: "gi（Grok图片编辑）", cost: 10 },
     { command: "gv（Grok视频生成）", cost: 20 },
@@ -231,11 +228,12 @@ const defaultCommandCosts = [
     { command: "表情包制作", cost: 5 },
     { command: "随机表情包", cost: 5 },
     { command: "pid（P站搜图）", cost: 5 },
-    { command: "语音生成", cost: 5 },
-    { command: "AI图片编辑", cost: 20 },
+    { command: "来张插画", cost: 5 },
     { command: "AI聊天", cost: 10 },
-    { command: "伪人", cost: 10 },
+    { command: "AI图片编辑", cost: 20 },
     { command: "绘图", cost: 30 },
+    { command: "伪人", cost: 10 },
+    { command: "语音生成", cost: 5 },
     { command: "p站排行榜", cost: 20 },
     { command: "p站排行榜详情", cost: 5 },
     { command: "搜图", cost: 5 },
@@ -445,7 +443,6 @@ export const configSchema = {
     'ImageChannels': ImageChannelsSchema,
     'EditImage': EditImageSchema,
     'EmojiThief': EmojiThiefSchema,
-    'SoraVideo': SoraVideoSchema,
     'VoxCPMVoice': VoxCPMVoiceSchema,
     'bilicookie': BilicookieSchema,
     'cool': CoolSchema,
@@ -475,7 +472,7 @@ export const schemaCategories = {
     '戳一戳': ['poke'],
     '图片功能': ['ImageChannels', 'EditImage', 'nai', 'pixiv', 'r18', 'summary', 'SearchImage', 'cool', 'teatime', 'EmojiThief'],
     '经济系统': ['economy'],
-    '其他功能': ['60sNews', 'AutoCleanup', 'forwardMessage', 'groupnotice', 'repeat', 'recall', 'bilicookie', 'VoxCPMVoice', 'SoraVideo', 'reminderTask'],
+    '其他功能': ['60sNews', 'AutoCleanup', 'forwardMessage', 'groupnotice', 'repeat', 'recall', 'bilicookie', 'VoxCPMVoice', 'reminderTask'],
 };
 
 export const schemaLabels = {
@@ -489,7 +486,6 @@ export const schemaLabels = {
     'ImageChannels': '生图渠道管理',
     'EditImage': '图片编辑',
     'EmojiThief': '表情偷取',
-    'SoraVideo': 'Sora 视频生成',
     'VoxCPMVoice': 'VoxCPM 语音生成',
     'bilicookie': 'B站解析',
     'cool': '随机冷却',
