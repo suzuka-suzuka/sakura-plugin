@@ -67,8 +67,6 @@ export default class Economy extends plugin {
   }
 
   transactionLog = Command(/^#?(?:查)?流水(?:.*)$/i, async (e) => {
-    if (!this.checkWhitelist(e)) return false;
-
     const targetId = e.at && e.isMaster ? String(e.at) : String(e.user_id);
     const text = String(e.msg || "").replace(/\[CQ:at[^\]]+\]/g, "").trim();
     const pageMatch = text.match(/(?:第)?(\d+)(?:页)?\s*$/);
@@ -123,8 +121,6 @@ export default class Economy extends plugin {
   });
 
   async sendTransactionAnalysis(e, range) {
-    if (!this.checkWhitelist(e)) return false;
-
     const targetId = e.at && e.isMaster ? String(e.at) : String(e.user_id);
     const since = range === "week" ? this.getStartOfWeek() : this.getStartOfToday();
     const until = Date.now();
