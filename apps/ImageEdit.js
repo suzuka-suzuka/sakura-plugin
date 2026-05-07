@@ -183,7 +183,7 @@ export class EditImage extends plugin {
       aspectRatio = null;
     }
 
-    const imageSize = userSize || "1K";
+    const imageSize = userSize || matchedTask.imageSize || null;
     let finalPrompt = matchedTask.prompt || "";
 
     if (finalPrompt && match) {
@@ -206,7 +206,7 @@ export class EditImage extends plugin {
     const msg = e.msg.replace(/^#i/, "").trim();
     const inputImages = await getImg(e, true, true);
     const { aspectRatio, imageSize: parsedSize, promptText } = this.parseArgs(msg);
-    const imageSize = parsedSize || "1K";
+    const imageSize = parsedSize || null;
 
     if (!promptText) {
       return false;
@@ -229,7 +229,7 @@ export class EditImage extends plugin {
         inputImages || [],
         {
           aspectRatio: options.aspectRatio,
-          imageSize: options.imageSize || "1K",
+          imageSize: options.imageSize,
         }
       );
 
