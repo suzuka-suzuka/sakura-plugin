@@ -212,7 +212,7 @@ export class AIChat extends plugin {
       const allRoles = rolesConfigForStart?.roles || [];
       const roleByName = allRoles.find((r) => r.name && afterCmd === r.name);
       if (startProfile || roleByName) {
-        return { accepted: true, command: "AI聊天", charge: false };
+        return { accepted: true, command: "AI聊天", refundOnFalse: true };
       }
     }
 
