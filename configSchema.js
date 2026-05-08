@@ -40,7 +40,7 @@ export const commandNames = {
     "AIChat.Chat": "AI聊天",
     "EditImage.dispatchHandler": "AI图片编辑",
     "NaiPainting.naiParams": "绘图",
-    "Mimic.Mimic": "伪人",
+    "Mimic.Mimic": "拟态回复",
     "VoxCPMVoice.generateVoice": "语音生成",
     "pixivSearch.viewRanking": "p站排行榜",
     "pixivSearch.getRankingItem": "p站排行榜详情",
@@ -232,7 +232,7 @@ const defaultCommandCosts = [
     { command: "AI聊天", cost: 10 },
     { command: "AI图片编辑", cost: 20 },
     { command: "绘图", cost: 30 },
-    { command: "伪人", cost: 10 },
+    { command: "拟态回复", cost: 10 },
     { command: "语音生成", cost: 5 },
     { command: "p站排行榜", cost: 20 },
     { command: "p站排行榜详情", cost: 5 },
@@ -289,12 +289,12 @@ export const MimicSchema = z.object({
     alternatePromptProbability: z.number().default(0.1).describe('反差人格概率|#step:0.01'),
     recalltime: z.number().default(10).describe('撤回时间(秒)'),
     Channel: z.string().default('2.5').describe('使用渠道|#channelSelect'),
-    Tool: z.preprocess(val => typeof val === 'boolean' ? '' : val, z.string().default('')).describe('工具组|#toolGroupSelect|选择伪人使用的工具组'),
+    Tool: z.preprocess(val => typeof val === 'boolean' ? '' : val, z.string().default('')).describe('工具组|#toolGroupSelect|选择拟态回复使用的工具组'),
     enableGroupLock: z.boolean().default(false).describe('群锁定'),
     splitMessage: z.boolean().default(true).describe('拆分消息'),
     Groups: z.array(z.number()).default([]).describe('启用群号|#groupSelect'),
-    GroupConfigs: z.array(GroupConfigSchema).default([]).describe('群独立配置|为每个群设置不同的模拟人参数'),
-}).describe('伪人配置');
+    GroupConfigs: z.array(GroupConfigSchema).default([]).describe('群独立配置|为每个群设置不同的拟态回复参数'),
+}).describe('拟态回复配置');
 
 const RankingConfigSchema = z.object({
     mode: z.string().describe('排行榜类型'),
@@ -492,7 +492,7 @@ export const schemaLabels = {
     'economy': '经济系统',
     'forwardMessage': '消息转发',
     'groupnotice': '群通知',
-    'mimic': '伪人配置',
+    'mimic': '拟态回复配置',
     'nai': 'NovelAI 绘画',
     'pixiv': 'Pixiv 图库',
     'poke': '戳一戳',

@@ -89,7 +89,7 @@ config/sakura-plugin/
 - `pixiv.yaml`：Pixiv cookie、refresh token、订阅推送。
 - `nai.yaml`：NovelAI 绘图 token、模型和负面提示词。
 - `VoxCPMVoice.yaml`：语音角色和默认语音角色。
-- `mimic.yaml`：伪人拟态回复。
+- `mimic.yaml`：拟态回复配置。
 - `SearchImage.yaml`：搜图渠道和返回数量。
 - `poke.yaml`、`repeat.yaml`、`recall.yaml`：戳一戳、复读、防撤回。
 - `60sNews.yaml`、`teatime.yaml`、`cool.yaml`：定时和自动推送。
@@ -224,7 +224,7 @@ AI 创作：
 可扣费指令由 `configSchema.js` 的 `commandNames` 定义，默认价格由 `defaultCommandCosts` 定义。当前默认包含：
 
 - 来张涩图、来张萝莉图、来张插画、pid、Pixiv 排行榜和详情。
-- AI聊天、AI图片编辑、绘图、Grok 图片、Grok 视频、语音生成、伪人。
+- AI聊天、AI图片编辑、绘图、Grok 图片、Grok 视频、语音生成、拟态回复。
 - 添加词条、删除词条、表情包制作、随机表情包、搜图。
 
 扣费只在 `economy.enable` 开启且当前群在 `economy.Groups` 中时生效。主人不扣费。部分指令支持失败退款。
