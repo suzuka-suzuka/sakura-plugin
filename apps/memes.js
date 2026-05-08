@@ -36,6 +36,12 @@ function checkFileSize(files) {
   return fileList.some((file) => file.size >= maxFileSizeByte);
 }
 
+function getOptionList(info) {
+  const options = info?.params?.options;
+  if (!options) return [];
+  return (Array.isArray(options) ? options : [options]).filter(Boolean);
+}
+
 async function getAvatar(e, userId = e.user_id) {
   return `https://q1.qlogo.cn/g?b=qq&s=0&nk=${userId}`;
 }
@@ -50,7 +56,10 @@ function detail(code) {
     }\n【最小文本数量】${d.params.min_texts
     }\n【默认文本】${d.params.default_texts.join("/")}\n`;
 
-  if (d.params.args_type?.parser_options?.length > 0) {
+  if (
+    d.params.args_type?.parser_options?.length > 0 ||
+    getOptionList(d).length > 0
+  ) {
     let supportArgs = generateSupportArgsText(d);
     ins += `【支持参数】${supportArgs}`;
   }
@@ -58,9 +67,90 @@ function detail(code) {
   return ins;
 }
 
+function getOptionAliases(option) {
+  const flags = option?.parser_flags || {};
+  return [
+    option?.name,
+    ...(flags.short_aliases || []),
+    ...(flags.long_aliases || []),
+  ].filter(Boolean);
+}
+
+function generateOptionSupportArgsText(info) {
+  const optionList = getOptionList(info);
+  if (optionList.length === 0) return "";
+
+  const choiceOption = optionList.find(
+    (option) => Array.isArray(option.choices) && option.choices.length > 0
+  );
+  if (choiceOption) {
+    const aliasMap = new Map();
+    optionList
+      .filter(
+        (option) =>
+          option.type === "boolean" && choiceOption.choices.includes(option.name)
+      )
+      .forEach((option) => {
+        const aliases = getOptionAliases(option).filter(
+          (alias) => alias !== option.name
+        );
+        if (aliases.length > 0) {
+          aliasMap.set(option.name, aliases);
+        }
+      });
+
+    const valueNames = choiceOption.choices.flatMap(
+      (choice) => aliasMap.get(choice) || [choice]
+    );
+    const exampleName =
+      aliasMap.get(choiceOption.choices[0])?.[0] || choiceOption.choices[0];
+    return `${choiceOption.description || choiceOption.name}，可选值：${[
+      ...new Set(valueNames),
+    ].join("、")}。如#${exampleName}`;
+  }
+
+  const numberOption = optionList.find((option) =>
+    ["integer", "number", "float"].includes(option.type)
+  );
+  if (numberOption) {
+    let rangeText = "";
+    if (
+      numberOption.minimum !== undefined &&
+      numberOption.maximum !== undefined
+    ) {
+      rangeText = `范围为${numberOption.minimum}~${numberOption.maximum}`;
+    }
+
+    return `${numberOption.description || numberOption.name}${rangeText ? "，" + rangeText : ""
+      }。如#1`;
+  }
+
+  const booleanOption = optionList.find((option) => option.type === "boolean");
+  if (booleanOption) {
+    const exampleName = getOptionAliases(booleanOption)[0] || booleanOption.name;
+    return `${booleanOption.description || booleanOption.name}。如#${exampleName}`;
+  }
+
+  const stringOption = optionList.find((option) => option.type === "string");
+  if (stringOption) {
+    return `${stringOption.description || stringOption.name}。如#内容`;
+  }
+
+  return "支持额外参数";
+}
+
 function generateSupportArgsText(info) {
   try {
+    const optionSupport = generateOptionSupportArgsText(info);
+    if (optionSupport) {
+      return optionSupport;
+    }
+
     const argsType = info.params.args_type;
+    if (!argsType) {
+      return "支持额外参数";
+    }
+
     const props = argsType.args_model.properties;
     const options = argsType.parser_options;
 
@@ -141,6 +231,183 @@ function generateSupportArgsText(info) {
   }
 }
 
+function normalizeArgToken(token) {
+  return String(token ?? "").trim().replace(/^--?/, "");
+}
+
+function addOptionAlias(aliasMap, alias, name, value) {
+  const normalized = normalizeArgToken(alias);
+  if (!normalized) return;
+
+  aliasMap[normalized] = { name, value };
+  aliasMap[normalized.toLowerCase()] = { name, value };
+}
+
+function getOptionByArgName(optionList, name) {
+  const normalized = normalizeArgToken(name);
+  if (!normalized) return null;
+
+  return (
+    optionList.find((option) =>
+      getOptionAliases(option).some(
+        (alias) =>
+          normalizeArgToken(alias).toLowerCase() === normalized.toLowerCase()
+      )
+    ) || null
+  );
+}
+
+function buildOptionAliasMap(optionList) {
+  const aliasMap = {};
+  const choiceOptions = optionList.filter(
+    (option) => Array.isArray(option.choices) && option.choices.length > 0
+  );
+
+  choiceOptions.forEach((option) => {
+    option.choices.forEach((choice) => {
+      addOptionAlias(aliasMap, choice, option.name, choice);
+    });
+  });
+
+  optionList
+    .filter((option) => option.type === "boolean")
+    .forEach((option) => {
+      const choiceOwner = choiceOptions.find((choiceOption) =>
+        choiceOption.choices.includes(option.name)
+      );
+      const targetName = choiceOwner?.name || option.name;
+      const targetValue = choiceOwner ? option.name : true;
+
+      getOptionAliases(option).forEach((alias) => {
+        addOptionAlias(aliasMap, alias, targetName, targetValue);
+      });
+    });
+
+  return aliasMap;
+}
+
+function getAliasValue(aliasMap, token) {
+  const normalized = normalizeArgToken(token);
+  return aliasMap[normalized] || aliasMap[normalized.toLowerCase()];
+}
+
+function parseOptionValue(option, rawValue, aliasMap) {
+  const value = String(rawValue ?? "").trim();
+  const normalized = normalizeArgToken(value);
+  if (!value) return undefined;
+
+  if (option.type === "boolean") {
+    const lowered = normalized.toLowerCase();
+    if (["false", "0", "no", "off", "否", "不"].includes(lowered)) {
+      return false;
+    }
+    return true;
+  }
+
+  if (option.type === "integer") {
+    if (/^-?\d+$/.test(value)) {
+      return parseInt(value, 10);
+    }
+    return undefined;
+  }
+
+  if (option.type === "number" || option.type === "float") {
+    if (/^-?\d+(\.\d+)?$/.test(value)) {
+      return Number(value);
+    }
+    return undefined;
+  }
+
+  if (Array.isArray(option.choices) && option.choices.length > 0) {
+    if (option.choices.includes(value)) {
+      return value;
+    }
+
+    const choice = option.choices.find(
+      (item) => item.toLowerCase() === normalized.toLowerCase()
+    );
+    if (choice) {
+      return choice;
+    }
+
+    const mapped = getAliasValue(aliasMap, value);
+    if (mapped?.name === option.name) {
+      return mapped.value;
+    }
+
+    return undefined;
+  }
+
+  return value;
+}
+
+function applyOptionArg(argsObj, optionList, aliasMap, token, rawValue) {
+  if (rawValue === undefined) {
+    const mapped = getAliasValue(aliasMap, token);
+    if (mapped) {
+      argsObj[mapped.name] = mapped.value;
+      return true;
+    }
+
+    return false;
+  }
+
+  const option = getOptionByArgName(optionList, token);
+  if (!option) return false;
+
+  const parsedValue = parseOptionValue(option, rawValue, aliasMap);
+  if (parsedValue === undefined) return false;
+
+  argsObj[option.name] = parsedValue;
+  return true;
+}
+
+function handleOptionArgs(key, args, argsObj) {
+  const optionList = getOptionList(infos[key]);
+  const trimmedArg = args.trim();
+  if (optionList.length === 0 || !trimmedArg) return argsObj;
+
+  const aliasMap = buildOptionAliasMap(optionList);
+  const equalsIndex = trimmedArg.indexOf("=");
+  if (equalsIndex > 0) {
+    const name = trimmedArg.slice(0, equalsIndex);
+    const value = trimmedArg.slice(equalsIndex + 1);
+    applyOptionArg(argsObj, optionList, aliasMap, name, value);
+    return argsObj;
+  }
+
+  const tokens = trimmedArg.split(/\s+/).filter(Boolean);
+  let matched = false;
+  for (let i = 0; i < tokens.length; i++) {
+    if (
+      i + 1 < tokens.length &&
+      applyOptionArg(argsObj, optionList, aliasMap, tokens[i], tokens[i + 1])
+    ) {
+      matched = true;
+      i++;
+      continue;
+    }
+
+    if (applyOptionArg(argsObj, optionList, aliasMap, tokens[i])) {
+      matched = true;
+    }
+  }
+
+  if (!matched) {
+    const valueOptions = optionList.filter(
+      (option) => option.type !== "boolean"
+    );
+    if (valueOptions.length === 1) {
+      const parsedValue = parseOptionValue(valueOptions[0], trimmedArg, aliasMap);
+      if (parsedValue !== undefined) {
+        argsObj[valueOptions[0].name] = parsedValue;
+      }
+    }
+  }
+
+  return argsObj;
+}
+
 function handleArgs(key, args) {
   if (!args) {
     args = "";
@@ -191,6 +458,8 @@ function handleArgs(key, args) {
       }
     }
   }
+
+  handleOptionArgs(key, args, argsObj);
 
   return JSON.stringify(argsObj);
 }
