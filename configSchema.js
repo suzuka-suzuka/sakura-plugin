@@ -86,8 +86,9 @@ export const AISchema = z.object({
     retryCount: z.number().int().min(0).default(1).describe('渠道重试次数|请求失败时对当前渠道的最大重试次数，等待时间线性回退（5s、10s、15s…），耗尽后再回退至默认渠道'),
     maxToolCalls: z.number().default(20).describe('最大工具调用次数|每次对话允许AI连续调用工具的最大次数，超过后将强制结束'),
     trustAICommand: z.boolean().default(false).describe('完全信任AI|开启后AI调用的全部命令均直接执行，无需用户确认且无视白名单'),
-    enableMarkdownProcess: z.boolean().default(true).describe('处理Markdown消息|开启后会对Markdown消息进行处理（短文本去除格式、长文本转图片），关闭则直接原样发送'),
-    markdownPlainTextLimit: z.number().int().min(0).default(300).describe('Markdown纯文本字数阈值|开启Markdown处理后，低于此字数的消息会去除Markdown格式以纯文本发送，超过则渲染为图片'),
+    enableMarkdownProcess: z.boolean().default(true).describe('处理Markdown消息|开启后会对Markdown消息进行处理（短文本原样发送、长文本转图片），关闭则直接原样发送'),
+    markdownPlainTextLimit: z.number().int().min(0).default(300).describe('Markdown文本字数阈值|开启Markdown处理后，低于此字数的消息会原样发送，达到或超过则渲染为图片'),
+    markdownSplitImageLimit: z.number().int().min(0).default(0).describe('Markdown分图字数阈值|设置为0表示关闭；开启Markdown处理后，达到此字数会尽量均分为两张图片节点发送'),
 }).describe('AI 对话设定');
 
 export const TavilyMCPSchema = z.object({
