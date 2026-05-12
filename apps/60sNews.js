@@ -1,10 +1,14 @@
 import Setting from "../lib/setting.js";
+import schedule from "node-schedule";
+import pluginConfigManager from "../../../src/core/pluginConfig.js";
+import { getBots } from "../../../src/api/client.js";
 
 export class News60s extends plugin {
   constructor() {
     super({
       name: "60sNews",
       priority: 1135,
+      configWatch: "60sNews",
     });
   }
 
@@ -12,15 +16,44 @@ export class News60s extends plugin {
     return Setting.getConfig("60sNews");
   }
 
-  dailyNewsTask = Cron("0 0 8 * * *", async () => {
-    if (!bot) return;
-    const config = this.appconfig;
-    if (!config) {
-      return;
-    }
+  getScopeIds() {
+    const configuredIds = pluginConfigManager.getConfiguredSelfIds("sakura-plugin");
+    const onlineIds = getBots()
+      .map((currentBot) => Number(currentBot.self_id))
+      .filter((selfId) => Number.isFinite(selfId));
+    return [...new Set([...configuredIds, ...onlineIds])];
+  }
 
-    const groups = config.Groups ?? [];
-    if (groups.length === 0) {
+  async init() {
+    for (const selfId of this.getScopeIds()) {
+      const config = Setting.getConfig("60sNews", { selfId });
+      const groups = Array.isArray(config?.Groups) ? config.Groups : [];
+      if (!groups.length) {
+        continue;
+      }
+
+      const cronExpression = String(config?.cron || "0 8 * * *").trim();
+      try {
+        const job = schedule.scheduleJob(cronExpression, async () => {
+          await this.runForSelf(selfId);
+        });
+        if (job) {
+          this.jobs.push(job);
+        }
+      } catch (error) {
+        logger.warn(`[60sNews] 跳过无效 cron 配置: ${selfId} -> ${cronExpression} (${error.message})`);
+      }
+    }
+  }
+
+  async runForSelf(selfId) {
+    const currentBot = this.getBot(selfId);
+    if (!currentBot) return;
+
+    const config = Setting.getConfig("60sNews", { selfId });
+
+    const groups = Array.isArray(config?.Groups) ? config.Groups : [];
+    if (!groups.length) {
       return;
     }
 
@@ -28,10 +61,10 @@ export class News60s extends plugin {
 
     for (const groupId of groups) {
       try {
-        await bot.pickGroup(groupId).sendMsg(segment.image(imageUrl));
+        await currentBot.pickGroup(groupId).sendMsg(segment.image(imageUrl));
       } catch (error) {
         logger.error(`[60sNews] 向群 ${groupId} 发送新闻失败:`, error);
       }
     }
-  });
+  }
 }

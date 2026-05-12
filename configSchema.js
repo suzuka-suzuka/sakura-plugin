@@ -52,6 +52,7 @@ export const manualCommandNames = [
 
 export const News60sSchema = z.object({
     Groups: z.array(z.number()).default([]).describe('推送群号列表|#groupSelect|选择需要推送60秒新闻的QQ群号'),
+    cron: cronString('0 8 * * *').describe('定时推送的时间表达式|#cron|5段格式: 分 时 日 月 周'),
 }).describe('60秒新闻推送');
 
 const ProfileSchema = z.object({
