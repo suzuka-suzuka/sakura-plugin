@@ -76,7 +76,7 @@ export const AISchema = z.object({
     profiles: z.array(ProfileSchema).default([]).describe('AI角色列表|#nameField:prefix|配置多个AI角色，每个角色可以有不同的前缀和设置'),
     toolGroups: z.array(ToolGroupSchema).default([]).describe('工具组|#nameField:name|自定义工具组合，每个角色可绑定一个工具组'),
     groupContextLength: z.number().default(20).describe('群上下文长度|群聊上下文记忆的消息条数'),
-    chatHistoryLength: z.number().default(20).describe('对话历史长度|保留的对话历史消息条数'),
+    chatHistoryLength: z.number().default(20).describe('对话历史长度|保留的用户对话轮数；一轮内的多次工具调用会作为同一轮保存'),
     enableUserLock: z.boolean().default(false).describe('用户锁定|同一用户同时只能进行一个对话'),
     toolschannel: z.string().default('default').describe('工具渠道|#channelSelect'),
     appschannel: z.string().default('default').describe('应用渠道|#channelSelect'),

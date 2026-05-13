@@ -13,6 +13,8 @@ import {
   clearAllConversationHistories,
   saveConversationHistory,
   cleanOldConversations,
+  getConversationRoundCount,
+  groupConversationRounds,
 } from "../lib/AIUtils/ConversationHistory.js";
 export class Conversationmanagement extends plugin {
   constructor() {
@@ -96,31 +98,33 @@ export class Conversationmanagement extends plugin {
       rounds = Math.abs(rounds);
     }
 
-    const itemsToRemove = rounds * 2;
-
-    if (itemsToRemove === 0) {
+    if (rounds === 0) {
       await e.reply("操作轮数必须大于 0 喵~", 10);
       return true;
     }
 
-    if (itemsToRemove >= history.length) {
+    const groupedRounds = groupConversationRounds(history);
+    const totalRounds = groupedRounds.length;
+
+    if (rounds >= totalRounds) {
       await clearConversationHistory(e, prefix);
-      await e.reply(`已撤销所有与「${profileName}」的对话历史（共 ${Math.ceil(history.length / 2)} 轮）。`, 10);
+      await e.reply(`已撤销所有与「${profileName}」的对话历史（共 ${totalRounds} 轮）。`, 10);
       return true;
     }
 
-    if (deleteFromFront) {
-      history.splice(0, itemsToRemove);
-    } else {
-      history.splice(-itemsToRemove);
-    }
+    const keptRounds = deleteFromFront
+      ? groupedRounds.slice(rounds)
+      : groupedRounds.slice(0, totalRounds - rounds);
+    history.splice(0, history.length, ...keptRounds.flat());
 
     await saveConversationHistory(e, history, prefix);
 
+    const remainingRounds = getConversationRoundCount(history);
+
     if (deleteFromFront) {
-      await e.reply(`已删除与「${profileName}」的前 ${rounds} 轮对话。当前剩余 ${Math.ceil(history.length / 2)} 轮。`, 10);
+      await e.reply(`已删除与「${profileName}」的前 ${rounds} 轮对话。当前剩余 ${remainingRounds} 轮。`, 10);
     } else {
-      await e.reply(`已撤销与「${profileName}」的最后 ${rounds} 轮对话。当前剩余 ${Math.ceil(history.length / 2)} 轮。`, 10);
+      await e.reply(`已撤销与「${profileName}」的最后 ${rounds} 轮对话。当前剩余 ${remainingRounds} 轮。`, 10);
     }
     return true;
   });
@@ -244,21 +248,32 @@ export class Conversationmanagement extends plugin {
     const info = await e.getInfo(e.self_id);
     const botName = info?.card || info?.nickname || e.self_id;
     const userName = e.sender.card || e.sender.nickname || e.user_id;
+    const groupedRounds = groupConversationRounds(history);
+    const totalRounds = groupedRounds.length;
+    const visibleHistory = groupedRounds.flat();
     await e.react(124);
 
 
+    const getItemText = (item) => (item.parts || [])
+      .filter((part) => typeof part.text === "string" && part.text)
+      .map((part) => part.text)
+      .join("");
+
     const buildSimpleNode = (item) => {
+      const text = getItemText(item);
+      if (!text) return null;
+
       if (item.role === "user") {
         return {
           user_id: e.user_id,
           nickname: userName,
-          content: [{ type: 'text', data: { text: item.parts[0].text } }],
+          content: [{ type: 'text', data: { text } }],
         };
       } else if (item.role === "model") {
         return {
           user_id: e.self_id,
           nickname: botName,
-          content: [{ type: 'text', data: { text: item.parts[0].text } }],
+          content: [{ type: 'text', data: { text } }],
         };
       }
       return null;
@@ -340,13 +355,15 @@ export class Conversationmanagement extends plugin {
       y -= 25;
       page.drawText(`导出时间: ${new Date().toLocaleString()}`, { x: margin, y, size: 10, font, color: rgb(0.4, 0.4, 0.4) });
       y -= 15;
-      page.drawText(`共 ${Math.ceil(history.length / 2)} 轮对话`, { x: margin, y, size: 10, font, color: rgb(0.4, 0.4, 0.4) });
+      page.drawText(`共 ${totalRounds} 轮对话`, { x: margin, y, size: 10, font, color: rgb(0.4, 0.4, 0.4) });
       y -= 30;
 
-      for (const item of history) {
+      for (const item of visibleHistory) {
+        const text = getItemText(item);
+        if (!text) continue;
+
         const role = item.role === "user" ? userName : botName;
         const roleColor = item.role === "user" ? rgb(0, 0.5, 0) : rgb(0, 0, 0.7);
-        const text = item.parts[0].text || "";
 
         if (y < margin + lineHeight * 2) {
           page = pdfDoc.addPage([pageWidth, pageHeight]);
@@ -415,9 +432,9 @@ export class Conversationmanagement extends plugin {
       }
     };
 
-    if (history.length <= CHUNK_SIZE) {
+    if (totalRounds <= CHUNK_SIZE) {
       const nodes = [];
-      for (const item of history) {
+      for (const item of visibleHistory) {
         const node = buildSimpleNode(item);
         if (node) nodes.push(node);
       }
@@ -431,11 +448,12 @@ export class Conversationmanagement extends plugin {
         await sendAsEncryptedPdf();
       }
     } else {
-      const chunks = _.chunk(history, CHUNK_SIZE);
+      const chunks = _.chunk(groupedRounds, CHUNK_SIZE);
       const outerNodes = [];
 
       for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i];
+        const chunkRounds = chunks[i];
+        const chunk = chunkRounds.flat();
         const innerNodes = [];
 
         for (const item of chunk) {
@@ -443,9 +461,8 @@ export class Conversationmanagement extends plugin {
           if (node) innerNodes.push(node);
         }
 
-        const startRound = Math.floor((i * CHUNK_SIZE) / 2) + 1;
-        const endRound = Math.floor(((i + 1) * CHUNK_SIZE - 1) / 2) + 1;
-        const actualEndRound = Math.min(endRound, Math.ceil(history.length / 2));
+        const startRound = i * CHUNK_SIZE + 1;
+        const actualEndRound = Math.min((i + 1) * CHUNK_SIZE, totalRounds);
 
         outerNodes.push({
           user_id: e.self_id,
@@ -463,7 +480,7 @@ export class Conversationmanagement extends plugin {
 
       const result = await e.sendForwardMsg(outerNodes, {
         source: `「${profileName}」对话历史`,
-        prompt: `共 ${Math.ceil(history.length / 2)} 轮对话`,
+        prompt: `共 ${totalRounds} 轮对话`,
         summary: `共 ${chunks.length} 个分组`,
       });
 
