@@ -1,10 +1,19 @@
 import Setting from "../lib/setting.js"
 
+const DAY_SECONDS = 24 * 60 * 60
+const DEFAULT_INACTIVE_DAYS = 180
+const DEFAULT_LOW_LEVEL_THRESHOLD = 2
+
+function getPositiveInteger(value, fallback) {
+  const number = Number.parseInt(value, 10)
+  return Number.isFinite(number) && number > 0 ? number : fallback
+}
+
 export class AutoCleanup extends plugin {
   constructor() {
     super({
       name: "自动清理群成员",
-      dsc: "每天0点自动清理半年未发言的人和进群超24小时但群等级为1级及以下的号",
+      dsc: "每天0点按配置自动清理长期未发言的人和进群超24小时的低等级号",
       priority: 1135,
     })
   }
@@ -23,6 +32,7 @@ export class AutoCleanup extends plugin {
   async autoCleanupTask() {
     const config = this.appconfig
     const groups = config?.groups ?? []
+    const cleanupOptions = this.getCleanupOptions(config)
 
     if (groups.length === 0) {
       return
@@ -30,7 +40,7 @@ export class AutoCleanup extends plugin {
 
     for (const groupId of groups) {
       try {
-        await this.cleanupGroup(groupId)
+        await this.cleanupGroup(groupId, cleanupOptions)
         await new Promise(resolve => setTimeout(resolve, 3000))
       } catch (error) {
         logger.error(`[自动清理] 处理群 ${groupId} 时出错:`, error)
@@ -38,7 +48,17 @@ export class AutoCleanup extends plugin {
     }
   }
 
-  async cleanupGroup(groupId) {
+  getCleanupOptions(config = {}) {
+    const inactiveDays = getPositiveInteger(config?.inactiveDays, DEFAULT_INACTIVE_DAYS)
+    const lowLevelThreshold = getPositiveInteger(config?.lowLevelThreshold, DEFAULT_LOW_LEVEL_THRESHOLD)
+
+    return {
+      inactiveSeconds: inactiveDays * DAY_SECONDS,
+      lowLevelThreshold,
+    }
+  }
+
+  async cleanupGroup(groupId, cleanupOptions = this.getCleanupOptions(this.appconfig)) {
     const group = Bot.pickGroup(groupId)
 
     let botInfo
@@ -65,8 +85,7 @@ export class AutoCleanup extends plugin {
     }
 
     const currentTime = Math.floor(Date.now() / 1000)
-    const sixMonthsInSeconds = 180 * 24 * 60 * 60
-    const oneDayInSeconds = 24 * 60 * 60
+    const { inactiveSeconds, lowLevelThreshold } = cleanupOptions
 
     const toCleanup = []
 
@@ -82,16 +101,16 @@ export class AutoCleanup extends plugin {
         joinTime = Math.floor(joinTime / 1000)
       }
 
-      const level = parseInt(member.level)
+      const level = Number.parseInt(member.level, 10)
 
       const timeSinceLastSpoke = currentTime - lastSentTime
       const timeSinceJoin = currentTime - joinTime
 
-      const isOldInactive = timeSinceLastSpoke > sixMonthsInSeconds
+      const isOldInactive = timeSinceLastSpoke > inactiveSeconds
 
-      const isLowLevel = !isNaN(level) && level <= 1
+      const isLowLevel = Number.isFinite(level) && level < lowLevelThreshold
 
-      const isNewJoiner = timeSinceJoin > oneDayInSeconds
+      const isNewJoiner = timeSinceJoin > DAY_SECONDS
 
       if (isOldInactive || (isNewJoiner && isLowLevel)) {
         toCleanup.push(member.user_id)

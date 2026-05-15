@@ -636,7 +636,21 @@ const configSchema = {
     "AutoCleanup.groups": {
       label: "启用群",
       type: "groupSelect",
-      help: "每天0点自动清理：1.半年未发言的人 2.进群超24小时但群等级为1级的号",
+      help: "每天0点自动清理：1.超过配置天数未发言的人 2.进群超24小时且群等级低于配置阈值的号",
+    },
+    "AutoCleanup.inactiveDays": {
+      label: "未发言天数",
+      type: "number",
+      help: "超过该天数未发言会被自动清理",
+      min: 1,
+      step: 1,
+    },
+    "AutoCleanup.lowLevelThreshold": {
+      label: "低等级阈值",
+      type: "number",
+      help: "进群超过24小时且群等级低于该值会被自动清理；例如 2 会清理 0/1 级",
+      min: 1,
+      step: 1,
     },
 
     "tenor.apiKey": {

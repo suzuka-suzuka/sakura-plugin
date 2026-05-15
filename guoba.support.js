@@ -698,11 +698,33 @@ export function supportGuoba() {
         {
           field: "AutoCleanup.groups",
           label: "自动清理启用群",
-          bottomHelpMessage: "每天0点自动清理：1.半年未发言的人 2.进群超24小时但群等级为1级的号",
+          bottomHelpMessage: "每天0点自动清理：1.超过配置天数未发言的人 2.进群超24小时且群等级低于配置阈值的号",
           component: "GSelectGroup",
           required: false,
           componentProps: {
             multiple: true,
+          },
+        },
+        {
+          field: "AutoCleanup.inactiveDays",
+          label: "未发言天数",
+          bottomHelpMessage: "超过该天数未发言会被自动清理",
+          component: "InputNumber",
+          required: true,
+          componentProps: {
+            min: 1,
+            precision: 0,
+          },
+        },
+        {
+          field: "AutoCleanup.lowLevelThreshold",
+          label: "低等级阈值",
+          bottomHelpMessage: "进群超过24小时且群等级低于该值会被自动清理；例如 2 会清理 0/1 级",
+          component: "InputNumber",
+          required: true,
+          componentProps: {
+            min: 1,
+            precision: 0,
           },
         },
         {

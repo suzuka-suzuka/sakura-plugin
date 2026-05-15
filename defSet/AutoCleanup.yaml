@@ -1,1 +1,3 @@
 groups: []
+inactiveDays: 180
+lowLevelThreshold: 2
