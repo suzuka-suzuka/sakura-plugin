@@ -40,7 +40,7 @@ export const commandNames = {
     "AIChat.Chat": "AI聊天",
     "EditImage.dispatchHandler": "AI图片编辑",
     "NaiPainting.naiParams": "绘图",
-    "Mimic.Mimic": "拟态回复",
+    "Mimic.Mimic": "伪人",
     "VoxCPMVoice.generateVoice": "语音生成",
     "pixivSearch.viewRanking": "p站排行榜",
     "pixivSearch.getRankingItem": "p站排行榜详情",
@@ -52,7 +52,6 @@ export const manualCommandNames = [
 
 export const News60sSchema = z.object({
     Groups: z.array(z.number()).default([]).describe('推送群号列表|#groupSelect|选择需要推送60秒新闻的QQ群号'),
-    cron: cronString('0 8 * * *').describe('定时推送的时间表达式|#cron|5段格式: 分 时 日 月 周'),
 }).describe('60秒新闻推送');
 
 const ProfileSchema = z.object({
@@ -76,7 +75,7 @@ export const AISchema = z.object({
     profiles: z.array(ProfileSchema).default([]).describe('AI角色列表|#nameField:prefix|配置多个AI角色，每个角色可以有不同的前缀和设置'),
     toolGroups: z.array(ToolGroupSchema).default([]).describe('工具组|#nameField:name|自定义工具组合，每个角色可绑定一个工具组'),
     groupContextLength: z.number().default(20).describe('群上下文长度|群聊上下文记忆的消息条数'),
-    chatHistoryLength: z.number().default(20).describe('对话历史长度|保留的用户对话轮数；一轮内的多次工具调用会作为同一轮保存'),
+    chatHistoryLength: z.number().default(20).describe('对话历史长度|保留的对话历史消息条数'),
     enableUserLock: z.boolean().default(false).describe('用户锁定|同一用户同时只能进行一个对话'),
     toolschannel: z.string().default('default').describe('工具渠道|#channelSelect'),
     appschannel: z.string().default('default').describe('应用渠道|#channelSelect'),
@@ -86,9 +85,8 @@ export const AISchema = z.object({
     retryCount: z.number().int().min(0).default(1).describe('渠道重试次数|请求失败时对当前渠道的最大重试次数，等待时间线性回退（5s、10s、15s…），耗尽后再回退至默认渠道'),
     maxToolCalls: z.number().default(20).describe('最大工具调用次数|每次对话允许AI连续调用工具的最大次数，超过后将强制结束'),
     trustAICommand: z.boolean().default(false).describe('完全信任AI|开启后AI调用的全部命令均直接执行，无需用户确认且无视白名单'),
-    enableMarkdownProcess: z.boolean().default(true).describe('处理Markdown消息|开启后会对Markdown消息进行处理（短文本原样发送、长文本转图片），关闭则直接原样发送'),
-    markdownPlainTextLimit: z.number().int().min(0).default(300).describe('Markdown文本字数阈值|开启Markdown处理后，低于此字数的消息会原样发送，达到或超过则渲染为图片'),
-    markdownSplitImageLimit: z.number().int().min(0).default(0).describe('Markdown分图字数阈值|设置为0表示关闭；开启Markdown处理后，达到此字数会尽量均分为两张图片节点发送'),
+    enableMarkdownProcess: z.boolean().default(true).describe('处理Markdown消息|开启后会对Markdown消息进行处理（短文本去除格式、长文本转图片），关闭则直接原样发送'),
+    markdownPlainTextLimit: z.number().int().min(0).default(300).describe('Markdown纯文本字数阈值|开启Markdown处理后，低于此字数的消息会去除Markdown格式以纯文本发送，超过则渲染为图片'),
 }).describe('AI 对话设定');
 
 export const TavilyMCPSchema = z.object({
@@ -127,7 +125,6 @@ const OpenAIChannelSchema = z.object({
     model: z.string().default('gpt-4').describe('模型名称'),
     enable_thinking: z.boolean().default(false).describe('思考模式|开启后向 OpenAI 兼容接口传入 enable_thinking'),
     reasoning_effort: z.enum(OPENAI_REASONING_EFFORT_OPTIONS).default('').describe('推理强度|留空则不传；OpenAI reasoning_effort，可选 none/minimal/low/medium/high/xhigh'),
-    nativeWebSearch: z.boolean().default(false).describe('OpenAI 原生搜索|开启后向支持 OpenAI 原生工具的接口注入 web_search'),
 });
 
 const ImageGeminiChannelSchema = z.object({
@@ -148,7 +145,7 @@ const ImageOpenAIChannelSchema = z.object({
 
 const GrokChannelSchema = z.object({
     name: z.string().default('grok').describe('渠道名称'),
-    model: z.string().default('grok-2').describe('模型名称'),
+    model: z.string().default('auto').describe('模型名称'),
     sso: z.string().default('').describe('SSO Token|#textarea'),
     supersso: z.string().default('').describe('SuperSSO Token|#textarea|可填写包含 sso-rw 或 supersso-rw 的完整 Cookie'),
     cf_clearance: z.string().default('').describe('CF Clearance|#textarea'),
@@ -235,7 +232,7 @@ const defaultCommandCosts = [
     { command: "AI聊天", cost: 10 },
     { command: "AI图片编辑", cost: 20 },
     { command: "绘图", cost: 30 },
-    { command: "拟态回复", cost: 10 },
+    { command: "伪人", cost: 10 },
     { command: "语音生成", cost: 5 },
     { command: "p站排行榜", cost: 20 },
     { command: "p站排行榜详情", cost: 5 },
@@ -292,12 +289,12 @@ export const MimicSchema = z.object({
     alternatePromptProbability: z.number().default(0.1).describe('反差人格概率|#step:0.01'),
     recalltime: z.number().default(10).describe('撤回时间(秒)'),
     Channel: z.string().default('2.5').describe('使用渠道|#channelSelect'),
-    Tool: z.preprocess(val => typeof val === 'boolean' ? '' : val, z.string().default('')).describe('工具组|#toolGroupSelect|选择拟态回复使用的工具组'),
+    Tool: z.preprocess(val => typeof val === 'boolean' ? '' : val, z.string().default('')).describe('工具组|#toolGroupSelect|选择伪人使用的工具组'),
     enableGroupLock: z.boolean().default(false).describe('群锁定'),
     splitMessage: z.boolean().default(true).describe('拆分消息'),
     Groups: z.array(z.number()).default([]).describe('启用群号|#groupSelect'),
-    GroupConfigs: z.array(GroupConfigSchema).default([]).describe('群独立配置|为每个群设置不同的拟态回复参数'),
-}).describe('拟态回复配置');
+    GroupConfigs: z.array(GroupConfigSchema).default([]).describe('群独立配置|为每个群设置不同的模拟人参数'),
+}).describe('伪人配置');
 
 const RankingConfigSchema = z.object({
     mode: z.string().describe('排行榜类型'),
@@ -495,7 +492,7 @@ export const schemaLabels = {
     'economy': '经济系统',
     'forwardMessage': '消息转发',
     'groupnotice': '群通知',
-    'mimic': '拟态回复配置',
+    'mimic': '伪人配置',
     'nai': 'NovelAI 绘画',
     'pixiv': 'Pixiv 图库',
     'poke': '戳一戳',

@@ -65,7 +65,7 @@ export class GrokImage extends plugin {
       };
 
       const request = {
-        model: "grok-image",
+        model: imgBase64List && imgBase64List.length > 0 ? "auto" : "grok-imagine-image",
         messages: messages,
       };
 
