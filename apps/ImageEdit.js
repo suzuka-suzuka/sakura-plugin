@@ -134,7 +134,7 @@ export class EditImage extends plugin {
       const { promptText } = this.parseArgs(msg);
       return {
         accepted: true,
-        command: "AI鍥剧墖缂栬緫",
+        command: "AI图片编辑",
         charge: Boolean(promptText),
         refundOnFalse: true,
       };

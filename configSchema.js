@@ -127,6 +127,7 @@ const OpenAIChannelSchema = z.object({
     model: z.string().default('gpt-4').describe('模型名称'),
     enable_thinking: z.boolean().default(false).describe('思考模式|开启后向 OpenAI 兼容接口传入 enable_thinking'),
     reasoning_effort: z.enum(OPENAI_REASONING_EFFORT_OPTIONS).default('').describe('推理强度|留空则不传；OpenAI reasoning_effort，可选 none/minimal/low/medium/high/xhigh'),
+    nativeWebSearch: z.boolean().default(false).describe('OpenAI 原生搜索|开启后向支持 OpenAI 原生工具的接口注入 web_search'),
 });
 
 const ImageGeminiChannelSchema = z.object({
