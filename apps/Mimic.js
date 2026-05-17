@@ -290,7 +290,11 @@ export class Mimic extends plugin {
         }
 
         if (modelResponseParts.length > 0) {
-          currentFullHistory.push({ role: "model", parts: modelResponseParts })
+          const modelHistoryItem = { role: "model", parts: modelResponseParts }
+          if (typeof currentGeminiResponse.reasoning_content !== "undefined") {
+            modelHistoryItem.reasoning_content = currentGeminiResponse.reasoning_content
+          }
+          currentFullHistory.push(modelHistoryItem)
         }
 
         if (functionCalls && functionCalls.length > 0) {
