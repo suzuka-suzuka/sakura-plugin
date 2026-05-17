@@ -204,6 +204,10 @@ export class AIChat extends plugin {
           }
         }
 
+        if (currentAIResponse.reasoning_content) {
+          modelResponseParts.push({ reasoning_content: currentAIResponse.reasoning_content })
+        }
+
         if (modelResponseParts.length > 0) {
           currentFullHistory.push({ role: "model", parts: modelResponseParts })
         }

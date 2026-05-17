@@ -289,6 +289,10 @@ export class Mimic extends plugin {
           }
         }
 
+        if (currentGeminiResponse.reasoning_content) {
+          modelResponseParts.push({ reasoning_content: currentGeminiResponse.reasoning_content })
+        }
+
         if (modelResponseParts.length > 0) {
           currentFullHistory.push({ role: "model", parts: modelResponseParts })
         }
