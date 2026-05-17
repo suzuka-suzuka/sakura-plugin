@@ -103,7 +103,7 @@ export class GrokImage extends plugin {
       }
 
       if (replyMessages.length > 0) {
-        await e.reply(replyMessages, 0, true);
+        await e.reply(replyMessages);
       } else {
         await e.reply("处理完成，但未返回有效内容", 10, true);
       }
