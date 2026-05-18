@@ -21,6 +21,11 @@ export class pixivSearch extends plugin {
           fnc: "getPixivByPid",
           log: false,
         },
+        {
+          reg: /(?:pixiv\.net|pximg\.net|pixiv:\/\/)/i,
+          fnc: "getPixivByLink",
+          log: false,
+        },
       ],
     })
   }
@@ -41,6 +46,82 @@ export class pixivSearch extends plugin {
     const pid = match[1]
     const pageNum = parseInt(match[2]) || 1
 
+    return this.getPixivIllust(e, pid, pageNum)
+  }
+
+  async getPixivByLink(e) {
+    const illustInfo = this.extractPixivIllustInfo(e)
+    if (!illustInfo) {
+      return false
+    }
+
+    return this.getPixivIllust(e, illustInfo.pid, illustInfo.pageNum)
+  }
+
+  extractPixivIllustInfo(e) {
+    const text = this.extractMessageText(e)
+    if (!text) {
+      return null
+    }
+
+    const patterns = [
+      /pixiv:\/\/illusts\/(\d+)/i,
+      /pixiv\.net\/(?:[a-z]{2}\/)?artworks\/(\d+)/i,
+      /pixiv\.net\/(?:[a-z]{2}\/)?i\/(\d+)/i,
+      /pixiv\.net\/ajax\/illust\/(\d+)/i,
+      /pixiv\.net\/member_illust\.php\?[^ \n\r\t]*illust_id=(\d+)/i,
+      /[?&]illust_id=(\d+)/i,
+      /pximg\.net\/[^ \n\r\t]*\/(\d+)_p(\d+)/i,
+    ]
+
+    for (const pattern of patterns) {
+      const match = text.match(pattern)
+      if (match) {
+        const pid = match[1]
+        const imageIndex = match[2] ? parseInt(match[2]) : null
+        return {
+          pid,
+          pageNum: imageIndex === null ? 1 : Math.floor(imageIndex / 3) + 1,
+        }
+      }
+    }
+
+    return null
+  }
+
+  extractMessageText(e) {
+    const parts = []
+    if (e.msg) {
+      parts.push(e.msg)
+    }
+
+    if (Array.isArray(e.message)) {
+      for (const msg of e.message) {
+        if (msg.type === "text" && msg.text) {
+          parts.push(msg.text)
+        }
+        if (msg.type === "json" && msg.data) {
+          const data = String(msg.data)
+          parts.push(data)
+          parts.push(data.replace(/\\/g, ""))
+          try {
+            const json = JSON.parse(data)
+            const urls = [
+              json?.meta?.detail_1?.qqdocurl,
+              json?.meta?.news?.jumpUrl,
+              json?.meta?.news?.url,
+              json?.meta?.news?.sourceUrl,
+            ].filter(Boolean)
+            parts.push(...urls.map(url => String(url).replace(/\\/g, "")))
+          } catch (error) {}
+        }
+      }
+    }
+
+    return parts.join("\n")
+  }
+
+  async getPixivIllust(e, pid, pageNum = 1) {
     await this.reply(`正在获取P站作品ID: ${pid} (第${pageNum}页)...`, false, { recallMsg: 10 })
 
     try {
@@ -240,10 +321,10 @@ export class pixivSearch extends plugin {
     const imagesToSend = pages.slice(startIndex, startIndex + imagesPerPage)
 
     let caption = "找到图片啦！"
-    const pidMatch = e.msg.match(/^#?pid\s*(\d+)/)
+    const isPagedRequest = String(e.msg || "").match(/^#?pid\s*(\d+)/) || pageNum > 1
 
     if (totalPages > 1) {
-      if (pidMatch && totalPages > imagesPerPage) {
+      if (isPagedRequest && totalPages > imagesPerPage) {
         caption += ` (第${pageNum}/${totalImagePages}页, 共${totalPages}张)`
       } else {
         caption += ` (共${totalPages}张`
