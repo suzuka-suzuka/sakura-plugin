@@ -8,11 +8,6 @@ import { MarkdownTool } from "./MarkdownTool.js"
 import { IllustrationTool } from "./IllustrationTool.js"
 import { ReminderTool } from "./ReminderTool.js"
 import { BlackListTool } from "./BlackListTool.js"
-import { PokeTool } from "./PokeTool.js"
-import { EmojiReactionTool } from "./EmojiReactionTool.js"
-import { FriendRequestTool } from "./FriendRequestTool.js"
-import { GroupSignTool } from "./GroupSignTool.js"
-import { UploadFileTool } from "./UploadFileTool.js"
 
 const availableTools = [
   new GroupAdminTool(),
@@ -25,11 +20,6 @@ const availableTools = [
   new IllustrationTool(),
   new ReminderTool(),
   new BlackListTool(),
-  new PokeTool(),
-  new EmojiReactionTool(),
-  new FriendRequestTool(),
-  new GroupSignTool(),
-  new UploadFileTool(),
 ]
 
 const toolMap = new Map(availableTools.map(tool => [tool.name, tool]))
