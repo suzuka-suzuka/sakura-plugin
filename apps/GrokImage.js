@@ -102,7 +102,7 @@ export class GrokImage extends plugin {
 
     const { prompt, options } = parseImageCommand(match[1]);
     if (!prompt) {
-      await e.reply("Grok image prompt is required.", true, { recallMsg: 10 });
+      await e.reply("Grok image prompt is required.", 10, true);
       return true;
     }
 
@@ -127,9 +127,7 @@ export class GrokImage extends plugin {
       await e.reply(result.buffers.map((buffer) => segment.image(buffer)));
     } catch (error) {
       logger.error("[GrokImage] CLIProxyAPI image request failed", error);
-      await e.reply(`Grok image failed: ${error.message}`, true, {
-        recallMsg: 10,
-      });
+      await e.reply(`Grok image failed: ${error.message}`, 10, true);
     }
 
     return true;

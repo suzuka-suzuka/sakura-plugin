@@ -128,16 +128,15 @@ export class GrokVideo extends plugin {
     const match = e.msg.match(/^#gv(.*)/);
     if (!match) return false;
 
-    const { prompt, options } = parseVideoCommand(match[1]);
-    if (!prompt) {
-      await e.reply("Grok video prompt is required.", true, { recallMsg: 10 });
-      return true;
-    }
-
-    await e.react(124);
-
     try {
+      const { prompt, options } = parseVideoCommand(match[1]);
       const imageRefs = (await getImg(e, true, true)) || [];
+      if (!prompt && imageRefs.length === 0) {
+        return false;
+      }
+
+      await e.react(124);
+
       const config = Setting.getConfig("CliProxyMedia");
       const result = await generateGrokVideoAndWait(
         {
@@ -170,9 +169,7 @@ export class GrokVideo extends plugin {
       }
     } catch (error) {
       logger.error("[GrokVideo] CLIProxyAPI video request failed", error);
-      await e.reply(`Grok video failed: ${error.message}`, true, {
-        recallMsg: 10,
-      });
+      await e.reply(`Grok video failed: ${error.message}`, 10, true);
     }
 
     return true;
