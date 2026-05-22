@@ -144,15 +144,15 @@ const ImageOpenAIChannelSchema = z.object({
 });
 
 export const CliProxyMediaSchema = z.object({
-    baseURL: z.string().default('http://127.0.0.1:8317/v1').describe('Base URL|CLIProxyAPI /v1 endpoint'),
-    apiKey: z.string().default('').describe('API Key|#textarea|Bearer key for CLIProxyAPI, empty if disabled by gateway'),
-    imageModel: z.string().default('grok-imagine-image').describe('Image model'),
-    imageQualityModel: z.string().default('grok-imagine-image-quality').describe('Quality image model'),
-    videoModel: z.string().default('grok-imagine-video').describe('Video model'),
-    pollIntervalMs: z.number().int().min(1000).default(5000).describe('Video poll interval ms'),
-    timeoutMs: z.number().int().min(30000).default(900000).describe('Video timeout ms'),
-    preferNativeVideo: z.boolean().default(true).describe('Use native /videos/generations for xAI video'),
-}).describe('CLIProxyAPI Media Gateway');
+    baseURL: z.string().default('http://127.0.0.1:8317/v1').describe('网关地址|CLIProxyAPI 的 /v1 接口地址'),
+    apiKey: z.string().default('').describe('网关密钥|#textarea|CLIProxyAPI 的 Bearer API Key；网关未启用鉴权时可留空'),
+    imageModel: z.string().default('grok-imagine-image').describe('普通生图模型|CPA 前端 Grok 分组暴露的模型名，例如 grok-imagine-image'),
+    imageQualityModel: z.string().default('grok-imagine-image-quality').describe('高质量生图模型|CPA 前端 Grok 分组暴露的模型名，例如 grok-imagine-image-quality'),
+    videoModel: z.string().default('grok-imagine-video').describe('视频生成模型|CPA 前端 Grok 分组暴露的模型名，例如 grok-imagine-video'),
+    pollIntervalMs: z.number().int().min(1000).default(5000).describe('视频轮询间隔|单位毫秒，用于查询 Grok 视频生成结果'),
+    timeoutMs: z.number().int().min(30000).default(900000).describe('视频等待超时|单位毫秒，超过后停止等待视频生成'),
+    preferNativeVideo: z.boolean().default(true).describe('优先原生视频接口|开启后使用 /videos/generations，可透传 1080p 等 xAI 原生参数'),
+}).describe('CLIProxyAPI 媒体网关');
 
 const GrokChannelSchema = z.object({
     name: z.string().default('grok').describe('渠道名称'),
@@ -480,9 +480,9 @@ export const schemaCategories = {
     '基础设定': ['bot'],
     'AI渠道': ['Channels'],
     'AI角色': ['roles'],
-    'AI设定': ['AI', 'TavilyMCP', 'mimic', 'ActiveChat'],
+    'AI设定': ['AI', 'TavilyMCP', 'CliProxyMedia', 'mimic', 'ActiveChat'],
     '戳一戳': ['poke'],
-    '图片功能': ['CliProxyMedia', 'ImageChannels', 'EditImage', 'nai', 'pixiv', 'r18', 'summary', 'SearchImage', 'cool', 'teatime', 'EmojiThief'],
+    '图片功能': ['ImageChannels', 'EditImage', 'nai', 'pixiv', 'r18', 'summary', 'SearchImage', 'cool', 'teatime', 'EmojiThief'],
     '经济系统': ['economy'],
     '其他功能': ['60sNews', 'AutoCleanup', 'forwardMessage', 'groupnotice', 'repeat', 'recall', 'bilicookie', 'VoxCPMVoice', 'reminderTask'],
 };
@@ -495,7 +495,7 @@ export const schemaLabels = {
     'ActiveChat': '主动聊天',
     'AutoCleanup': '自动清理',
     'Channels': 'AI 渠道管理',
-    'CliProxyMedia': 'CLIProxyAPI Media Gateway',
+    'CliProxyMedia': 'CLIProxyAPI 媒体网关',
     'ImageChannels': '生图渠道管理',
     'EditImage': '图片编辑',
     'EmojiThief': '表情偷取',
