@@ -137,12 +137,12 @@ export class GrokVideo extends plugin {
     await e.react(124);
 
     try {
-      const imageUrls = (await getImg(e, true, false)) || [];
+      const imageRefs = (await getImg(e, true, true)) || [];
       const config = Setting.getConfig("CliProxyMedia");
       const result = await generateGrokVideoAndWait(
         {
           prompt,
-          imageUrls,
+          imageUrls: imageRefs,
           duration: options.duration,
           aspectRatio: options.aspectRatio,
           resolution: options.resolution,
