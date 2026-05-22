@@ -144,15 +144,15 @@ const ImageOpenAIChannelSchema = z.object({
 });
 
 export const CliProxyMediaSchema = z.object({
-    baseURL: z.string().default('http://127.0.0.1:8317/v1').describe('网关地址|CLIProxyAPI 的 /v1 接口地址'),
-    apiKey: z.string().default('').describe('网关密钥|#textarea|CLIProxyAPI 的 Bearer API Key；网关未启用鉴权时可留空'),
-    imageModel: z.string().default('grok-imagine-image').describe('普通生图模型|CPA 前端 Grok 分组暴露的模型名，例如 grok-imagine-image'),
-    imageQualityModel: z.string().default('grok-imagine-image-quality').describe('高质量生图模型|CPA 前端 Grok 分组暴露的模型名，例如 grok-imagine-image-quality'),
-    videoModel: z.string().default('grok-imagine-video').describe('视频生成模型|CPA 前端 Grok 分组暴露的模型名，例如 grok-imagine-video'),
+    baseURL: z.string().default('http://127.0.0.1:8317/v1').describe('Grok 网关地址|本地 Grok OAuth 网关的 /v1 接口地址'),
+    apiKey: z.string().default('').describe('Grok 网关密钥|#textarea|本地 Grok OAuth 网关的 Bearer API Key；网关未启用鉴权时可留空'),
+    imageModel: z.string().default('grok-imagine-image').describe('普通生图模型|用于 #gi 和 #i 的 Grok 图片模型，例如 grok-imagine-image'),
+    imageQualityModel: z.string().default('grok-imagine-image-quality').describe('高质量生图模型|#gi 使用 pro/quality/hd/high 参数时调用的 Grok 图片模型'),
+    videoModel: z.string().default('grok-imagine-video').describe('视频生成模型|用于 #gv 的 Grok 视频模型，例如 grok-imagine-video'),
     pollIntervalMs: z.number().int().min(1000).default(5000).describe('视频轮询间隔|单位毫秒，用于查询 Grok 视频生成结果'),
     timeoutMs: z.number().int().min(30000).default(900000).describe('视频等待超时|单位毫秒，超过后停止等待视频生成'),
     preferNativeVideo: z.boolean().default(true).describe('优先原生视频接口|开启后使用 /videos/generations，可透传 1080p 等 xAI 原生参数'),
-}).describe('CLIProxyAPI 媒体网关');
+}).describe('Grok 媒体网关');
 
 const GrokChannelSchema = z.object({
     name: z.string().default('grok').describe('渠道名称'),
@@ -495,7 +495,7 @@ export const schemaLabels = {
     'ActiveChat': '主动聊天',
     'AutoCleanup': '自动清理',
     'Channels': 'AI 渠道管理',
-    'CliProxyMedia': 'CLIProxyAPI 媒体网关',
+    'CliProxyMedia': 'Grok 媒体网关',
     'ImageChannels': '生图渠道管理',
     'EditImage': '图片编辑',
     'EmojiThief': '表情偷取',
