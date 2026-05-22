@@ -1,10 +1,96 @@
-import { grokRequest } from "../lib/AIUtils/GrokClient.js";
+import { generateGrokImage } from "../lib/AIUtils/cliProxyMediaClient.js";
 import { getImg } from "../lib/utils.js";
 import Setting from "../lib/setting.js";
+
+const ASPECT_RATIOS = new Set([
+  "auto",
+  "1:1",
+  "16:9",
+  "9:16",
+  "4:3",
+  "3:4",
+  "3:2",
+  "2:3",
+  "square",
+  "landscape",
+  "portrait",
+]);
+
+function normalizeAspectRatio(token) {
+  if (token === "square") return "1:1";
+  if (token === "landscape") return "16:9";
+  if (token === "portrait") return "9:16";
+  return token;
+}
+
+function clampCount(value) {
+  const count = Number.parseInt(value, 10);
+  if (!Number.isFinite(count)) return 1;
+  return Math.max(1, Math.min(6, count));
+}
+
+function parseImageCommand(rawText) {
+  const options = {
+    aspectRatio: null,
+    resolution: null,
+    n: 1,
+    quality: false,
+  };
+  const promptParts = [];
+
+  for (const part of `${rawText || ""}`.split(/\s+/)) {
+    const token = part.trim();
+    if (!token) continue;
+
+    const lower = token.toLowerCase();
+    const countMatch = lower.match(/^(?:--)?(?:n|count)=(\d+)$/);
+    if (countMatch) {
+      options.n = clampCount(countMatch[1]);
+      continue;
+    }
+
+    if (ASPECT_RATIOS.has(lower)) {
+      options.aspectRatio = normalizeAspectRatio(lower);
+      continue;
+    }
+
+    if (["pro", "quality", "hd", "high"].includes(lower)) {
+      options.quality = true;
+      continue;
+    }
+
+    if (["fast", "standard"].includes(lower)) {
+      options.quality = false;
+      continue;
+    }
+
+    if (["1k", "2k"].includes(lower)) {
+      options.resolution = lower;
+      continue;
+    }
+
+    promptParts.push(token);
+  }
+
+  return {
+    prompt: promptParts.join(" ").trim(),
+    options,
+  };
+}
+
+function toImageReferences(images = []) {
+  return images
+    .filter((image) => image?.base64)
+    .map((image) => ({
+      base64: image.base64,
+      mimeType: image.mimeType || "image/png",
+    }));
+}
+
 export class GrokImage extends plugin {
   constructor() {
     super({
-      name: "Grok图片编辑",
+      name: "Grok Image",
       event: "message",
       priority: 1135,
     });
@@ -14,102 +100,36 @@ export class GrokImage extends plugin {
     const match = e.msg.match(/^#gi\s*(.+)/);
     if (!match) return false;
 
-    const prompt = match[1].trim();
+    const { prompt, options } = parseImageCommand(match[1]);
     if (!prompt) {
-      return false;
-    }
-    const imgBase64List = await getImg(e, true, true);
-
-    const channelsConfig = Setting.getConfig("Channels");
-    const grokList = channelsConfig?.grok || [];
-    const grokChannel = grokList[Math.floor(Math.random() * grokList.length)];
-
-    if (!grokChannel || !grokChannel.sso) {
-      return false;
+      await e.reply("Grok image prompt is required.", true, { recallMsg: 10 });
+      return true;
     }
 
     await e.react(124);
+
     try {
-      let messages = [];
+      const imgBase64List = (await getImg(e, true, true)) || [];
+      const config = Setting.getConfig("CliProxyMedia");
+      const result = await generateGrokImage(
+        {
+          prompt,
+          images: toImageReferences(imgBase64List),
+          aspectRatio: options.aspectRatio,
+          resolution: options.resolution,
+          n: options.n,
+          quality: options.quality,
+          responseFormat: "b64_json",
+        },
+        config
+      );
 
-      if (imgBase64List && imgBase64List.length > 0) {
-        const img = imgBase64List[0];
-        messages = [
-          {
-            role: "user",
-            content: [
-              {
-                type: "image_url",
-                image_url: { url: `data:${img.mimeType};base64,${img.base64}` },
-              },
-              { type: "text", text: prompt },
-            ],
-          },
-        ];
-      } else {
-        messages = [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ];
-      }
-
-      const grokConfig = {
-        sso: grokChannel.sso,
-        supersso: grokChannel.supersso,
-        cf_clearance: grokChannel.cf_clearance,
-        x_statsig_id: grokChannel.x_statsig_id,
-        temporary: grokChannel.temporary !== false,
-        dynamic_statsig: grokChannel.dynamic_statsig !== false,
-      };
-
-      const request = {
-        model: imgBase64List && imgBase64List.length > 0 ? "auto" : "grok-imagine-image",
-        messages: messages,
-      };
-
-      const result = await grokRequest(request, grokConfig, e);
-
-      if (!result || typeof result === "string") {
-        await e.reply(`图片处理失败: ${result || "未知错误"}`, 10, true);
-        return true;
-      }
-
-      const replyMessages = [];
-
-      if (result.text && result.text.trim()) {
-        replyMessages.push(result.text);
-      }
-
-      if (result.images && result.images.length > 0) {
-        for (const image of result.images) {
-          if (image.localPath) {
-            replyMessages.push(segment.image(image.localPath));
-          } else if (image.url) {
-            replyMessages.push(segment.image(image.url));
-          }
-        }
-      }
-
-      if (result.videos && result.videos.length > 0) {
-        for (const video of result.videos) {
-          if (video.localPath) {
-            replyMessages.push(segment.video(video.localPath));
-          } else if (video.url) {
-            replyMessages.push(`视频: ${video.url}`);
-          }
-        }
-      }
-
-      if (replyMessages.length > 0) {
-        await e.reply(replyMessages);
-      } else {
-        await e.reply("处理完成，但未返回有效内容", 10, true);
-      }
+      await e.reply(result.buffers.map((buffer) => segment.image(buffer)));
     } catch (error) {
-      logger.error("[GrokImage] 处理图片时出错:", error);
-      await e.reply(`图片处理出错: ${error.message}`, 10, true);
+      logger.error("[GrokImage] CLIProxyAPI image request failed", error);
+      await e.reply(`Grok image failed: ${error.message}`, true, {
+        recallMsg: 10,
+      });
     }
 
     return true;

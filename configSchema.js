@@ -143,6 +143,17 @@ const ImageOpenAIChannelSchema = z.object({
     model: z.string().default('gpt-image-2').describe('生图模型'),
 });
 
+export const CliProxyMediaSchema = z.object({
+    baseURL: z.string().default('http://127.0.0.1:8317/v1').describe('Base URL|CLIProxyAPI /v1 endpoint'),
+    apiKey: z.string().default('').describe('API Key|#textarea|Bearer key for CLIProxyAPI, empty if disabled by gateway'),
+    imageModel: z.string().default('grok-imagine-image').describe('Image model'),
+    imageQualityModel: z.string().default('grok-imagine-image-quality').describe('Quality image model'),
+    videoModel: z.string().default('grok-imagine-video').describe('Video model'),
+    pollIntervalMs: z.number().int().min(1000).default(5000).describe('Video poll interval ms'),
+    timeoutMs: z.number().int().min(30000).default(900000).describe('Video timeout ms'),
+    preferNativeVideo: z.boolean().default(true).describe('Use native /videos/generations for xAI video'),
+}).describe('CLIProxyAPI Media Gateway');
+
 const GrokChannelSchema = z.object({
     name: z.string().default('grok').describe('渠道名称'),
     model: z.string().default('auto').describe('模型名称'),
@@ -440,6 +451,7 @@ export const configSchema = {
     'ActiveChat': ActiveChatSchema,
     'AutoCleanup': AutoCleanupSchema,
     'Channels': ChannelsSchema,
+    'CliProxyMedia': CliProxyMediaSchema,
     'ImageChannels': ImageChannelsSchema,
     'EditImage': EditImageSchema,
     'EmojiThief': EmojiThiefSchema,
@@ -470,7 +482,7 @@ export const schemaCategories = {
     'AI角色': ['roles'],
     'AI设定': ['AI', 'TavilyMCP', 'mimic', 'ActiveChat'],
     '戳一戳': ['poke'],
-    '图片功能': ['ImageChannels', 'EditImage', 'nai', 'pixiv', 'r18', 'summary', 'SearchImage', 'cool', 'teatime', 'EmojiThief'],
+    '图片功能': ['CliProxyMedia', 'ImageChannels', 'EditImage', 'nai', 'pixiv', 'r18', 'summary', 'SearchImage', 'cool', 'teatime', 'EmojiThief'],
     '经济系统': ['economy'],
     '其他功能': ['60sNews', 'AutoCleanup', 'forwardMessage', 'groupnotice', 'repeat', 'recall', 'bilicookie', 'VoxCPMVoice', 'reminderTask'],
 };
@@ -483,6 +495,7 @@ export const schemaLabels = {
     'ActiveChat': '主动聊天',
     'AutoCleanup': '自动清理',
     'Channels': 'AI 渠道管理',
+    'CliProxyMedia': 'CLIProxyAPI Media Gateway',
     'ImageChannels': '生图渠道管理',
     'EditImage': '图片编辑',
     'EmojiThief': '表情偷取',
