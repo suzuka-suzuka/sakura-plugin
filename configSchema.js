@@ -87,6 +87,7 @@ export const AISchema = z.object({
     trustAICommand: z.boolean().default(false).describe('完全信任AI|开启后AI调用的全部命令均直接执行，无需用户确认且无视白名单'),
     enableMarkdownProcess: z.boolean().default(true).describe('处理Markdown消息|开启后会对Markdown消息进行处理（短文本去除格式、长文本转图片），关闭则直接原样发送'),
     markdownPlainTextLimit: z.number().int().min(0).default(300).describe('Markdown纯文本字数阈值|开启Markdown处理后，低于此字数的消息会去除Markdown格式以纯文本发送，超过则渲染为图片'),
+    markdownSplitImageLimit: z.number().int().min(0).default(0).describe('Markdown分图阈值|大于0且Markdown长度达到此字数时，尝试拆成两张图片发送；0表示关闭'),
 }).describe('AI 对话设定');
 
 export const TavilyMCPSchema = z.object({
