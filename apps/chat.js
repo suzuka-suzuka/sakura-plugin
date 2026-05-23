@@ -82,7 +82,30 @@ export class AIChat extends plugin {
       }
     }
 
-    const matchedProfile = config.profiles.find(p => textToMatch.startsWith(p.prefix))
+    const isAtBot = e.message?.some(m => m.type === "at" && String(m.qq) === String(e.self_id))
+
+    let isReplyToBot = false
+    const replyPart = e.message?.find(m => m.type === "reply")
+    if (replyPart && e.group && typeof e.group.getChatHistory === "function") {
+      try {
+        let history
+        if (e.source && e.source.seq) {
+          history = await e.group.getChatHistory(e.source.seq, 1)
+        } else if (replyPart.id) {
+          history = await e.group.getChatHistory(replyPart.id, 1)
+        }
+        const origSender = history?.[0]?.sender?.user_id
+        isReplyToBot = String(origSender) === String(e.self_id)
+      } catch (err) {
+        logger.debug(`[Chat] 检查回复目标失败: ${err.message}`)
+      }
+    }
+
+    const matchedProfile = config.profiles.find(p =>
+      textToMatch.startsWith(p.prefix) ||
+      (p.atBot && isAtBot) ||
+      (p.replyToBot && isReplyToBot)
+    )
 
     if (!matchedProfile) {
       return false
@@ -100,7 +123,14 @@ export class AIChat extends plugin {
       }
     }
 
-    let query = textToMatch.substring(prefix.length).trim()
+    let query
+    if (textToMatch.startsWith(prefix)) {
+      query = textToMatch.substring(prefix.length).trim()
+    } else if (isAtBot) {
+      query = messageText.replace(new RegExp(`@${e.self_id}`, "g"), "").trim()
+    } else {
+      query = messageText
+    }
 
     if (!query) {
       return false

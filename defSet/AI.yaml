@@ -5,6 +5,8 @@ profiles:
     GroupContext: false
     History: true
     Tool: true
+    atBot: false
+    replyToBot: false
 groupContextLength: 20
 enableUserLock: false
 requirePermission: false
