@@ -5,7 +5,7 @@ const configSchema = {
     {
       name: "图片功能",
       icon: "🖼️",
-      configs: ["cool", "teatime", "EmojiThief", "summary", "pixiv", "r18", "EditImage", "tenor"],
+      configs: ["cool", "teatime", "EmojiThief", "summary", "pixiv", "r18", "jm", "EditImage", "tenor"],
     },
     {
       name: "AI渠道",
@@ -57,6 +57,7 @@ const configSchema = {
     EmojiThief: "表情包小偷",
     forwardMessage: "消息转发",
     menu: "菜单",
+    jm: "禁漫下载",
     mimic: "伪人模式",
     pixiv: "P站功能",
     poke: "戳一戳",
@@ -105,6 +106,9 @@ const configSchema = {
     "recall.Groups": { label: "启用群", type: "groupSelect" },
     "ActiveChat.Groups": { label: "启用群", type: "groupSelect" },
     "r18.enable": { label: "启用群", type: "groupSelect", help: "影响所有图片功能" },
+
+    "jm.baseDir": { label: "下载目录", type: "text", help: "jmcomic 漫画存放目录", path: "dir_rule.base_dir" },
+    "jm.pdfDir": { label: "PDF存储目录", type: "text", help: "PDF 文件输出目录", path: "plugins.after_album.0.kwargs.pdf_dir" },
 
     "cool.Groups": { label: "启用群", type: "groupSelect" },
     "cool.randomIntervalMin": {
@@ -745,10 +749,13 @@ function getCategories() {
   return configSchema.categories
 }
 
-window.configSchema = configSchema
-window.getFieldSchema = getFieldSchema
-window.getConfigName = getConfigName
-window.getCategories = getCategories
-
-console.log("[Schema] 配置定义加载完成，已暴露到 window 对象")
-console.log("[Schema] 分类数量:", configSchema.categories.length)
+if (typeof window !== "undefined") {
+  window.configSchema = configSchema
+  window.getFieldSchema = getFieldSchema
+  window.getConfigName = getConfigName
+  window.getCategories = getCategories
+  console.log("[Schema] 配置定义加载完成，已暴露到 window 对象")
+  console.log("[Schema] 分类数量:", configSchema.categories.length)
+} else {
+  globalThis.__configSchema = configSchema
+}

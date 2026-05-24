@@ -4,10 +4,32 @@ import fs from "node:fs"
 import path from "node:path"
 import os from "node:os"
 import { fileURLToPath } from "node:url"
+import { createRequire } from "node:module"
 import setting from "./lib/setting.js"
+
+const require = createRequire(import.meta.url)
+require("./resources/webeditor/schema.js")
+const configSchema = globalThis.__configSchema
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+
+function getByPath(obj, p) {
+  for (const k of p.split('.')) {
+    if (obj == null) return ''
+    obj = obj[k]
+  }
+  return obj ?? ''
+}
+
+function setByPath(obj, p, value) {
+  const parts = p.split('.')
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (obj[parts[i]] == null) obj[parts[i]] = {}
+    obj = obj[parts[i]]
+  }
+  obj[parts[parts.length - 1]] = value
+}
 
 class WebEditor {
   constructor(bot = null) {
@@ -132,23 +154,24 @@ class WebEditor {
       try {
         const defFiles = fs
           .readdirSync(this.defPath)
-          .filter(file => file.endsWith(".yaml"))
-          .map(file => file.replace(".yaml", ""))
+          .filter(file => /\.ya?ml$/.test(file))
+          .map(file => file.replace(/\.ya?ml$/, ""))
 
         defFiles.forEach(name => {
-          const configFile = path.join(this.configPath, `${name}.yaml`)
-          const defFile = path.join(this.defPath, `${name}.yaml`)
+          const ext = fs.existsSync(path.join(this.defPath, `${name}.yaml`)) ? ".yaml" : ".yml"
+          const configFile = path.join(this.configPath, `${name}${ext}`)
+          const defFile = path.join(this.defPath, `${name}${ext}`)
 
           if (!fs.existsSync(configFile) && fs.existsSync(defFile)) {
             fs.copyFileSync(defFile, configFile)
-            console.log(`[sakura] 已从 defSet 复制配置文件: ${name}.yaml`)
+            console.log(`[sakura] 已从 defSet 复制配置文件: ${name}${ext}`)
           }
         })
 
         const files = fs
           .readdirSync(this.configPath)
-          .filter(file => file.endsWith(".yaml"))
-          .map(file => file.replace(".yaml", ""))
+          .filter(file => /\.ya?ml$/.test(file))
+          .map(file => file.replace(/\.ya?ml$/, ""))
         res.json({ success: true, data: files })
       } catch (error) {
         res.json({ success: false, error: error.message })
@@ -186,6 +209,16 @@ class WebEditor {
             return cfg
           }
           config = transformGroups(config)
+        }
+
+        const flatFields = Object.entries(configSchema.fields)
+          .filter(([k, v]) => k.startsWith(name + '.') && v.path)
+        if (flatFields.length) {
+          const yml = setting.getConfig(name) || {}
+          config = {}
+          for (const [key, { path: yamlPath }] of flatFields) {
+            config[key.slice(name.length + 1)] = getByPath(yml, yamlPath)
+          }
         }
 
         res.json({
@@ -231,6 +264,16 @@ class WebEditor {
           }
         }
 
+        const flatFields = Object.entries(configSchema.fields)
+          .filter(([k, v]) => k.startsWith(name + '.') && v.path)
+        if (flatFields.length) {
+          const yml = JSON.parse(JSON.stringify(setting.getConfig(name)))
+          for (const [key, { path: yamlPath }] of flatFields) {
+            setByPath(yml, yamlPath, data[key.slice(name.length + 1)])
+          }
+          data = yml
+        }
+
         const success = setting.setConfig(name, data)
 
         if (success === false) {
@@ -263,7 +306,8 @@ class WebEditor {
     this.app.get("/api/config/:name/raw", (req, res) => {
       try {
         const { name } = req.params
-        const configFile = path.join(this.configPath, `${name}.yaml`)
+        let configFile = path.join(this.configPath, `${name}.yaml`)
+        if (!fs.existsSync(configFile)) configFile = path.join(this.configPath, `${name}.yml`)
 
         if (fs.existsSync(configFile)) {
           const content = fs.readFileSync(configFile, "utf8")
@@ -280,9 +324,11 @@ class WebEditor {
       try {
         const { name } = req.params
         const { content } = req.body
-        const configFile = path.join(this.configPath, `${name}.yaml`)
 
         YAML.parse(content)
+
+        let configFile = path.join(this.configPath, `${name}.yaml`)
+        if (!fs.existsSync(configFile)) configFile = path.join(this.configPath, `${name}.yml`)
 
         fs.writeFileSync(configFile, content, "utf8")
 

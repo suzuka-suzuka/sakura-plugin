@@ -1,0 +1,17 @@
+dir_rule:
+  base_dir: /home/USER/jmcomic
+
+download:
+  cache: true
+  image:
+    decode: true
+  threading:
+    image: 10
+    photo: 2
+
+plugins:
+  after_album:
+    - plugin: img2pdf
+      kwargs:
+        pdf_dir: /home/USER/jmcomic/pdf
+        filename_rule: Aid
