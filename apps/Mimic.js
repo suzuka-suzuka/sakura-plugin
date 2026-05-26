@@ -337,6 +337,6 @@ export class Mimic extends plugin {
   }
 
   async handleToolConfirmCallback() {
-    resolveToolConfirmation(this);
+    await resolveToolConfirmation(this);
   }
 }

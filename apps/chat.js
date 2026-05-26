@@ -548,6 +548,6 @@ export class AIChat extends plugin {
   }
 
   async handleToolConfirmCallback() {
-    resolveToolConfirmation(this);
+    await resolveToolConfirmation(this);
   }
 }
