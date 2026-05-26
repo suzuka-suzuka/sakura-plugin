@@ -14,6 +14,42 @@ const DOWNLOAD_TIMEOUT_MS = 60_000;
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36";
 
+function getFileSize(filePath) {
+  try {
+    return fs.existsSync(filePath) ? fs.statSync(filePath).size : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function parseContentRange(header) {
+  if (!header) return null;
+
+  const rangeMatch = String(header).match(/^bytes\s+(\d+)-(\d+)\/(\d+|\*)$/i);
+  if (rangeMatch) {
+    return {
+      start: Number(rangeMatch[1]),
+      end: Number(rangeMatch[2]),
+      total: rangeMatch[3] === "*" ? null : Number(rangeMatch[3]),
+    };
+  }
+
+  const unsatisfiedMatch = String(header).match(/^bytes\s+\*\/(\d+)$/i);
+  if (unsatisfiedMatch) {
+    return {
+      unsatisfied: true,
+      total: Number(unsatisfiedMatch[1]),
+    };
+  }
+
+  return null;
+}
+
+function parseContentLength(header) {
+  const value = Number(header);
+  return Number.isFinite(value) && value >= 0 ? value : null;
+}
+
 const TEMP_DIR = path.join(plugindata, "bilibili_temp");
 
 let lastVideoSentTimestamp = 0;
@@ -435,10 +471,15 @@ export class bilibili extends plugin {
     };
 
     try {
-      await Promise.all([
+      const downloadResults = await Promise.allSettled([
         this.downloadFile(urls.videoUrl, videoPath, "视频流"),
         this.downloadFile(urls.audioUrl, audioPath, "音频流"),
       ]);
+
+      const failedDownload = downloadResults.find((result) => result.status === "rejected");
+      if (failedDownload) {
+        throw failedDownload.reason;
+      }
 
       await this.mergeWithFfmpeg(videoPath, audioPath, outputPath);
 
@@ -464,24 +505,51 @@ export class bilibili extends plugin {
     for (let attempt = 1; attempt <= DOWNLOAD_RETRIES; attempt++) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
+      let resumeFrom = getFileSize(destPath);
 
       try {
-        // 清理上一次失败留下的不完整文件，避免 ffmpeg 读取坏文件。
-        if (fs.existsSync(destPath)) {
-          fs.unlinkSync(destPath);
+        const headers = {
+          Cookie: BILI_COOKIE,
+          "User-Agent": USER_AGENT,
+          Referer: "https://www.bilibili.com",
+          Origin: "https://www.bilibili.com",
+          Accept: "*/*",
+          "Accept-Encoding": "identity",
+        };
+
+        if (resumeFrom > 0) {
+          headers.Range = `bytes=${resumeFrom}-`;
+          logger.info(`${label}尝试断点续传: 已下载 ${resumeFrom} bytes`);
         }
 
         const response = await fetch(url, {
           signal: controller.signal,
-          headers: {
-            Cookie: BILI_COOKIE,
-            "User-Agent": USER_AGENT,
-            Referer: "https://www.bilibili.com",
-            Origin: "https://www.bilibili.com",
-            Accept: "*/*",
-            Range: "bytes=0-",
-          },
+          headers,
         });
+
+        if (response.status === 416 && resumeFrom > 0) {
+          const contentRange = parseContentRange(response.headers.get("content-range"));
+          if (contentRange?.unsatisfied && contentRange.total != null && resumeFrom === contentRange.total) {
+            logger.info(`${label}本地临时文件已完整: ${resumeFrom}/${contentRange.total} bytes`);
+            return;
+          }
+
+          try {
+            if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
+          } catch {
+          }
+          throw new Error("断点续传位置无效，已清理临时文件并准备重下");
+        }
+
+        if (resumeFrom > 0 && response.status === 200) {
+          // 服务器/CDN 忽略 Range 时只能从头重下，否则 append 会得到坏文件。
+          logger.warn(`${label}服务器未支持断点续传，本次改为从头下载`);
+          try {
+            if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
+          } catch {
+          }
+          resumeFrom = 0;
+        }
 
         if (!response.ok) {
           throw new Error(`下载失败: HTTP ${response.status} ${response.statusText}`);
@@ -491,29 +559,58 @@ export class bilibili extends plugin {
           throw new Error("下载失败: 响应体为空");
         }
 
-        const readable = Readable.fromWeb(response.body);
-        const fileStream = fs.createWriteStream(destPath);
+        const isResume = resumeFrom > 0 && response.status === 206;
+        let expectedTotal = null;
 
-        // 不能使用 finished(Readable.fromWeb(...).pipe(fileStream))。
-        // Node 的 pipe 不会自动处理源 Readable 的 error 事件，B站 CDN 断流时
-        // undici 会在源流上 emit error: TypeError: terminated / ECONNRESET，
-        // 若无人监听就会触发 Unhandled 'error' event 并导致整个进程退出。
-        // pipeline 会同时监听源和目标流错误，并把错误转成 Promise reject。
+        if (isResume) {
+          const contentRange = parseContentRange(response.headers.get("content-range"));
+          if (!contentRange || contentRange.unsatisfied) {
+            throw new Error("断点续传失败: 响应缺少有效 Content-Range");
+          }
+
+          if (contentRange.start !== resumeFrom) {
+            try {
+              if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
+            } catch {
+            }
+            throw new Error(
+              `断点续传位置不匹配: 本地=${resumeFrom}, 服务端=${contentRange.start}`
+            );
+          }
+
+          expectedTotal = contentRange.total;
+        } else {
+          const contentLength = parseContentLength(response.headers.get("content-length"));
+          expectedTotal = contentLength;
+        }
+
+        const readable = Readable.fromWeb(response.body);
+        const fileStream = fs.createWriteStream(destPath, {
+          flags: isResume ? "a" : "w",
+        });
+
+        // pipeline 会监听源/目标流的 error。B站 CDN 断流时，undici 抛出的
+        // TypeError: terminated / ECONNRESET 会变成 Promise reject，进入重试逻辑。
         await pipeline(readable, fileStream);
+
+        const finalSize = getFileSize(destPath);
+        if (expectedTotal != null && finalSize < expectedTotal) {
+          throw new Error(`下载不完整: ${finalSize}/${expectedTotal} bytes`);
+        }
+
+        if (isResume) {
+          logger.info(`${label}断点续传完成: ${finalSize}${expectedTotal != null ? `/${expectedTotal}` : ""} bytes`);
+        }
 
         return;
       } catch (error) {
         lastError = error;
         const isAbort = error?.name === "AbortError";
         const causeCode = error?.cause?.code;
+        const currentSize = getFileSize(destPath);
         logger.warn(
-          `${label}下载失败，第 ${attempt}/${DOWNLOAD_RETRIES} 次: ${error?.message || error}${causeCode ? ` (${causeCode})` : ""}`
+          `${label}下载失败，第 ${attempt}/${DOWNLOAD_RETRIES} 次: ${error?.message || error}${causeCode ? ` (${causeCode})` : ""}，已保留 ${currentSize} bytes 用于续传`
         );
-
-        try {
-          if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
-        } catch {
-        }
 
         if (attempt >= DOWNLOAD_RETRIES) {
           throw new Error(
