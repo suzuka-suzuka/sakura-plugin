@@ -2,13 +2,17 @@ import { exec } from "child_process";
 import fs from "fs";
 import path from "path";
 import { Readable } from "stream";
-import { finished } from "stream/promises";
+import { pipeline } from "stream/promises";
 import setting from "../lib/setting.js";
 import { plugindata } from "../lib/path.js";
 
 const FFMPEG_PATH = "ffmpeg";
 
 const MAX_VIDEO_DURATION = 600;
+const DOWNLOAD_RETRIES = 3;
+const DOWNLOAD_TIMEOUT_MS = 60_000;
+const USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36";
 
 const TEMP_DIR = path.join(plugindata, "bilibili_temp");
 
@@ -345,15 +349,34 @@ export class bilibili extends plugin {
       const response = await fetch(url, {
         headers: {
           Cookie: BILI_COOKIE,
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
-          Referer: "https://www.bilibili.com",
+          "User-Agent": USER_AGENT,
+          Referer: `https://www.bilibili.com/video/${bvId}`,
+          Origin: "https://www.bilibili.com",
+          Accept: "application/json, text/plain, */*",
         },
       });
-      const json = await response.json();
+
+      const text = await response.text();
+      let json;
+      try {
+        json = JSON.parse(text);
+      } catch {
+        logger.error(
+          `API获取播放地址返回非JSON: status=${response.status}, content-type=${response.headers.get("content-type")}, body=${text.slice(0, 300)}`
+        );
+        return null;
+      }
+
       if (json.code === 0) {
-        const dash = json.data.dash;
-        const availableVideos = dash.video;
+        const dash = json.data?.dash;
+        const availableVideos = dash?.video || [];
+        const availableAudios = dash?.audio || [];
+
+        if (availableVideos.length === 0 || availableAudios.length === 0) {
+          logger.error("API播放地址数据不完整，缺少视频流或音频流");
+          return null;
+        }
+
         const availableQns = [
           ...new Set(availableVideos.map((v) => v.id)),
         ].sort((a, b) => b - a);
@@ -369,14 +392,25 @@ export class bilibili extends plugin {
           }
         }
 
+        if (!selectedVideo?.baseUrl && !selectedVideo?.base_url) {
+          logger.error("API播放地址数据不完整，视频流缺少 baseUrl");
+          return null;
+        }
+
+        const selectedAudio = availableAudios[0];
+        if (!selectedAudio?.baseUrl && !selectedAudio?.base_url) {
+          logger.error("API播放地址数据不完整，音频流缺少 baseUrl");
+          return null;
+        }
+
         logger.info(`目标清晰度: ${targetQn}, 最终选择: ${selectedVideo.id}`);
 
         return {
-          videoUrl: selectedVideo.baseUrl,
-          audioUrl: dash.audio[0].baseUrl,
+          videoUrl: selectedVideo.baseUrl || selectedVideo.base_url,
+          audioUrl: selectedAudio.baseUrl || selectedAudio.base_url,
         };
       }
-      logger.error(`API获取播放地址失败: ${json.message}`);
+      logger.error(`API获取播放地址失败: code=${json.code}, message=${json.message}`);
       return null;
     } catch (error) {
       logger.error("请求播放地址API时出错:", error);
@@ -385,45 +419,115 @@ export class bilibili extends plugin {
   }
 
   async processAndSendVideo(bvId, urls, e) {
-    const videoPath = path.join(TEMP_DIR, `${bvId}_video.m4s`);
-    const audioPath = path.join(TEMP_DIR, `${bvId}_audio.m4s`);
-    const outputPath = path.join(TEMP_DIR, `${bvId}.mp4`);
+    const taskId = `${bvId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const videoPath = path.join(TEMP_DIR, `${taskId}_video.m4s`);
+    const audioPath = path.join(TEMP_DIR, `${taskId}_audio.m4s`);
+    const outputPath = path.join(TEMP_DIR, `${taskId}.mp4`);
 
     const cleanup = () => {
       [videoPath, audioPath, outputPath].forEach((file) => {
-        if (fs.existsSync(file)) fs.unlinkSync(file);
+        try {
+          if (fs.existsSync(file)) fs.unlinkSync(file);
+        } catch (err) {
+          logger.warn(`清理临时文件失败 ${file}: ${err.message || err}`);
+        }
       });
     };
 
     try {
       await Promise.all([
-        this.downloadFile(urls.videoUrl, videoPath),
-        this.downloadFile(urls.audioUrl, audioPath),
+        this.downloadFile(urls.videoUrl, videoPath, "视频流"),
+        this.downloadFile(urls.audioUrl, audioPath, "音频流"),
       ]);
 
       await this.mergeWithFfmpeg(videoPath, audioPath, outputPath);
 
       await e.reply(segment.video(outputPath));
+
+      // 某些协议端会在 send_group_msg 返回后才继续读取本地文件，
+      // 立即删除可能导致视频上传失败，因此延迟清理。
+      setTimeout(cleanup, 60_000);
     } catch (error) {
-      logger.error(`处理视频 ${bvId} 时出错:`, error.message);
-    } finally {
+      logger.error(`处理视频 ${bvId} 时出错:`, error);
+      try {
+        await e.reply("视频下载失败，可能是 B站 CDN 断开、网络波动或 Cookie 失效。", true);
+      } catch {
+      }
       cleanup();
     }
   }
 
-  async downloadFile(url, destPath) {
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
-        Referer: "https://www.bilibili.com",
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`下载失败: ${response.statusText}`);
+  async downloadFile(url, destPath, label = "文件") {
+    const BILI_COOKIE = this.appconfig.cookie || "";
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= DOWNLOAD_RETRIES; attempt++) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
+
+      try {
+        // 清理上一次失败留下的不完整文件，避免 ffmpeg 读取坏文件。
+        if (fs.existsSync(destPath)) {
+          fs.unlinkSync(destPath);
+        }
+
+        const response = await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            Cookie: BILI_COOKIE,
+            "User-Agent": USER_AGENT,
+            Referer: "https://www.bilibili.com",
+            Origin: "https://www.bilibili.com",
+            Accept: "*/*",
+            Range: "bytes=0-",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`下载失败: HTTP ${response.status} ${response.statusText}`);
+        }
+
+        if (!response.body) {
+          throw new Error("下载失败: 响应体为空");
+        }
+
+        const readable = Readable.fromWeb(response.body);
+        const fileStream = fs.createWriteStream(destPath);
+
+        // 不能使用 finished(Readable.fromWeb(...).pipe(fileStream))。
+        // Node 的 pipe 不会自动处理源 Readable 的 error 事件，B站 CDN 断流时
+        // undici 会在源流上 emit error: TypeError: terminated / ECONNRESET，
+        // 若无人监听就会触发 Unhandled 'error' event 并导致整个进程退出。
+        // pipeline 会同时监听源和目标流错误，并把错误转成 Promise reject。
+        await pipeline(readable, fileStream);
+
+        return;
+      } catch (error) {
+        lastError = error;
+        const isAbort = error?.name === "AbortError";
+        const causeCode = error?.cause?.code;
+        logger.warn(
+          `${label}下载失败，第 ${attempt}/${DOWNLOAD_RETRIES} 次: ${error?.message || error}${causeCode ? ` (${causeCode})` : ""}`
+        );
+
+        try {
+          if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
+        } catch {
+        }
+
+        if (attempt >= DOWNLOAD_RETRIES) {
+          throw new Error(
+            `${label}下载失败，已重试 ${DOWNLOAD_RETRIES} 次: ${isAbort ? "下载超时" : (error?.message || error)}`
+          );
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+      } finally {
+        clearTimeout(timeout);
+      }
     }
-    const fileStream = fs.createWriteStream(destPath);
-    await finished(Readable.fromWeb(response.body).pipe(fileStream));
+
+    throw lastError || new Error(`${label}下载失败`);
   }
 
   mergeWithFfmpeg(videoPath, audioPath, outputPath) {
