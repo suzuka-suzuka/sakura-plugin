@@ -31,6 +31,7 @@ export const commandNames = {
     "GetImagePlugin.handleImage": "来张萝莉图",
     "GrokImage.editImage": "gi（Grok图片编辑）",
     "GrokVideo.generateVideo": "gv（Grok视频生成）",
+    "BiliUidAnalyzer.queryUid": "B站UID分析",
     "KeywordReply.添加词条": "添加词条",
     "KeywordReply.删除词条": "删除词条",
     "memesPlugin.memes": "表情包制作",
@@ -213,6 +214,14 @@ export const BilicookieSchema = z.object({
     autoResolve: z.boolean().default(true).describe('自动解析|是否自动解析群内的B站链接'),
 }).describe('B站解析');
 
+export const BiliUidSchema = z.object({
+    pageSize: z.number().int().min(1).max(75).default(75).describe('分页大小|每次从 syrds.pro 接口读取的评论数，建议保持 75'),
+    maxPages: z.number().int().min(0).max(500).default(0).describe('最大页数|0 表示不限制；用于防止超大 UID 查询过久'),
+    concurrency: z.number().int().min(1).max(5).default(3).describe('并发页数|同时请求的分页数量，过高可能触发接口限制'),
+    timeoutMs: z.number().int().min(5000).max(120000).default(30000).describe('请求超时|单次接口请求超时时间，单位毫秒'),
+    aiCommentCharLimit: z.number().int().min(10000).max(200000).default(60000).describe('AI输入上限|评论过长时用于代表性压缩，图片仍展示已抓取评论'),
+}).describe('B站UID分析');
+
 export const CoolSchema = z.object({
     Groups: z.array(z.number()).default([]).describe('启用群号'),
     randomIntervalMin: z.number().default(30).describe('最小间隔(秒)|随机冷却的最小间隔'),
@@ -235,6 +244,7 @@ const defaultCommandCosts = [
     { command: "来张萝莉图", cost: 5 },
     { command: "gi（Grok图片编辑）", cost: 10 },
     { command: "gv（Grok视频生成）", cost: 20 },
+    { command: "B站UID分析", cost: 5 },
     { command: "添加词条", cost: 50 },
     { command: "删除词条", cost: 50 },
     { command: "表情包制作", cost: 5 },
@@ -457,6 +467,7 @@ export const configSchema = {
     'EditImage': EditImageSchema,
     'EmojiThief': EmojiThiefSchema,
     'VoxCPMVoice': VoxCPMVoiceSchema,
+    'BiliUid': BiliUidSchema,
     'bilicookie': BilicookieSchema,
     'cool': CoolSchema,
     'economy': EconomySchema,
@@ -485,7 +496,7 @@ export const schemaCategories = {
     '戳一戳': ['poke'],
     '图片功能': ['ImageChannels', 'EditImage', 'nai', 'pixiv', 'r18', 'summary', 'SearchImage', 'cool', 'teatime', 'EmojiThief'],
     '经济系统': ['economy'],
-    '其他功能': ['60sNews', 'AutoCleanup', 'forwardMessage', 'groupnotice', 'repeat', 'recall', 'bilicookie', 'VoxCPMVoice', 'reminderTask'],
+    '其他功能': ['60sNews', 'AutoCleanup', 'forwardMessage', 'groupnotice', 'repeat', 'recall', 'bilicookie', 'BiliUid', 'VoxCPMVoice', 'reminderTask'],
 };
 
 export const schemaLabels = {
@@ -501,6 +512,7 @@ export const schemaLabels = {
     'EditImage': '图片编辑',
     'EmojiThief': '表情偷取',
     'VoxCPMVoice': 'VoxCPM 语音生成',
+    'BiliUid': 'B站UID分析',
     'bilicookie': 'B站解析',
     'cool': '随机冷却',
     'economy': '经济系统',
