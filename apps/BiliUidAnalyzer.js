@@ -647,7 +647,7 @@ function buildReportHtml({ report, aiReport }, profile) {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 7px 10px;
+      padding: 6px 10px 6px 6px;
       border-radius: 999px;
       background: #29313a;
       color: #f7fbfc;
@@ -655,12 +655,32 @@ function buildReportHtml({ report, aiReport }, profile) {
       font-size: 19px;
       max-width: 100%;
     }
-    .tag b {
-      color: #8ee5d2;
+    .tag-name {
       font-weight: 800;
+      border-radius: 999px;
+      padding: 4px 10px;
+      color: #f8fbfc;
+      white-space: nowrap;
     }
-    .tag span {
+    .tag.conf-high .tag-name {
+      background: rgba(243, 139, 168, 0.36);
+      border: 1px solid rgba(243, 139, 168, 0.56);
+    }
+    .tag.conf-medium .tag-name {
+      background: rgba(250, 179, 135, 0.34);
+      border: 1px solid rgba(250, 179, 135, 0.54);
+    }
+    .tag.conf-low .tag-name {
+      background: rgba(137, 180, 250, 0.32);
+      border: 1px solid rgba(137, 180, 250, 0.52);
+    }
+    .tag.conf-unknown .tag-name {
+      background: rgba(148, 226, 213, 0.28);
+      border: 1px solid rgba(148, 226, 213, 0.48);
+    }
+    .tag-reason {
       color: #bac5cf;
+      overflow-wrap: anywhere;
     }
     .analysis-grid {
       display: grid;
@@ -723,6 +743,22 @@ function buildReportHtml({ report, aiReport }, profile) {
       font-size: 25px;
       font-weight: 800;
       line-height: 44px;
+    }
+    .ref-badge {
+      display: inline-block;
+      min-width: 28px;
+      height: 28px;
+      margin: 0 2px;
+      padding: 0 7px;
+      border-radius: 7px;
+      background: rgba(243, 139, 168, 0.28);
+      border: 1px solid rgba(243, 139, 168, 0.46);
+      color: #ffdbe6;
+      font-size: 0.82em;
+      line-height: 26px;
+      text-align: center;
+      font-weight: 800;
+      vertical-align: 0.05em;
     }
     .video-title {
       color: #f0f4f7;
@@ -797,7 +833,7 @@ function buildReportHtml({ report, aiReport }, profile) {
         <span>AI 成分总结与标签</span>
         <span class="note">${escHtml(aiReport.inputNote || "")}</span>
       </div>
-      <p class="summary">${escHtml(aiReport.summary || "")}</p>
+      <p class="summary">${renderTextWithRefs(aiReport.summary || "")}</p>
       ${renderTags(aiReport.tags)}
       <div class="analysis-grid">
         ${renderAnalysisCard("成分判断", aiReport.composition)}
@@ -824,8 +860,10 @@ function renderTags(tags) {
   if (!tags.length) return "";
   return `<div class="tags">${tags
     .map(
-      (tag) =>
-        `<div class="tag"><b>${escHtml(tag.name)}</b>${tag.confidence ? `<span>${escHtml(tag.confidence)}</span>` : ""}${tag.reason ? `<span>${escHtml(tag.reason)}</span>` : ""}</div>`
+      (tag) => {
+        const confidenceClass = getTagConfidenceClass(tag.confidence);
+        return `<div class="tag ${confidenceClass}"><b class="tag-name">${escHtml(tag.name)}</b>${tag.reason ? `<span class="tag-reason">${renderTextWithRefs(tag.reason)}</span>` : ""}</div>`;
+      }
     )
     .join("")}</div>`;
 }
@@ -833,9 +871,23 @@ function renderTags(tags) {
 function renderAnalysisCard(title, items) {
   const safeItems = Array.isArray(items) ? items.filter(Boolean) : [];
   const body = safeItems.length
-    ? `<ul>${safeItems.map((item) => `<li>${escHtml(item)}</li>`).join("")}</ul>`
+    ? `<ul>${safeItems.map((item) => `<li>${renderTextWithRefs(item)}</li>`).join("")}</ul>`
     : '<ul><li>暂无</li></ul>';
   return `<div class="analysis-card"><h2>${escHtml(title)}</h2>${body}</div>`;
+}
+
+function getTagConfidenceClass(confidence) {
+  const value = safeString(confidence).toLowerCase();
+  if (value === "高" || value === "high") return "conf-high";
+  if (value === "中" || value === "medium" || value === "mid") return "conf-medium";
+  if (value === "低" || value === "low") return "conf-low";
+  return "conf-unknown";
+}
+
+function renderTextWithRefs(value) {
+  return escHtml(value).replace(/#(\d{1,4})(?![\dA-Za-z_])/g, (_, number) => {
+    return `<span class="ref-badge">${number}</span>`;
+  });
 }
 
 function renderCommentCard(row) {
