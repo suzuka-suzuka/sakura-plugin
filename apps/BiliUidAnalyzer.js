@@ -3,7 +3,7 @@ import Setting from "../lib/setting.js";
 import { getAI } from "../lib/AIUtils/getAI.js";
 
 const UID_COMMAND_RE =
-  /^#?\s*(?:查)?(?:B站|b站|哔哩哔哩|bili)\s*(?:UID|uid|用户|成分)?\s*[:：]?\s*(\d{2,20})(?:\s+[\s\S]*)?$/i;
+  /^#?\s*(?:查)?(?:B站|b站|哔哩哔哩|bili)\s*(?:UID|uid|用户|成分)?\s*[:：]?\s*(\d{2,20})(?:\s*[\s\S]*)?$/i;
 
 const API_BASE = "https://api.syrds.pro/get_replies";
 const SOURCE_SITE = "https://syrds.pro";
@@ -532,27 +532,9 @@ async function renderReportImage(data) {
 }
 
 function getRenderProfile(count) {
-  if (count > 260) {
-    return {
-      width: 1680,
-      scale: 1,
-      columns: 4,
-      density: "ultra",
-    };
-  }
-
-  if (count > 90) {
-    return {
-      width: 1440,
-      scale: 1.15,
-      columns: 3,
-      density: "compact",
-    };
-  }
-
   return {
-    width: 1280,
-    scale: 1.5,
+    width: 1080,
+    scale: 1,
     columns: 2,
     density: "normal",
   };
@@ -571,9 +553,9 @@ function buildReportHtml({ report, aiReport }, profile) {
     :root {
       --columns: ${profile.columns};
       --body-width: ${profile.width}px;
-      --font-size: ${profile.density === "ultra" ? "12px" : profile.density === "compact" ? "13px" : "14px"};
-      --content-font-size: ${profile.density === "ultra" ? "11px" : profile.density === "compact" ? "12px" : "13px"};
-      --gap: ${profile.density === "ultra" ? "10px" : "14px"};
+      --font-size: 25px;
+      --content-font-size: 27px;
+      --gap: 18px;
     }
     * { box-sizing: border-box; }
     body {
@@ -585,71 +567,51 @@ function buildReportHtml({ report, aiReport }, profile) {
     #capture-area {
       width: var(--body-width);
       min-height: 100vh;
-      padding: 26px;
+      padding: 30px 40px;
       background:
         linear-gradient(135deg, rgba(18, 144, 156, 0.18), transparent 28%),
         linear-gradient(315deg, rgba(236, 95, 121, 0.12), transparent 30%),
         #17191d;
     }
     .header {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 20px;
-      align-items: end;
-      padding: 24px;
+      padding: 28px 30px;
       border: 1px solid #303842;
       border-radius: 8px;
       background: #20242a;
     }
     .eyebrow {
       color: #7dd8c6;
-      font-size: 13px;
+      font-size: 18px;
       letter-spacing: 0;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
       font-weight: 700;
     }
-    h1 {
+    h1,
+    .title-peer {
       margin: 0;
-      font-size: ${profile.density === "normal" ? "34px" : "28px"};
-      line-height: 1.16;
+      font-size: 34px;
+      line-height: 1.28;
       letter-spacing: 0;
+      font-weight: 800;
+      color: #f4f7f9;
+      overflow-wrap: anywhere;
+    }
+    .title-peer {
+      margin-top: 4px;
     }
     .header-meta {
-      text-align: right;
+      margin-top: 14px;
       color: #aab4bd;
-      font-size: 13px;
-      line-height: 1.8;
-      white-space: nowrap;
-    }
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: var(--gap);
-      margin: 14px 0;
-    }
-    .stat {
-      min-height: 76px;
-      padding: 14px 16px;
-      border-radius: 8px;
-      border: 1px solid #303842;
-      background: #21262d;
-    }
-    .stat .label {
-      color: #8d98a3;
-      font-size: 12px;
-      margin-bottom: 8px;
-    }
-    .stat .value {
       font-size: 20px;
-      font-weight: 800;
+      line-height: 1.5;
       overflow-wrap: anywhere;
     }
     .section {
       border: 1px solid #303842;
       border-radius: 8px;
       background: #20242a;
-      padding: 18px;
-      margin-top: 14px;
+      padding: 22px;
+      margin-top: 18px;
     }
     .section-title {
       display: flex;
@@ -659,18 +621,18 @@ function buildReportHtml({ report, aiReport }, profile) {
       margin-bottom: 12px;
       color: #f4f7f9;
       font-weight: 800;
-      font-size: 18px;
+      font-size: 25px;
     }
     .note {
       color: #9faab4;
-      font-size: 12px;
+      font-size: 17px;
       font-weight: 500;
       text-align: right;
     }
     .summary {
       margin: 0 0 14px;
       color: #e8edf0;
-      font-size: ${profile.density === "normal" ? "15px" : "13px"};
+      font-size: 25px;
       line-height: 1.7;
       white-space: pre-wrap;
       overflow-wrap: anywhere;
@@ -690,7 +652,7 @@ function buildReportHtml({ report, aiReport }, profile) {
       background: #29313a;
       color: #f7fbfc;
       border: 1px solid #3a4651;
-      font-size: 12px;
+      font-size: 19px;
       max-width: 100%;
     }
     .tag b {
@@ -713,7 +675,7 @@ function buildReportHtml({ report, aiReport }, profile) {
     }
     .analysis-card h2 {
       margin: 0 0 8px;
-      font-size: 14px;
+      font-size: 22px;
       color: #f0c66a;
       letter-spacing: 0;
     }
@@ -726,36 +688,41 @@ function buildReportHtml({ report, aiReport }, profile) {
     }
     li { margin: 5px 0; overflow-wrap: anywhere; }
     .comment-grid {
-      display: grid;
-      grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
-      gap: var(--gap);
-      align-items: start;
+      column-count: var(--columns);
+      column-gap: var(--gap);
     }
     .comment-card {
       min-width: 0;
+      width: 100%;
+      display: inline-block;
+      margin: 0 0 var(--gap);
       border-radius: 8px;
       border: 1px solid #303842;
       background: #20242a;
       overflow: hidden;
       break-inside: avoid;
+      page-break-inside: avoid;
     }
     .comment-head {
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
-      gap: 9px;
+      gap: 14px;
       align-items: start;
-      padding: 10px 12px 6px;
+      padding: 16px 18px 12px;
       border-bottom: 1px solid #2b323b;
     }
     .comment-index {
-      min-width: 30px;
-      padding: 4px 7px;
-      border-radius: 7px;
-      background: #2b5958;
-      color: #dcfffa;
+      min-width: 46px;
+      height: 46px;
+      padding: 0 10px;
+      border-radius: 10px;
+      background: rgba(243, 139, 168, 0.28);
+      color: #ffdbe6;
+      border: 1px solid rgba(243, 139, 168, 0.45);
       text-align: center;
-      font-size: 12px;
+      font-size: 25px;
       font-weight: 800;
+      line-height: 44px;
     }
     .video-title {
       color: #f0f4f7;
@@ -767,11 +734,11 @@ function buildReportHtml({ report, aiReport }, profile) {
     .owner {
       margin-top: 4px;
       color: #9ba7b1;
-      font-size: 12px;
+      font-size: 18px;
       overflow-wrap: anywhere;
     }
     .comment-content {
-      padding: 10px 12px;
+      padding: 16px 18px;
       color: #e2e7eb;
       font-size: var(--content-font-size);
       line-height: 1.58;
@@ -783,9 +750,9 @@ function buildReportHtml({ report, aiReport }, profile) {
       display: flex;
       flex-wrap: wrap;
       gap: 7px;
-      padding: 0 12px 11px;
+      padding: 0 18px 16px;
       color: #aeb8c2;
-      font-size: 11px;
+      font-size: 17px;
     }
     .pill {
       padding: 4px 7px;
@@ -805,7 +772,7 @@ function buildReportHtml({ report, aiReport }, profile) {
     .footer {
       margin-top: 14px;
       color: #87919b;
-      font-size: 12px;
+      font-size: 17px;
       text-align: right;
     }
   </style>
@@ -816,20 +783,13 @@ function buildReportHtml({ report, aiReport }, profile) {
       <div>
         <div class="eyebrow">BILIBILI UID COMMENT REPORT</div>
         <h1>UID ${escHtml(report.uid)} 的评论成分分析</h1>
+        <div class="title-peer">用户名：${escHtml(report.currentName)}</div>
+        <div class="title-peer">曾用名：${escHtml(report.allNames.join("、") || "无")}</div>
       </div>
       <div class="header-meta">
-        <div>当前用户名：${escHtml(report.currentName)}</div>
-        <div>曾用名：${escHtml(report.allNames.join("、") || "无")}</div>
         <div>生成时间：${escHtml(report.generatedAt)}</div>
+        <div>已抓取评论：${formatNum(report.fetchedCount)} 条${report.limitedByMaxPages ? "（达到页数上限）" : ""}</div>
       </div>
-    </section>
-
-    <section class="stats">
-      ${renderStat("公开评论", formatNum(report.reviewNum))}
-      ${renderStat("已抓取", `${formatNum(report.fetchedCount)} 条`)}
-      ${renderStat("分页", `${report.fetchedPages}/${report.totalPages}`)}
-      ${renderStat("数据源", "syrds.pro")}
-      ${renderStat("状态", report.limitedByMaxPages ? "达到页数上限" : "已拉取完毕")}
     </section>
 
     <section class="section">
@@ -860,10 +820,6 @@ function buildReportHtml({ report, aiReport }, profile) {
 </html>`;
 }
 
-function renderStat(label, value) {
-  return `<div class="stat"><div class="label">${escHtml(label)}</div><div class="value">${escHtml(value)}</div></div>`;
-}
-
 function renderTags(tags) {
   if (!tags.length) return "";
   return `<div class="tags">${tags
@@ -887,7 +843,7 @@ function renderCommentCard(row) {
   const link = row.link || "";
   return `<article class="comment-card">
     <div class="comment-head">
-      <div class="comment-index">#${escHtml(row.index)}</div>
+      <div class="comment-index">${escHtml(row.index)}</div>
       <div>
         <div class="video-title">${escHtml(row.title || "无标题")}</div>
         <div class="owner">UP：${escHtml(row.videoOwnerName || "未知")}</div>
