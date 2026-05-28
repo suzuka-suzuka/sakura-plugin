@@ -7,10 +7,12 @@ const UID_COMMAND_RE =
 
 const API_BASE = "https://api.syrds.pro/get_replies";
 const SOURCE_SITE = "https://syrds.pro";
-const DEFAULT_PAGE_SIZE = 75;
-const DEFAULT_CONCURRENCY = 3;
-const DEFAULT_TIMEOUT_MS = 30_000;
-const DEFAULT_AI_CHAR_LIMIT = 60_000;
+const FIRST_PAGE_SIZE = 75;
+const RANDOM_FOLLOWUP_PAGE_COUNT = 5;
+const RANDOM_COMMENTS_PER_PAGE = 5;
+const REQUEST_TIMEOUT_MS = 90_000;
+const REQUEST_RETRIES = 3;
+const AI_COMMENT_CHAR_LIMIT = 60_000;
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36";
 
@@ -23,10 +25,6 @@ export class BiliUidAnalyzer extends plugin {
     });
   }
 
-  get appconfig() {
-    return Setting.getConfig("BiliUid") || {};
-  }
-
   queryUid = Command(
     UID_COMMAND_RE,
     { economy: { command: "B站UID分析", refundOnFalse: true } },
@@ -37,9 +35,8 @@ export class BiliUidAnalyzer extends plugin {
       await e.react?.(124).catch(() => {});
 
       try {
-        const config = normalizeConfig(this.appconfig);
-        const report = await this.fetchUidReport(uid, config);
-        const aiReport = await this.buildAiReport(e, report, config);
+        const report = await this.fetchUidReport(uid);
+        const aiReport = await this.buildAiReport(e, report);
         const imageBuffer = await renderReportImage({
           uid,
           report,
@@ -61,42 +58,42 @@ export class BiliUidAnalyzer extends plugin {
     }
   );
 
-  async fetchUidReport(uid, config) {
-    const pageSize = config.pageSize;
-    const firstPage = await fetchReplyPage(uid, 1, pageSize, config.timeoutMs);
+  async fetchUidReport(uid) {
+    const firstPage = await fetchReplyPage(
+      uid,
+      1,
+      FIRST_PAGE_SIZE,
+      REQUEST_TIMEOUT_MS
+    );
     const totalReviews = Number(firstPage.review_num || 0);
     const totalPagesFromCount = totalReviews
-      ? Math.max(1, Math.ceil(totalReviews / pageSize))
+      ? Math.max(1, Math.ceil(totalReviews / FIRST_PAGE_SIZE))
       : 1;
-    const plannedPages =
-      config.maxPages > 0
-        ? Math.min(totalPagesFromCount, config.maxPages)
-        : totalPagesFromCount;
 
-    const pages = [firstPage];
-    const restPageNums = [];
-    for (let page = 2; page <= plannedPages; page++) {
-      restPageNums.push(page);
+    const sampledRows = normalizeRows(firstPage.data);
+    const sampledPageNums = sampleNumbersInRange(
+      2,
+      totalPagesFromCount,
+      RANDOM_FOLLOWUP_PAGE_COUNT
+    );
+
+    for (const pageNum of sampledPageNums) {
+      const followupPage = await fetchReplyPage(
+        uid,
+        pageNum,
+        FIRST_PAGE_SIZE,
+        REQUEST_TIMEOUT_MS
+      );
+      sampledRows.push(
+        ...sampleArray(normalizeRows(followupPage.data), RANDOM_COMMENTS_PER_PAGE)
+      );
     }
 
-    const restPages = await mapLimit(
-      restPageNums,
-      config.concurrency,
-      (pageNum) => fetchReplyPage(uid, pageNum, pageSize, config.timeoutMs)
-    );
-    pages.push(...restPages);
-
-    await probeExtraPages(uid, pages, config);
-
-    const pagesWithRows = pages.filter((page) => pageRows(page).length > 0);
-    const comments = dedupeComments(
-      pagesWithRows.flatMap((page) => normalizeRows(page.data))
-    );
-    const lastRows = pageRows(pagesWithRows[pagesWithRows.length - 1]);
-    const hitMaxPages =
-      config.maxPages > 0 &&
-      pagesWithRows.length >= config.maxPages &&
-      lastRows.length >= pageSize;
+    const comments = dedupeComments(sampledRows);
+    const samplingNote =
+      totalPagesFromCount > 1
+        ? `采样策略：第 1 页完整 ${FIRST_PAGE_SIZE} 条，后续随机抽 ${sampledPageNums.length} 页，每页随机取 ${RANDOM_COMMENTS_PER_PAGE} 条。`
+        : "采样策略：仅 1 页，已完整抓取。";
 
     return {
       uid: String(firstPage.uid || uid),
@@ -104,18 +101,17 @@ export class BiliUidAnalyzer extends plugin {
       allNames: parseAllNames(firstPage.all_names),
       reviewNum: Math.max(totalReviews, comments.length),
       fetchedCount: comments.length,
-      totalPages: Math.max(totalPagesFromCount, pagesWithRows.length),
-      fetchedPages: pagesWithRows.length,
-      limitedByMaxPages:
-        (config.maxPages > 0 && totalPagesFromCount > config.maxPages) ||
-        hitMaxPages,
+      totalPages: totalPagesFromCount,
+      fetchedPages: 1 + sampledPageNums.length,
+      limitedByMaxPages: false,
+      samplingNote,
       sourceUrl: `${SOURCE_SITE}/uid=${encodeURIComponent(uid)}`,
       generatedAt: formatDateTime(new Date()),
       comments,
     };
   }
 
-  async buildAiReport(e, report, config) {
+  async buildAiReport(e, report) {
     if (!report.comments.length) {
       return {
         summary: "该 UID 暂无可分析的评论数据。",
@@ -127,7 +123,7 @@ export class BiliUidAnalyzer extends plugin {
       };
     }
 
-    const aiInput = buildAiInput(report, config.aiCommentCharLimit);
+    const aiInput = buildAiInput(report, AI_COMMENT_CHAR_LIMIT);
     const prompt = buildAiPrompt(report, aiInput.text);
     const channel = Setting.getConfig("AI")?.appschannel || "default";
 
@@ -172,28 +168,6 @@ export class BiliUidAnalyzer extends plugin {
   }
 }
 
-function normalizeConfig(config = {}) {
-  const pageSize = clampInt(config.pageSize, DEFAULT_PAGE_SIZE, 1, 75);
-  return {
-    pageSize,
-    maxPages: clampInt(config.maxPages, 0, 0, 500),
-    concurrency: clampInt(config.concurrency, DEFAULT_CONCURRENCY, 1, 5),
-    timeoutMs: clampInt(config.timeoutMs, DEFAULT_TIMEOUT_MS, 5_000, 120_000),
-    aiCommentCharLimit: clampInt(
-      config.aiCommentCharLimit,
-      DEFAULT_AI_CHAR_LIMIT,
-      10_000,
-      200_000
-    ),
-  };
-}
-
-function clampInt(value, fallback, min, max) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return fallback;
-  return Math.min(max, Math.max(min, Math.trunc(number)));
-}
-
 async function fetchReplyPage(uid, pageNum, pageSize, timeoutMs) {
   const params = new URLSearchParams({
     uid,
@@ -212,85 +186,44 @@ async function fetchReplyPage(uid, pageNum, pageSize, timeoutMs) {
 }
 
 async function fetchJson(url, timeoutMs) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let lastError = null;
 
-  try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent": USER_AGENT,
-        Accept: "application/json, text/plain, */*",
-        Referer: `${SOURCE_SITE}/`,
-      },
-    });
+  for (let attempt = 1; attempt <= REQUEST_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} ${response.statusText}`);
-    }
-
-    const text = await response.text();
     try {
-      return JSON.parse(text);
-    } catch {
-      throw new Error(`接口返回非 JSON：${text.slice(0, 120)}`);
-    }
-  } finally {
-    clearTimeout(timer);
-  }
-}
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          "User-Agent": USER_AGENT,
+          Accept: "application/json, text/plain, */*",
+          Referer: `${SOURCE_SITE}/`,
+        },
+      });
 
-async function mapLimit(items, limit, worker) {
-  const results = new Array(items.length);
-  let index = 0;
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+      }
 
-  async function run() {
-    while (index < items.length) {
-      const current = index++;
-      results[current] = await worker(items[current], current);
-    }
-  }
-
-  const workers = Array.from(
-    { length: Math.min(limit, items.length) },
-    () => run()
-  );
-  await Promise.all(workers);
-  return results;
-}
-
-async function probeExtraPages(uid, pages, config) {
-  const seenKeys = new Set(
-    pages.flatMap((page) => normalizeRows(page.data).map(getCommentKey))
-  );
-
-  while (true) {
-    const lastRows = pageRows(pages[pages.length - 1]);
-    if (lastRows.length < config.pageSize) return;
-    if (config.maxPages > 0 && pages.length >= config.maxPages) return;
-
-    const nextPageNum = pages.length + 1;
-    const nextPage = await fetchReplyPage(
-      uid,
-      nextPageNum,
-      config.pageSize,
-      config.timeoutMs
-    );
-    const nextRows = normalizeRows(nextPage.data);
-    if (!nextRows.length) return;
-
-    const hasNewRows = nextRows.some((row) => !seenKeys.has(getCommentKey(row)));
-    if (!hasNewRows) return;
-
-    pages.push(nextPage);
-    for (const row of nextRows) {
-      seenKeys.add(getCommentKey(row));
+      const text = await response.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        throw new Error(`接口返回非 JSON：${text.slice(0, 120)}`);
+      }
+    } catch (error) {
+      lastError = error;
+      if (attempt >= REQUEST_RETRIES) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 800 * attempt));
+    } finally {
+      clearTimeout(timer);
     }
   }
-}
 
-function pageRows(page) {
-  return page ? normalizeRows(page.data) : [];
+  throw lastError || new Error("接口请求失败");
 }
 
 function normalizeRows(rows) {
@@ -328,6 +261,29 @@ function getCommentKey(row) {
   return row.link || `${row.bvid}:${row.pubdate}:${row.content}`;
 }
 
+function sampleNumbersInRange(start, end, count) {
+  if (end < start || count <= 0) return [];
+
+  const numbers = [];
+  for (let value = start; value <= end; value++) {
+    numbers.push(value);
+  }
+
+  return sampleArray(numbers, count);
+}
+
+function sampleArray(items, count) {
+  if (!Array.isArray(items) || count <= 0) return [];
+  if (items.length <= count) return [...items];
+
+  const pickedIndexes = new Set();
+  while (pickedIndexes.size < count) {
+    pickedIndexes.add(Math.floor(Math.random() * items.length));
+  }
+
+  return items.filter((_, index) => pickedIndexes.has(index));
+}
+
 function parseAllNames(value) {
   if (Array.isArray(value)) return value.map(safeString).filter(Boolean);
   if (typeof value !== "string") return [];
@@ -352,7 +308,7 @@ function buildAiInput(report, charLimit) {
   if (allLines.length <= charLimit) {
     return {
       text: allLines,
-      note: `AI 输入使用全部 ${report.comments.length} 条评论。`,
+      note: `${report.samplingNote} AI 输入使用 ${report.comments.length}/${report.reviewNum} 条评论样本。`,
     };
   }
 
@@ -386,7 +342,7 @@ function buildAiInput(report, charLimit) {
 
   return {
     text,
-    note: `评论过长，AI 输入使用代表性样本 ${used}/${report.comments.length} 条；图片评论区仍列出已抓取的全部评论。`,
+    note: `${report.samplingNote} 评论样本过长，AI 输入二次压缩为 ${used}/${report.comments.length} 条。`,
   };
 }
 
@@ -396,7 +352,6 @@ function formatCommentForAi(row) {
     `时间: ${row.pubdate || row.dt || "未知"}`,
     `视频: ${row.title}`,
     `UP: ${row.videoOwnerName}`,
-    `互动: 点赞${row.favorite} 回复${row.reply}`,
     `评论: ${row.content || "(空评论/表情)"}`,
   ].join("\n");
 }
@@ -824,7 +779,7 @@ function buildReportHtml({ report, aiReport }, profile) {
       </div>
       <div class="header-meta">
         <div>生成时间：${escHtml(report.generatedAt)}</div>
-        <div>已抓取评论：${formatNum(report.fetchedCount)} 条${report.limitedByMaxPages ? "（达到页数上限）" : ""}</div>
+        <div>评论样本：${formatNum(report.fetchedCount)} / ${formatNum(report.reviewNum)} 条</div>
       </div>
     </section>
 
