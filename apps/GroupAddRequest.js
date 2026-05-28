@@ -56,4 +56,29 @@ export class groupRequestListener extends plugin {
       return true;
     }
   );
+
+  handleRejectCommand = Command(
+    /^#?关门\s*(\d+)$/,
+    "message.group",
+    1135,
+    async (e) => {
+      if (!e.isAdmin && !e.isWhite) {
+        return false;
+      }
+
+      const markerId = Number(e.msg.match(/^#?关门\s*(\d+)$/)[1]);
+      const flag = await redis.hget(requestHashKey(e.self_id, e.group_id), markerId);
+
+      if (!flag) {
+        await e.reply(`门牌号${markerId}不存在`, 10);
+        return true;
+      }
+
+      await e.reply(`好的，我这就关门`);
+      await e.bot.setGroupAddRequest({ flag, approve: false });
+      await redis.hdel(requestHashKey(e.self_id, e.group_id), markerId);
+
+      return true;
+    }
+  );
 }
