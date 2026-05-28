@@ -846,6 +846,10 @@ function buildReportHtml({ report, aiReport }, profile) {
       font-size: 17px;
       text-align: right;
     }
+    .footer-brand {
+      color: #f3a7ba;
+      font-weight: 800;
+    }
   </style>
 </head>
 <body>
@@ -885,7 +889,7 @@ function buildReportHtml({ report, aiReport }, profile) {
       <div class="comment-grid">${commentsHtml}</div>
     </section>
 
-    <div class="footer">来源：${escHtml(report.sourceUrl)} | 仅基于公开评论数据生成</div>
+    <div class="footer">来源：${escHtml(report.sourceUrl)} | 仅基于公开评论数据生成 | <span class="footer-brand">Made by Sakura Plugin</span></div>
   </main>
 </body>
 </html>`;
