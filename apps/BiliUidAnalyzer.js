@@ -870,7 +870,6 @@ function buildReportHtml({ report, aiReport }, profile) {
     <section class="section">
       <div class="section-title">
         <span>AI 成分总结与标签</span>
-        <span class="note">${escHtml(aiReport.inputNote || "")}</span>
       </div>
       <p class="summary">${renderTextWithRefs(aiReport.summary || "")}</p>
       ${renderTags(aiReport.tags)}
