@@ -10,7 +10,8 @@ const SOURCE_SITE = "https://syrds.pro";
 const FIRST_PAGE_SIZE = 75;
 const RANDOM_FOLLOWUP_PAGE_COUNT = 5;
 const RANDOM_COMMENTS_PER_PAGE = 5;
-const REQUEST_TIMEOUT_MS = 90_000;
+const FOLLOWUP_FETCH_CONCURRENCY = 2;
+const REQUEST_TIMEOUT_MS = 180_000;
 const REQUEST_RETRIES = 3;
 const AI_COMMENT_CHAR_LIMIT = 60_000;
 const USER_AGENT =
@@ -71,28 +72,13 @@ export class BiliUidAnalyzer extends plugin {
       : 1;
 
     const sampledRows = normalizeRows(firstPage.data);
-    const sampledPageNums = sampleNumbersInRange(
-      2,
-      totalPagesFromCount,
-      RANDOM_FOLLOWUP_PAGE_COUNT
-    );
-
-    for (const pageNum of sampledPageNums) {
-      const followupPage = await fetchReplyPage(
-        uid,
-        pageNum,
-        FIRST_PAGE_SIZE,
-        REQUEST_TIMEOUT_MS
-      );
-      sampledRows.push(
-        ...sampleArray(normalizeRows(followupPage.data), RANDOM_COMMENTS_PER_PAGE)
-      );
-    }
+    const followupSample = await fetchFollowupSamples(uid, totalPagesFromCount);
+    sampledRows.push(...followupSample.rows);
 
     const comments = dedupeComments(sampledRows);
     const samplingNote =
       totalPagesFromCount > 1
-        ? `采样策略：第 1 页完整 ${FIRST_PAGE_SIZE} 条，后续随机抽 ${sampledPageNums.length} 页，每页随机取 ${RANDOM_COMMENTS_PER_PAGE} 条。`
+        ? buildSamplingNote(followupSample)
         : "采样策略：仅 1 页，已完整抓取。";
 
     return {
@@ -102,7 +88,7 @@ export class BiliUidAnalyzer extends plugin {
       reviewNum: Math.max(totalReviews, comments.length),
       fetchedCount: comments.length,
       totalPages: totalPagesFromCount,
-      fetchedPages: 1 + sampledPageNums.length,
+      fetchedPages: 1 + followupSample.pageNums.length,
       limitedByMaxPages: false,
       samplingNote,
       sourceUrl: `${SOURCE_SITE}/uid=${encodeURIComponent(uid)}`,
@@ -213,17 +199,99 @@ async function fetchJson(url, timeoutMs) {
         throw new Error(`接口返回非 JSON：${text.slice(0, 120)}`);
       }
     } catch (error) {
-      lastError = error;
+      lastError = normalizeFetchError(error, timeoutMs);
       if (attempt >= REQUEST_RETRIES) {
-        throw error;
+        throw lastError;
       }
-      await new Promise((resolve) => setTimeout(resolve, 800 * attempt));
+      logger.warn(
+        `[BiliUidAnalyzer] 接口请求失败，准备第 ${attempt + 1} 次重试:`,
+        lastError
+      );
+      await delay(800 * attempt);
     } finally {
       clearTimeout(timer);
     }
   }
 
   throw lastError || new Error("接口请求失败");
+}
+
+function normalizeFetchError(error, timeoutMs) {
+  const message = String(error?.message || error || "");
+  if (error?.name === "AbortError" || message.includes("aborted")) {
+    return new Error(`接口请求超时（${Math.round(timeoutMs / 1000)} 秒）`);
+  }
+
+  const causeMessage = error?.cause?.message;
+  return new Error(causeMessage ? `${message}: ${causeMessage}` : message);
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchFollowupSamples(uid, totalPages) {
+  const candidatePages = shuffleArray(numbersInRange(2, totalPages));
+  const pageNums = [];
+  const failedPages = [];
+  const rows = [];
+  let cursor = 0;
+
+  while (
+    pageNums.length < RANDOM_FOLLOWUP_PAGE_COUNT &&
+    cursor < candidatePages.length
+  ) {
+    const neededPages = RANDOM_FOLLOWUP_PAGE_COUNT - pageNums.length;
+    const batch = candidatePages.slice(
+      cursor,
+      cursor + Math.min(FOLLOWUP_FETCH_CONCURRENCY, neededPages)
+    );
+    cursor += batch.length;
+
+    const results = await Promise.allSettled(
+      batch.map(async (pageNum) => {
+        const page = await fetchReplyPage(
+          uid,
+          pageNum,
+          FIRST_PAGE_SIZE,
+          REQUEST_TIMEOUT_MS
+        );
+        return {
+          pageNum,
+          rows: sampleArray(
+            normalizeRows(page.data),
+            RANDOM_COMMENTS_PER_PAGE
+          ),
+        };
+      })
+    );
+
+    for (let index = 0; index < results.length; index++) {
+      const result = results[index];
+      const pageNum = batch[index];
+      if (result.status === "fulfilled") {
+        pageNums.push(pageNum);
+        rows.push(...result.value.rows);
+        if (pageNums.length >= RANDOM_FOLLOWUP_PAGE_COUNT) break;
+      } else {
+        failedPages.push(pageNum);
+        logger.warn(
+          `[BiliUidAnalyzer] UID ${uid} 第 ${pageNum} 页抓取失败，尝试换页补样本:`,
+          result.reason
+        );
+      }
+    }
+  }
+
+  return { rows, pageNums, failedPages };
+}
+
+function buildSamplingNote(followupSample) {
+  const failedNote = followupSample.failedPages.length
+    ? `，跳过失败页 ${followupSample.failedPages.join("、")}`
+    : "";
+
+  return `采样策略：第 1 页完整 ${FIRST_PAGE_SIZE} 条，后续随机抽 ${followupSample.pageNums.length} 页，每页随机取 ${RANDOM_COMMENTS_PER_PAGE} 条${failedNote}。`;
 }
 
 function normalizeRows(rows) {
@@ -261,15 +329,27 @@ function getCommentKey(row) {
   return row.link || `${row.bvid}:${row.pubdate}:${row.content}`;
 }
 
-function sampleNumbersInRange(start, end, count) {
-  if (end < start || count <= 0) return [];
-
+function numbersInRange(start, end) {
   const numbers = [];
   for (let value = start; value <= end; value++) {
     numbers.push(value);
   }
+  return numbers;
+}
 
-  return sampleArray(numbers, count);
+function shuffleArray(items) {
+  if (!Array.isArray(items) || items.length <= 1) return [...(items || [])];
+
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index--) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [
+      shuffled[swapIndex],
+      shuffled[index],
+    ];
+  }
+
+  return shuffled;
 }
 
 function sampleArray(items, count) {
