@@ -1,9 +1,11 @@
-import { GoogleGenAI } from "@google/genai"
 import { getImg } from "../lib/utils.js"
 import Setting from "../lib/setting.js"
-import sharp from "sharp"
 import cfg from "../../../lib/config/config.js"
 import { PermissionManager } from "../lib/PermissionManager.js"
+import {
+  fetchImageForGeneration,
+  generateImageWithConfig,
+} from "../lib/AIUtils/ImageGenerationProvider.js"
 
 export class EditImage extends plugin {
   constructor() {
@@ -172,23 +174,13 @@ export class EditImage extends plugin {
     }
 
     const { aspectRatio, imageSize = "1K" } = options
-    const contents = []
+    const imageInputs = []
     const hasImage = imageUrls && imageUrls.length > 0
-
-    if (promptText) {
-      contents.push({ text: promptText })
-    }
 
     if (hasImage) {
       for (const imageUrl of imageUrls) {
         try {
-          const { base64Data, finalMimeType } = await this._processImage(imageUrl)
-          contents.push({
-            inlineData: {
-              mimeType: finalMimeType,
-              data: base64Data,
-            },
-          })
+          imageInputs.push(await fetchImageForGeneration(imageUrl))
         } catch (error) {
           logger.error("处理其中一张图片时出错:", error)
           await this.reply("处理图片时失败，请重试", true, {
@@ -202,125 +194,29 @@ export class EditImage extends plugin {
     try {
       const imageConfig = this.task
 
-      if (!imageConfig || !imageConfig.api || !imageConfig.model) {
-        throw new Error(
-          "配置错误：未在 'EditImage' 配置中找到有效的 'gemini' 配置或缺少api/model。",
-        )
-      }
+      const result = await generateImageWithConfig({
+        imageConfig,
+        prompt: promptText,
+        imageInputs,
+        aspectRatio,
+        imageSize,
+        allowVertexFallback: true,
+      })
 
-      let API_KEY = imageConfig.api
-      const GEMINI_MODEL = imageConfig.model
-
-      if (!API_KEY || typeof API_KEY !== "string" || !API_KEY.trim()) {
-        throw new Error("渠道配置中的 API Key 无效。")
-      }
-      API_KEY = API_KEY.trim()
-
-      const callAI = async (apiKey, isVertex) => {
-        const geminiOptions = { apiKey: apiKey }
-
-        if (isVertex) {
-          geminiOptions.vertexai = true
-        }
-
-        if (imageConfig.baseURL) {
-          geminiOptions.httpOptions = {
-            baseUrl: imageConfig.baseURL,
-          }
-        }
-
-        let ai = new GoogleGenAI(geminiOptions)
-
-        const config = {
-          tools: [{ googleSearch: {} }],
-          responseModalities: ["IMAGE", "TEXT"],
-          imageConfig: {
-            imageSize: imageSize,
-          },
-          safetySettings: [
-            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "OFF" },
-            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "OFF" },
-            { category: "HARM_CATEGORY_HARASSMENT", threshold: "OFF" },
-            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "OFF" },
-          ],
-        }
-
-        if (isVertex) {
-          config.imageConfig.outputMimeType = "image/png"
-        }
-
-        if (aspectRatio) {
-          config.imageConfig.aspectRatio = aspectRatio
-        }
-
-        return await ai.models.generateContent({
-          model: GEMINI_MODEL,
-          contents: contents,
-          config: config,
+      if (result.imageBase64) {
+        await this.reply(segment.image(`base64://${result.imageBase64}`))
+      } else if (result.imageUrl) {
+        await this.reply(segment.image(result.imageUrl))
+      } else {
+        await this.reply(`${result.text || "请求被拦截，请更换提示词或图片"}`, true, {
+          recallMsg: 10,
         })
       }
-
-      const tryCall = async (apiKey, isVertex) => {
-        try {
-          const res = await callAI(apiKey, isVertex)
-          const img = res.candidates?.[0]?.content?.parts?.find(
-            part => part.inlineData && part.inlineData.mimeType.startsWith("image/"),
-          )
-          return { response: res, imagePart: img, error: null }
-        } catch (e) {
-          return { response: null, imagePart: null, error: e }
-        }
-      }
-
-      const isVertexConfigured = imageConfig.vertex === true
-      let result = await tryCall(API_KEY, isVertexConfigured)
-
-      if ((result.error || !result.imagePart) && !isVertexConfigured && imageConfig.vertexApi) {
-        logger.warn(
-          `Gemini 渠道失败(${result.error?.message || "被拦截"}), 尝试切换到 Vertex 渠道重试...`,
-        )
-        result = await tryCall(imageConfig.vertexApi, true)
-      }
-
-      if (result.error) {
-        throw result.error
-      }
-
-      const response = result.response
-      const imagePart = result.imagePart
-
-      if (imagePart) {
-        const imageData = imagePart.inlineData.data
-        await this.reply(segment.image(`base64://${imageData}`))
-      } else {
-        const textPart = response.candidates?.[0]?.content?.parts?.find(part => part.text)
-        const textResponse = textPart ? textPart.text : "请求被拦截，请更换提示词或图片"
-        await this.reply(`${textResponse}`, true, { recallMsg: 10 })
-      }
     } catch (error) {
-      logger.error(`调用 Gemini API 失败:`, error)
+      logger.error(`调用图片生成 API 失败:`, error)
       await this.reply("创作失败，可能是网络问题或请求超额", true, { recallMsg: 10 })
     }
 
     return true
-  }
-
-  async _processImage(imageUrl) {
-    const response = await fetch(imageUrl)
-    if (!response.ok) {
-      throw new Error(`图片下载失败: ${response.statusText}`)
-    }
-    const arrayBuffer = await response.arrayBuffer()
-    let buffer = Buffer.from(arrayBuffer)
-    const contentType = response.headers.get("content-type") || "image/jpeg"
-    let finalMimeType = contentType
-
-    if (contentType === "image/gif") {
-      buffer = await sharp(buffer).toFormat("png").toBuffer()
-      finalMimeType = "image/png"
-    }
-
-    const base64Data = buffer.toString("base64")
-    return { base64Data, finalMimeType }
   }
 }

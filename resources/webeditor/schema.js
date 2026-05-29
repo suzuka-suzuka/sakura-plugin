@@ -175,15 +175,39 @@ const configSchema = {
     EditImage: {
       label: "修图API配置",
       type: "object",
-      help: "配置用于修图的 Gemini API",
+      help: "配置用于修图的 Gemini / OpenAI 格式图片 API",
       schema: {
+        format: {
+          label: "接口格式",
+          type: "text",
+          required: false,
+          help: "gemini 或 openai，留空默认 gemini",
+        },
         model: { label: "模型名称", type: "text", required: true },
         api: { label: "API Key", type: "text", required: true },
         baseURL: {
-          label: "反代地址",
+          label: "API地址",
           type: "text",
           required: false,
-          help: "可选，Gemini API 反代地址，例如 https://your-proxy.com/",
+          help: "OpenAI 格式默认 https://api.openai.com/v1；Gemini 可填反代地址",
+        },
+        openaiSize: {
+          label: "OpenAI尺寸",
+          type: "text",
+          required: false,
+          help: "如 1024x1024 / 1536x1024 / 1024x1536 / auto，留空按比例自动",
+        },
+        quality: {
+          label: "OpenAI质量",
+          type: "text",
+          required: false,
+          help: "如 auto / low / medium / high / standard / hd",
+        },
+        outputFormat: {
+          label: "输出格式",
+          type: "text",
+          required: false,
+          help: "gpt-image-1 可用 png / jpeg / webp",
         },
         vertexApi: {
           label: "Vertex API Key",
@@ -205,8 +229,38 @@ const configSchema = {
         },
       },
     },
+    "EditImage.format": {
+      label: "接口格式",
+      type: "text",
+      required: false,
+      help: "gemini 或 openai，留空默认 gemini",
+    },
     "EditImage.model": { label: "模型名称", type: "text", required: true },
     "EditImage.api": { label: "API Key", type: "text", required: true },
+    "EditImage.baseURL": {
+      label: "API地址",
+      type: "text",
+      required: false,
+      help: "OpenAI 格式默认 https://api.openai.com/v1；Gemini 可填反代地址",
+    },
+    "EditImage.openaiSize": {
+      label: "OpenAI尺寸",
+      type: "text",
+      required: false,
+      help: "如 1024x1024 / 1536x1024 / 1024x1536 / auto，留空按比例自动",
+    },
+    "EditImage.quality": {
+      label: "OpenAI质量",
+      type: "text",
+      required: false,
+      help: "如 auto / low / medium / high / standard / hd",
+    },
+    "EditImage.outputFormat": {
+      label: "输出格式",
+      type: "text",
+      required: false,
+      help: "gpt-image-1 可用 png / jpeg / webp",
+    },
     "EditImage.vertexApi": {
       label: "Vertex API Key",
       type: "text",

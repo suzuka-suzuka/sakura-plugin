@@ -179,18 +179,53 @@ export function supportGuoba() {
         {
           field: "EditImage",
           label: "修图API配置",
-          bottomHelpMessage: "配置用于修图的 Gemini API",
+          bottomHelpMessage: "配置用于修图的 Gemini / OpenAI 格式图片 API",
           component: "GSubForm",
           required: false,
           componentProps: {
             multiple: false,
             schemas: [
+              {
+                field: "format",
+                label: "接口格式",
+                component: "Input",
+                required: false,
+                bottomHelpMessage: "gemini 或 openai，留空默认 gemini",
+              },
               { field: "model", label: "模型名称", component: "Input", required: true },
               {
                 field: "api",
                 label: "API Key",
                 component: "Input",
                 required: true,
+              },
+              {
+                field: "baseURL",
+                label: "API 地址",
+                component: "Input",
+                required: false,
+                bottomHelpMessage: "OpenAI 格式默认 https://api.openai.com/v1，Gemini 可填反代",
+              },
+              {
+                field: "openaiSize",
+                label: "OpenAI尺寸",
+                component: "Input",
+                required: false,
+                bottomHelpMessage: "如 1024x1024 / 1536x1024 / 1024x1536 / auto，留空按比例自动",
+              },
+              {
+                field: "quality",
+                label: "OpenAI质量",
+                component: "Input",
+                required: false,
+                bottomHelpMessage: "如 auto / low / medium / high / standard / hd",
+              },
+              {
+                field: "outputFormat",
+                label: "输出格式",
+                component: "Input",
+                required: false,
+                bottomHelpMessage: "gpt-image-1 可用 png / jpeg / webp",
               },
               {
                 field: "vertexApi",

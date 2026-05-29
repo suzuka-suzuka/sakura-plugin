@@ -1,5 +1,10 @@
+format: gemini # 可选：gemini / openai
 model: gemini-3-pro-image-preview
 api: "请在这里填写你的 Gemini API Key，支持多个"
+baseURL: "" # OpenAI 格式可填 https://api.openai.com/v1；Gemini 可填反代地址
+openaiSize: "" # OpenAI 可选：1024x1024 / 1536x1024 / 1024x1536 / 1792x1024 / 1024x1792 / auto
+quality: "" # OpenAI 可选：auto / low / medium / high / standard / hd
+outputFormat: "" # OpenAI gpt-image-1 可选：png / jpeg / webp
 vertex: false
 vertexApi: "" # Vertex API Key，填写后如果默认渠道失败将尝试使用 Vertex 重试
 requirePermission: false
