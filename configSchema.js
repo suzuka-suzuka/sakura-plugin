@@ -148,8 +148,7 @@ const ImageOpenAIChannelSchema = z.object({
 export const CliProxyMediaSchema = z.object({
     baseURL: z.string().default('http://127.0.0.1:8317/v1').describe('Grok 网关地址|本地 Grok OAuth 网关的 /v1 接口地址'),
     apiKey: z.string().default('').describe('Grok 网关密钥|#textarea|本地 Grok OAuth 网关的 Bearer API Key；网关未启用鉴权时可留空'),
-    imageModel: z.string().default('grok-imagine-image').describe('普通生图模型|用于 #gi 和 #i 的 Grok 图片模型，例如 grok-imagine-image'),
-    imageQualityModel: z.string().default('grok-imagine-image-quality').describe('高质量生图模型|#gi 使用 pro/quality/hd/high 参数时调用的 Grok 图片模型'),
+    imageModel: z.string().default('grok-imagine-image-quality').describe('生图模型|用于 #gi 的 Grok 图片模型，例如 grok-imagine-image-quality'),
     videoModel: z.string().default('grok-imagine-video').describe('视频生成模型|用于 #gv 的 Grok 视频模型，例如 grok-imagine-video'),
     pollIntervalMs: z.number().int().min(1000).default(5000).describe('视频轮询间隔|单位毫秒，用于查询 Grok 视频生成结果'),
     timeoutMs: z.number().int().min(30000).default(900000).describe('视频等待超时|单位毫秒，超过后停止等待视频生成'),

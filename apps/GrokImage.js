@@ -34,7 +34,6 @@ function parseImageCommand(rawText) {
     aspectRatio: null,
     resolution: null,
     n: 1,
-    quality: false,
   };
   const promptParts = [];
 
@@ -51,16 +50,6 @@ function parseImageCommand(rawText) {
 
     if (ASPECT_RATIOS.has(lower)) {
       options.aspectRatio = normalizeAspectRatio(lower);
-      continue;
-    }
-
-    if (["pro", "quality", "hd", "high"].includes(lower)) {
-      options.quality = true;
-      continue;
-    }
-
-    if (["fast", "standard"].includes(lower)) {
-      options.quality = false;
       continue;
     }
 
@@ -118,7 +107,6 @@ export class GrokImage extends plugin {
           aspectRatio: options.aspectRatio,
           resolution: options.resolution,
           n: options.n,
-          quality: options.quality,
           responseFormat: "b64_json",
         },
         config
