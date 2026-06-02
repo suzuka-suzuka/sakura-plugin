@@ -3,6 +3,15 @@ import {
   downloadMedia,
   generateGrokVideoAndWait,
 } from "../lib/AIUtils/cliProxyMediaClient.js";
+import { grokRequest } from "../lib/AIUtils/GrokClient.js";
+import {
+  buildGrokMediaMessages,
+  GROK_MEDIA_ROUTE_API,
+  GROK_MEDIA_ROUTE_AUTO,
+  GROK_MEDIA_ROUTE_WEB,
+  parseGrokMediaRouteToken,
+  resolveGrokWebConfig,
+} from "../lib/AIUtils/grokMediaRouting.js";
 import { getImg } from "../lib/utils.js";
 import { plugindata } from "../lib/path.js";
 import Setting from "../lib/setting.js";
@@ -36,21 +45,36 @@ function clampDuration(value) {
 
 function applySizeOption(options, rawSize) {
   const size = rawSize.toLowerCase();
+  if (
+    ![
+      "854x480",
+      "480x854",
+      "480x480",
+      "1280x720",
+      "720x1280",
+      "720x720",
+    ].includes(size)
+  ) {
+    return false;
+  }
+
   options.size = size;
 
-  if (["1280x720", "1792x1024", "1920x1080"].includes(size)) {
+  if (["854x480", "1280x720"].includes(size)) {
     options.aspectRatio = "16:9";
-  } else if (["720x1280", "1024x1792", "1080x1920"].includes(size)) {
+  } else if (["480x854", "720x1280"].includes(size)) {
     options.aspectRatio = "9:16";
-  } else if (["1024x1024", "1080x1080"].includes(size)) {
+  } else if (["480x480", "720x720"].includes(size)) {
     options.aspectRatio = "1:1";
   }
 
-  if (size.includes("1080") || size.includes("1920")) {
-    options.resolution = "1080p";
-  } else if (size.includes("720") || size.includes("1280")) {
+  if (size.includes("720") || size.includes("1280")) {
     options.resolution = "720p";
+  } else if (size.includes("480") || size.includes("854")) {
+    options.resolution = "480p";
   }
+
+  return true;
 }
 
 function parseVideoCommand(rawText) {
@@ -58,6 +82,7 @@ function parseVideoCommand(rawText) {
     aspectRatio: null,
     duration: 6,
     resolution: "720p",
+    route: GROK_MEDIA_ROUTE_AUTO,
     size: null,
   };
   const promptParts = [];
@@ -69,6 +94,12 @@ function parseVideoCommand(rawText) {
     const lower = token.toLowerCase();
     const sizeToken = lower.replace("*", "x");
 
+    const route = parseGrokMediaRouteToken(lower);
+    if (route) {
+      options.route = route;
+      continue;
+    }
+
     const durationMatch =
       lower.match(/^(?:duration|seconds|sec|s)=(\d+)$/) ||
       lower.match(/^(\d+)(?:s|sec|secs|second|seconds|\u79d2)?$/);
@@ -77,14 +108,15 @@ function parseVideoCommand(rawText) {
       continue;
     }
 
-    if (["480p", "720p", "1080p"].includes(lower)) {
+    if (["480p", "720p"].includes(lower)) {
       options.resolution = lower;
       continue;
     }
 
     if (/^\d{3,4}x\d{3,4}$/.test(sizeToken)) {
-      applySizeOption(options, sizeToken);
-      continue;
+      if (applySizeOption(options, sizeToken)) {
+        continue;
+      }
     }
 
     if (ASPECT_RATIOS.has(lower)) {
@@ -115,6 +147,73 @@ function videoExtensionFromURL(url) {
   return "mp4";
 }
 
+async function generateViaWeb(prompt, options, images, e) {
+  const result = await grokRequest(
+    {
+      model: "grok-imagine-video",
+      messages: buildGrokMediaMessages(prompt, images),
+      videoOptions: {
+        prompt,
+        durationSec: options.duration,
+        aspectRatio: options.aspectRatio,
+        resolution: options.resolution,
+        size: options.size,
+      },
+    },
+    resolveGrokWebConfig(),
+    e
+  );
+
+  const video = (result.videos || []).find((item) => item?.localPath || item?.url);
+  const source = video?.localPath || video?.url;
+  if (!source) {
+    throw new Error(result.text || "Grok web did not return video output.");
+  }
+
+  return source;
+}
+
+async function generateViaOpenAICompatible(prompt, options, images) {
+  const config = Setting.getConfig("CliProxyMedia");
+  const result = await generateGrokVideoAndWait(
+    {
+      prompt,
+      imageUrls: images,
+      duration: options.duration,
+      aspectRatio: options.aspectRatio,
+      resolution: options.resolution,
+      native: true,
+    },
+    config
+  );
+
+  const extension = videoExtensionFromURL(result.videoURL);
+  const targetPath = path.join(
+    plugindata,
+    "grok",
+    "videos",
+    `video_${Date.now()}.${extension}`
+  );
+
+  try {
+    return await downloadMedia(result.videoURL, targetPath);
+  } catch (downloadError) {
+    logger.warn(
+      `[GrokVideo] video download failed, replying with URL: ${downloadError.message}`
+    );
+    return result.videoURL;
+  }
+}
+
+async function replyVideoSource(e, videoSource) {
+  if (/^https?:\/\//i.test(videoSource) || /^data:video\//i.test(videoSource)) {
+    await e.reply(`Grok video: ${videoSource}`);
+    return;
+  }
+
+  await e.reply(segment.video(videoSource));
+}
+
 export class GrokVideo extends plugin {
   constructor() {
     super({
@@ -137,38 +236,40 @@ export class GrokVideo extends plugin {
 
       await e.react(124);
 
-      const config = Setting.getConfig("CliProxyMedia");
-      const result = await generateGrokVideoAndWait(
-        {
-          prompt,
-          imageUrls: imageRefs,
-          duration: options.duration,
-          aspectRatio: options.aspectRatio,
-          resolution: options.resolution,
-          native: true,
-        },
-        config
+      let webError = null;
+
+      if (options.route !== GROK_MEDIA_ROUTE_API) {
+        try {
+          const videoSource = await generateViaWeb(prompt, options, imageRefs, e);
+          await replyVideoSource(e, videoSource);
+          return true;
+        } catch (error) {
+          webError = error;
+          const suffix =
+            options.route === GROK_MEDIA_ROUTE_WEB
+              ? ""
+              : ", falling back to OpenAI-compatible API";
+          logger.warn(`[GrokVideo] web video request failed${suffix}: ${error.message}`);
+
+          if (options.route === GROK_MEDIA_ROUTE_WEB) {
+            throw error;
+          }
+        }
+      }
+
+      const videoSource = await generateViaOpenAICompatible(
+        prompt,
+        options,
+        imageRefs
       );
 
-      const extension = videoExtensionFromURL(result.videoURL);
-      const targetPath = path.join(
-        plugindata,
-        "grok",
-        "videos",
-        `video_${Date.now()}.${extension}`
-      );
+      await replyVideoSource(e, videoSource);
 
-      try {
-        const localPath = await downloadMedia(result.videoURL, targetPath);
-        await e.reply(segment.video(localPath));
-      } catch (downloadError) {
-        logger.warn(
-          `[GrokVideo] video download failed, replying with URL: ${downloadError.message}`
-        );
-        await e.reply(`Grok video: ${result.videoURL}`);
+      if (webError) {
+        logger.info("[GrokVideo] OpenAI-compatible fallback succeeded.");
       }
     } catch (error) {
-      logger.error("[GrokVideo] CLIProxyAPI video request failed", error);
+      logger.error("[GrokVideo] video request failed", error);
       await e.reply(`Grok video failed: ${error.message}`, 10, true);
     }
 

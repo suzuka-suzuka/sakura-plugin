@@ -1,4 +1,13 @@
 import { generateGrokImage } from "../lib/AIUtils/cliProxyMediaClient.js";
+import { grokRequest } from "../lib/AIUtils/GrokClient.js";
+import {
+  buildGrokMediaMessages,
+  GROK_MEDIA_ROUTE_API,
+  GROK_MEDIA_ROUTE_AUTO,
+  GROK_MEDIA_ROUTE_WEB,
+  parseGrokMediaRouteToken,
+  resolveGrokWebConfig,
+} from "../lib/AIUtils/grokMediaRouting.js";
 import { getImg } from "../lib/utils.js";
 import Setting from "../lib/setting.js";
 
@@ -34,6 +43,7 @@ function parseImageCommand(rawText) {
     aspectRatio: null,
     resolution: null,
     n: 1,
+    route: GROK_MEDIA_ROUTE_AUTO,
   };
   const promptParts = [];
 
@@ -42,6 +52,12 @@ function parseImageCommand(rawText) {
     if (!token) continue;
 
     const lower = token.toLowerCase();
+    const route = parseGrokMediaRouteToken(lower);
+    if (route) {
+      options.route = route;
+      continue;
+    }
+
     const countMatch = lower.match(/^(?:--)?(?:n|count)=(\d+)$/);
     if (countMatch) {
       options.n = clampCount(countMatch[1]);
@@ -76,6 +92,50 @@ function toImageReferences(images = []) {
     }));
 }
 
+async function generateViaWeb(prompt, options, images, e) {
+  const result = await grokRequest(
+    {
+      model: "grok-imagine-image",
+      messages: buildGrokMediaMessages(prompt, images),
+      imageOptions: {
+        prompt,
+        aspectRatio: options.aspectRatio,
+        count: options.n,
+        enablePro: options.resolution === "2k" ? true : undefined,
+      },
+    },
+    resolveGrokWebConfig(),
+    e
+  );
+
+  const imageSources = (result.images || [])
+    .map((image) => image.localPath || image.url)
+    .filter(Boolean);
+
+  if (imageSources.length === 0) {
+    throw new Error(result.text || "Grok web did not return image output.");
+  }
+
+  return imageSources;
+}
+
+async function generateViaOpenAICompatible(prompt, options, images) {
+  const config = Setting.getConfig("CliProxyMedia");
+  const result = await generateGrokImage(
+    {
+      prompt,
+      images: toImageReferences(images),
+      aspectRatio: options.aspectRatio,
+      resolution: options.resolution,
+      n: options.n,
+      responseFormat: "b64_json",
+    },
+    config
+  );
+
+  return result.buffers;
+}
+
 export class GrokImage extends plugin {
   constructor() {
     super({
@@ -99,22 +159,39 @@ export class GrokImage extends plugin {
 
     try {
       const imgBase64List = (await getImg(e, true, true)) || [];
-      const config = Setting.getConfig("CliProxyMedia");
-      const result = await generateGrokImage(
-        {
-          prompt,
-          images: toImageReferences(imgBase64List),
-          aspectRatio: options.aspectRatio,
-          resolution: options.resolution,
-          n: options.n,
-          responseFormat: "b64_json",
-        },
-        config
-      );
+      let webError = null;
 
-      await e.reply(result.buffers.map((buffer) => segment.image(buffer)));
+      if (options.route !== GROK_MEDIA_ROUTE_API) {
+        try {
+          const imageSources = await generateViaWeb(prompt, options, imgBase64List, e);
+          await e.reply(imageSources.map((source) => segment.image(source)));
+          return true;
+        } catch (error) {
+          webError = error;
+          const suffix =
+            options.route === GROK_MEDIA_ROUTE_WEB
+              ? ""
+              : ", falling back to OpenAI-compatible API";
+          logger.warn(`[GrokImage] web image request failed${suffix}: ${error.message}`);
+
+          if (options.route === GROK_MEDIA_ROUTE_WEB) {
+            throw error;
+          }
+        }
+      }
+
+      const buffers = await generateViaOpenAICompatible(
+        prompt,
+        options,
+        imgBase64List
+      );
+      await e.reply(buffers.map((buffer) => segment.image(buffer)));
+
+      if (webError) {
+        logger.info("[GrokImage] OpenAI-compatible fallback succeeded.");
+      }
     } catch (error) {
-      logger.error("[GrokImage] CLIProxyAPI image request failed", error);
+      logger.error("[GrokImage] image request failed", error);
       await e.reply(`Grok image failed: ${error.message}`, 10, true);
     }
 
