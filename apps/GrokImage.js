@@ -6,6 +6,7 @@ import {
   GROK_MEDIA_ROUTE_AUTO,
   GROK_MEDIA_ROUTE_WEB,
   parseGrokMediaRouteToken,
+  resolveGrokMediaRoute,
   resolveGrokWebConfig,
 } from "../lib/AIUtils/grokMediaRouting.js";
 import { getImg } from "../lib/utils.js";
@@ -159,37 +160,25 @@ export class GrokImage extends plugin {
 
     try {
       const imgBase64List = (await getImg(e, true, true)) || [];
-      let webError = null;
+      const route = resolveGrokMediaRoute(options.route);
 
-      if (options.route !== GROK_MEDIA_ROUTE_API) {
-        try {
-          const imageSources = await generateViaWeb(prompt, options, imgBase64List, e);
-          await e.reply(imageSources.map((source) => segment.image(source)));
-          return true;
-        } catch (error) {
-          webError = error;
-          const suffix =
-            options.route === GROK_MEDIA_ROUTE_WEB
-              ? ""
-              : ", falling back to OpenAI-compatible API";
-          logger.warn(`[GrokImage] web image request failed${suffix}: ${error.message}`);
-
-          if (options.route === GROK_MEDIA_ROUTE_WEB) {
-            throw error;
-          }
-        }
+      if (route === GROK_MEDIA_ROUTE_WEB) {
+        const imageSources = await generateViaWeb(prompt, options, imgBase64List, e);
+        await e.reply(imageSources.map((source) => segment.image(source)));
+        return true;
       }
 
-      const buffers = await generateViaOpenAICompatible(
-        prompt,
-        options,
-        imgBase64List
-      );
-      await e.reply(buffers.map((buffer) => segment.image(buffer)));
-
-      if (webError) {
-        logger.info("[GrokImage] OpenAI-compatible fallback succeeded.");
+      if (route === GROK_MEDIA_ROUTE_API) {
+        const buffers = await generateViaOpenAICompatible(
+          prompt,
+          options,
+          imgBase64List
+        );
+        await e.reply(buffers.map((buffer) => segment.image(buffer)));
+        return true;
       }
+
+      throw new Error(`Unsupported Grok media route: ${route}`);
     } catch (error) {
       logger.error("[GrokImage] image request failed", error);
       await e.reply(`Grok image failed: ${error.message}`, 10, true);

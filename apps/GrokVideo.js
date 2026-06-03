@@ -10,6 +10,7 @@ import {
   GROK_MEDIA_ROUTE_AUTO,
   GROK_MEDIA_ROUTE_WEB,
   parseGrokMediaRouteToken,
+  resolveGrokMediaRoute,
   resolveGrokWebConfig,
 } from "../lib/AIUtils/grokMediaRouting.js";
 import { getImg } from "../lib/utils.js";
@@ -29,6 +30,9 @@ const ASPECT_RATIOS = new Set([
   "landscape",
   "portrait",
 ]);
+
+const GROK_VIDEO_MODE_SPICY = "extremely-spicy-or-crazy";
+const SPICY_MODE_TOKENS = new Set(["r18", "r-18", "spicy", "crazy"]);
 
 function normalizeAspectRatio(token) {
   if (token === "square") return "1:1";
@@ -84,6 +88,7 @@ function parseVideoCommand(rawText) {
     resolution: "720p",
     route: GROK_MEDIA_ROUTE_AUTO,
     size: null,
+    mode: null,
   };
   const promptParts = [];
 
@@ -92,11 +97,17 @@ function parseVideoCommand(rawText) {
     if (!token) continue;
 
     const lower = token.toLowerCase();
+    const optionToken = lower.replace(/^--/, "");
     const sizeToken = lower.replace("*", "x");
 
     const route = parseGrokMediaRouteToken(lower);
     if (route) {
       options.route = route;
+      continue;
+    }
+
+    if (SPICY_MODE_TOKENS.has(optionToken)) {
+      options.mode = GROK_VIDEO_MODE_SPICY;
       continue;
     }
 
@@ -158,6 +169,7 @@ async function generateViaWeb(prompt, options, images, e) {
         aspectRatio: options.aspectRatio,
         resolution: options.resolution,
         size: options.size,
+        mode: options.mode,
       },
     },
     resolveGrokWebConfig(),
@@ -236,38 +248,26 @@ export class GrokVideo extends plugin {
 
       await e.react(124);
 
-      let webError = null;
+      const route = resolveGrokMediaRoute(options.route);
 
-      if (options.route !== GROK_MEDIA_ROUTE_API) {
-        try {
-          const videoSource = await generateViaWeb(prompt, options, imageRefs, e);
-          await replyVideoSource(e, videoSource);
-          return true;
-        } catch (error) {
-          webError = error;
-          const suffix =
-            options.route === GROK_MEDIA_ROUTE_WEB
-              ? ""
-              : ", falling back to OpenAI-compatible API";
-          logger.warn(`[GrokVideo] web video request failed${suffix}: ${error.message}`);
-
-          if (options.route === GROK_MEDIA_ROUTE_WEB) {
-            throw error;
-          }
-        }
+      if (route === GROK_MEDIA_ROUTE_WEB) {
+        const videoSource = await generateViaWeb(prompt, options, imageRefs, e);
+        await replyVideoSource(e, videoSource);
+        return true;
       }
 
-      const videoSource = await generateViaOpenAICompatible(
-        prompt,
-        options,
-        imageRefs
-      );
+      if (route === GROK_MEDIA_ROUTE_API) {
+        const videoSource = await generateViaOpenAICompatible(
+          prompt,
+          options,
+          imageRefs
+        );
 
-      await replyVideoSource(e, videoSource);
-
-      if (webError) {
-        logger.info("[GrokVideo] OpenAI-compatible fallback succeeded.");
+        await replyVideoSource(e, videoSource);
+        return true;
       }
+
+      throw new Error(`Unsupported Grok media route: ${route}`);
     } catch (error) {
       logger.error("[GrokVideo] video request failed", error);
       await e.reply(`Grok video failed: ${error.message}`, 10, true);

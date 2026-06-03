@@ -11,6 +11,7 @@ import {
 } from './lib/AIUtils/tavilyConfig.js';
 
 const OPENAI_REASONING_EFFORT_OPTIONS = ['', 'none', 'minimal', 'low', 'medium', 'high', 'xhigh'];
+const GROK_MEDIA_ROUTE_OPTIONS = ['web', 'api'];
 
 function cronString(defaultValue = '0 * * * *') {
     return z.string().default(defaultValue).refine((val) => {
@@ -146,6 +147,7 @@ const ImageOpenAIChannelSchema = z.object({
 });
 
 export const CliProxyMediaSchema = z.object({
+    defaultRoute: z.enum(GROK_MEDIA_ROUTE_OPTIONS).default('web').describe('Grok媒体默认路由|web 使用网页逆向；api 使用本地 OpenAI-compatible 网关'),
     baseURL: z.string().default('http://127.0.0.1:8317/v1').describe('Grok 网关地址|本地 Grok OAuth 网关的 /v1 接口地址'),
     apiKey: z.string().default('').describe('Grok 网关密钥|#textarea|本地 Grok OAuth 网关的 Bearer API Key；网关未启用鉴权时可留空'),
     imageModel: z.string().default('grok-imagine-image-quality').describe('生图模型|用于 #gi 的 Grok 图片模型，例如 grok-imagine-image-quality'),
