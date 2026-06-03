@@ -151,7 +151,7 @@ export const CliProxyMediaSchema = z.object({
     baseURL: z.string().default('http://127.0.0.1:8317/v1').describe('Grok 网关地址|本地 Grok OAuth 网关的 /v1 接口地址'),
     apiKey: z.string().default('').describe('Grok 网关密钥|#textarea|本地 Grok OAuth 网关的 Bearer API Key；网关未启用鉴权时可留空'),
     imageModel: z.string().default('grok-imagine-image-quality').describe('生图模型|用于 #gi 的 Grok 图片模型，例如 grok-imagine-image-quality'),
-    videoModel: z.string().default('grok-imagine-video').describe('视频生成模型|用于 #gv 的 Grok 视频模型，例如 grok-imagine-video'),
+    videoModel: z.string().default('grok-imagine-video').describe('视频生成模型|用于 #gv 的 Grok 视频模型；grok-imagine-video-1.5-preview 无参考图时会自动改用 grok-imagine-video'),
     pollIntervalMs: z.number().int().min(1000).default(5000).describe('视频轮询间隔|单位毫秒，用于查询 Grok 视频生成结果'),
     timeoutMs: z.number().int().min(30000).default(900000).describe('视频等待超时|单位毫秒，超过后停止等待视频生成'),
     preferNativeVideo: z.boolean().default(true).describe('优先原生视频接口|开启后使用 /videos/generations，可透传 xAI 原生参数'),
