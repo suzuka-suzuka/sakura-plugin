@@ -1,4 +1,5 @@
 import { generateGrokImage } from "../lib/AIUtils/cliProxyMediaClient.js";
+import { formatGrokUserError } from "../lib/AIUtils/grokErrorMessages.js";
 import { grokRequest } from "../lib/AIUtils/GrokClient.js";
 import {
   buildGrokMediaMessages,
@@ -114,7 +115,10 @@ async function generateViaWeb(prompt, options, images, e) {
     .filter(Boolean);
 
   if (imageSources.length === 0) {
-    throw new Error(result.text || "Grok web did not return image output.");
+    throw new Error(
+      result.text ||
+        "Grok 网页没有返回图片，可能是提示词被拦截、额度不足，或页面状态异常。"
+    );
   }
 
   return imageSources;
@@ -152,7 +156,7 @@ export class GrokImage extends plugin {
 
     const { prompt, options } = parseImageCommand(match[1]);
     if (!prompt) {
-      await e.reply("Grok image prompt is required.", 10, true);
+      await e.reply("请输入图片提示词，例如：#gi 16:9 赛博城市夜景。", 10, true);
       return true;
     }
 
@@ -178,10 +182,14 @@ export class GrokImage extends plugin {
         return true;
       }
 
-      throw new Error(`Unsupported Grok media route: ${route}`);
+      throw new Error(`Grok 媒体渠道不支持：${route}`);
     } catch (error) {
       logger.error("[GrokImage] image request failed", error);
-      await e.reply(`Grok image failed: ${error.message}`, 10, true);
+      await e.reply(
+        `Grok 图片生成失败：${formatGrokUserError(error, "image")}`,
+        10,
+        true
+      );
     }
 
     return true;

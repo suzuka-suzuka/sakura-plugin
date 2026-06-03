@@ -3,6 +3,7 @@ import {
   downloadMedia,
   generateGrokVideoAndWait,
 } from "../lib/AIUtils/cliProxyMediaClient.js";
+import { formatGrokUserError } from "../lib/AIUtils/grokErrorMessages.js";
 import { grokRequest } from "../lib/AIUtils/GrokClient.js";
 import {
   buildGrokMediaMessages,
@@ -179,7 +180,10 @@ async function generateViaWeb(prompt, options, images, e) {
   const video = (result.videos || []).find((item) => item?.localPath || item?.url);
   const source = video?.localPath || video?.url;
   if (!source) {
-    throw new Error(result.text || "Grok web did not return video output.");
+    throw new Error(
+      result.text ||
+        "Grok 网页没有返回视频，可能还在排队、提示词被拦截，或额度暂时不足。"
+    );
   }
 
   return source;
@@ -211,7 +215,7 @@ async function generateViaOpenAICompatible(prompt, options, images) {
     return await downloadMedia(result.videoURL, targetPath);
   } catch (downloadError) {
     logger.warn(
-      `[GrokVideo] video download failed, replying with URL: ${downloadError.message}`
+      `[GrokVideo] 视频下载失败，改为回复原始链接: ${downloadError.message}`
     );
     return result.videoURL;
   }
@@ -219,7 +223,7 @@ async function generateViaOpenAICompatible(prompt, options, images) {
 
 async function replyVideoSource(e, videoSource) {
   if (/^https?:\/\//i.test(videoSource) || /^data:video\//i.test(videoSource)) {
-    await e.reply(`Grok video: ${videoSource}`);
+    await e.reply(`Grok 视频生成好了，但本地下载失败，先给你原始链接：${videoSource}`);
     return;
   }
 
@@ -267,10 +271,14 @@ export class GrokVideo extends plugin {
         return true;
       }
 
-      throw new Error(`Unsupported Grok media route: ${route}`);
+      throw new Error(`Grok 媒体渠道不支持：${route}`);
     } catch (error) {
       logger.error("[GrokVideo] video request failed", error);
-      await e.reply(`Grok video failed: ${error.message}`, 10, true);
+      await e.reply(
+        `Grok 视频生成失败：${formatGrokUserError(error, "video")}`,
+        10,
+        true
+      );
     }
 
     return true;
