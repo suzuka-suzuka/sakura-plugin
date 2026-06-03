@@ -189,11 +189,7 @@ export class poke extends plugin {
     }
 
     const master = e.getMaster();
-    if (
-      Array.isArray(master)
-        ? master.includes(e.target_id)
-        : master == e.target_id
-    ) {
+    if (common.isMasterUser(e.target_id, master)) {
       return await this.handlePokeMaster(e, pokeConfig);
     }
 
