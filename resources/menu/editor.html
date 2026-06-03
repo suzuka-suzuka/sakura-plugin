@@ -257,7 +257,54 @@
 
     <script>
         let configData = { title: "", subtitle: "", menu: [] };
-        const token = sessionStorage.getItem('sakura_token') || localStorage.getItem('sakura_token');
+        const AUTH_TOKEN_STORAGE_KEY = 'sakura_token';
+        const AUTH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+        function parseAuthState(value) {
+            if (!value) return null;
+            const now = Date.now();
+            try {
+                const parsed = JSON.parse(value);
+                if (parsed && parsed.token) {
+                    const expiresAt = Number(parsed.expiresAt) || now + AUTH_TOKEN_TTL_MS;
+                    return expiresAt > now ? { token: String(parsed.token), expiresAt } : null;
+                }
+            } catch {
+                const token = String(value).trim();
+                return token ? { token, expiresAt: now + AUTH_TOKEN_TTL_MS } : null;
+            }
+            return null;
+        }
+
+        function storeAuthState(token, expiresAt = Date.now() + AUTH_TOKEN_TTL_MS) {
+            localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, JSON.stringify({
+                token,
+                expiresAt,
+                updatedAt: Date.now(),
+            }));
+            sessionStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+        }
+
+        function readAuthToken() {
+            const localValue = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+            const localState = parseAuthState(localValue);
+            if (localState) {
+                storeAuthState(localState.token);
+                return localState.token;
+            }
+            if (localValue) localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+
+            const sessionValue = sessionStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+            const sessionState = parseAuthState(sessionValue);
+            if (sessionState) {
+                storeAuthState(sessionState.token);
+                return sessionState.token;
+            }
+            if (sessionValue) sessionStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+            return null;
+        }
+
+        const token = readAuthToken();
 
         function goBack() { window.location.href = '/'; }
 
