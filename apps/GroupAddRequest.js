@@ -20,12 +20,11 @@ export class groupRequestListener extends plugin {
     await redis.expire(requestHashKey(e.self_id, e.group_id), REQUEST_TTL);
 
     const avatarUrl = `https://q1.qlogo.cn/g?b=qq&nk=${e.user_id}&s=100`;
+    // 这里不要拆成多个连续 text 段。部分 QQNT/Milky 组合在“连续文本段 + 图片”混排时，
+    // 偶发把中间文本段渲染成乱码/0；把所有文字合成一个 text 段更稳。
     const message = [
-      `来人啦\n`,
-      `门牌号: ${markerId}\n`,
-      `敲门人: ${nickname} (${e.user_id})\n`,
+      `来人啦\n门牌号: ${markerId}\n敲门人: ${nickname} (${e.user_id})\n敲门口令: ${e.comment || "这个人啥也没说"}`,
       segment.image(avatarUrl),
-      `\n敲门口令: ${e.comment || "这个人啥也没说"}`,
     ];
     await e.reply(message);
 
