@@ -16,12 +16,6 @@ import {
   getConversationRoundCount,
   groupConversationRounds,
 } from "../lib/AIUtils/ConversationHistory.js";
-import {
-  buildGrokConversationSessionKey,
-  clearGrokConversationSession,
-  clearGrokConversationSessionsForEvent,
-  clearAllGrokConversationSessions,
-} from "../lib/AIUtils/GrokClient.js";
 export class Conversationmanagement extends plugin {
   constructor() {
     super({
@@ -61,17 +55,7 @@ export class Conversationmanagement extends plugin {
     }
 
     const profileName = this.getProfileName(prefix);
-    const profile = config.profiles.find((p) => p.prefix === prefix);
     await clearConversationHistory(e, prefix);
-    if (profile) {
-      clearGrokConversationSession(
-        buildGrokConversationSessionKey(
-          e,
-          profile.Channel || "",
-          profile.prefix || profile.name || prefix
-        )
-      );
-    }
     await e.reply(`您与「${profileName}」的对话历史已清空！喵~`, 10);
     return true;
   });
@@ -124,16 +108,6 @@ export class Conversationmanagement extends plugin {
 
     if (rounds >= totalRounds) {
       await clearConversationHistory(e, prefix);
-      const profile = config.profiles.find((p) => p.prefix === prefix);
-      if (profile) {
-        clearGrokConversationSession(
-          buildGrokConversationSessionKey(
-            e,
-            profile.Channel || "",
-            profile.prefix || profile.name || prefix
-          )
-        );
-      }
       await e.reply(`已撤销所有与「${profileName}」的对话历史（共 ${totalRounds} 轮）。`, 10);
       return true;
     }
@@ -520,14 +494,12 @@ export class Conversationmanagement extends plugin {
 
   ClearAllPrefixes = Command(/^#?清空全部对话$/, async (e) => {
     await clearAllPrefixesForUser(e);
-    clearGrokConversationSessionsForEvent(e);
     await e.reply("您的所有模式对话历史已全部清空！喵~", 10);
     return true;
   });
 
   ClearAllUsers = Command(/^#?清空所有用户对话$/, "master", async (e) => {
     await clearAllConversationHistories();
-    clearAllGrokConversationSessions();
     await e.reply("所有用户的全部对话历史已成功清空！喵~", 10);
     return true;
   });

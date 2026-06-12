@@ -4,16 +4,6 @@ import {
   generateGrokVideoAndWait,
 } from "../lib/AIUtils/cliProxyMediaClient.js";
 import { formatGrokUserError } from "../lib/AIUtils/grokErrorMessages.js";
-import { grokRequest } from "../lib/AIUtils/GrokClient.js";
-import {
-  buildGrokMediaMessages,
-  GROK_MEDIA_ROUTE_API,
-  GROK_MEDIA_ROUTE_AUTO,
-  GROK_MEDIA_ROUTE_WEB,
-  parseGrokMediaRouteToken,
-  resolveGrokMediaRoute,
-  resolveGrokWebConfig,
-} from "../lib/AIUtils/grokMediaRouting.js";
 import { getImg } from "../lib/utils.js";
 import { plugindata } from "../lib/path.js";
 import Setting from "../lib/setting.js";
@@ -31,9 +21,6 @@ const ASPECT_RATIOS = new Set([
   "landscape",
   "portrait",
 ]);
-
-const GROK_VIDEO_MODE_SPICY = "extremely-spicy-or-crazy";
-const SPICY_MODE_TOKENS = new Set(["r18", "r-18", "spicy", "crazy"]);
 
 function normalizeAspectRatio(token) {
   if (token === "square") return "1:1";
@@ -87,9 +74,7 @@ function parseVideoCommand(rawText) {
     aspectRatio: null,
     duration: 6,
     resolution: "720p",
-    route: GROK_MEDIA_ROUTE_AUTO,
     size: null,
-    mode: null,
   };
   const promptParts = [];
 
@@ -98,19 +83,7 @@ function parseVideoCommand(rawText) {
     if (!token) continue;
 
     const lower = token.toLowerCase();
-    const optionToken = lower.replace(/^--/, "");
     const sizeToken = lower.replace("*", "x");
-
-    const route = parseGrokMediaRouteToken(lower);
-    if (route) {
-      options.route = route;
-      continue;
-    }
-
-    if (SPICY_MODE_TOKENS.has(optionToken)) {
-      options.mode = GROK_VIDEO_MODE_SPICY;
-      continue;
-    }
 
     const durationMatch =
       lower.match(/^(?:duration|seconds|sec|s)=(\d+)$/) ||
@@ -157,36 +130,6 @@ function videoExtensionFromURL(url) {
   }
 
   return "mp4";
-}
-
-async function generateViaWeb(prompt, options, images, e) {
-  const result = await grokRequest(
-    {
-      model: "grok-imagine-video",
-      messages: buildGrokMediaMessages(prompt, images),
-      videoOptions: {
-        prompt,
-        durationSec: options.duration,
-        aspectRatio: options.aspectRatio,
-        resolution: options.resolution,
-        size: options.size,
-        mode: options.mode,
-      },
-    },
-    resolveGrokWebConfig(),
-    e
-  );
-
-  const video = (result.videos || []).find((item) => item?.localPath || item?.url);
-  const source = video?.localPath || video?.url;
-  if (!source) {
-    throw new Error(
-      result.text ||
-        "Grok 网页没有返回视频，可能还在排队、提示词被拦截，或额度暂时不足。"
-    );
-  }
-
-  return source;
 }
 
 async function generateViaOpenAICompatible(prompt, options, images) {
@@ -252,26 +195,14 @@ export class GrokVideo extends plugin {
 
       await e.react(124);
 
-      const route = resolveGrokMediaRoute(options.route);
+      const videoSource = await generateViaOpenAICompatible(
+        prompt,
+        options,
+        imageRefs
+      );
 
-      if (route === GROK_MEDIA_ROUTE_WEB) {
-        const videoSource = await generateViaWeb(prompt, options, imageRefs, e);
-        await replyVideoSource(e, videoSource);
-        return true;
-      }
-
-      if (route === GROK_MEDIA_ROUTE_API) {
-        const videoSource = await generateViaOpenAICompatible(
-          prompt,
-          options,
-          imageRefs
-        );
-
-        await replyVideoSource(e, videoSource);
-        return true;
-      }
-
-      throw new Error(`Grok 媒体渠道不支持：${route}`);
+      await replyVideoSource(e, videoSource);
+      return true;
     } catch (error) {
       logger.error("[GrokVideo] video request failed", error);
       await e.reply(

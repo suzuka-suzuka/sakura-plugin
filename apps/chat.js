@@ -1,10 +1,6 @@
 import Setting from "../lib/setting.js";
 import { runAgentLoop } from "../lib/AIUtils/AgentRunner.js";
 import {
-  buildGrokConversationSessionKey,
-  clearGrokConversationSession,
-} from "../lib/AIUtils/GrokClient.js";
-import {
   loadConversationHistory,
   saveConversationHistory,
 } from "../lib/AIUtils/ConversationHistory.js";
@@ -101,24 +97,6 @@ export class AIChat extends plugin {
     const roles = rolesConfig?.roles || [];
     const role = roles.find((item) => item.name === roleName);
     return role?.prompt || "";
-  }
-
-  isGrokChannel(channelName) {
-    const channelsConfig = Setting.getConfig("Channels");
-    const grokChannels = channelsConfig?.grok || [];
-    return grokChannels.some((channel) => channel.name === channelName);
-  }
-
-  getGrokSessionKeyForProfile(e, profile) {
-    return buildGrokConversationSessionKey(
-      e,
-      profile?.Channel || "",
-      profile?.prefix || profile?.name || "default"
-    );
-  }
-
-  clearGrokSessionForProfile(e, profile) {
-    clearGrokConversationSession(this.getGrokSessionKeyForProfile(e, profile));
   }
 
   async startSession(e, profile, Prompt) {
@@ -281,7 +259,6 @@ export class AIChat extends plugin {
     if (textToMatch === "结束对话") {
       const endedSession = await this.endSession(e);
       if (endedSession) {
-        this.clearGrokSessionForProfile(e, endedSession.profile);
         await e.reply(`已结束与【${endedSession.profile.name || endedSession.profile.prefix}】的对话。`, 10);
         return true;
       }
@@ -469,16 +446,9 @@ export class AIChat extends plugin {
     }
 
     let currentFullHistory = [];
-    const useGrokSession = History && this.isGrokChannel(Channel);
-
-    if (useGrokSession) {
-      e._grokSessionKey = this.getGrokSessionKeyForProfile(e, matchedProfile);
-    } else {
-      delete e._grokSessionKey;
-    }
 
     try {
-      if (History && !useGrokSession) {
+      if (History) {
         currentFullHistory = await loadConversationHistory(
           e,
           matchedProfile.prefix
@@ -527,13 +497,13 @@ export class AIChat extends plugin {
 
       if (agentResult.status === "tool_limit") {
         await e.reply("⚠️ 工具调用次数过多，为防止死循环已强制中断对话。", 10, true);
-        if (History && !useGrokSession) {
+        if (History) {
           await saveConversationHistory(e, currentFullHistory, prefix);
         }
         return true;
       }
 
-      if (History && !useGrokSession) {
+      if (History) {
         await saveConversationHistory(e, currentFullHistory, prefix);
       }
 

@@ -80,7 +80,7 @@ config/sakura-plugin/
 常用配置文件：
 
 - `bot.yaml`：机器人名称等基础信息。
-- `Channels.yaml`：AI 文本/多模态渠道，包括 Gemini、OpenAI、Grok。
+- `Channels.yaml`：AI 文本/多模态渠道，包括 Gemini、OpenAI。
 - `ImageChannels.yaml`：生图渠道，包括 Gemini 图片和 OpenAI 图片。
 - `AI.yaml`：AI 对话、工具组、上下文、Markdown 处理等设置。
 - `roles.yaml`：AI 角色和人设。
@@ -100,7 +100,7 @@ config/sakura-plugin/
 
 ### AI 对话
 
-1. 在 `Channels` 中配置至少一个 Gemini、OpenAI 或 Grok 渠道。
+1. 在 `Channels` 中配置至少一个 Gemini 或 OpenAI 渠道。
 2. 在 `roles` 中配置角色。
 3. 在 `AI.profiles` 中配置角色触发前缀、角色名和渠道。
 4. 群内发送角色前缀加内容即可触发对话。
@@ -129,16 +129,17 @@ config/sakura-plugin/
 
 ### Grok
 
-`Channels.grok` 支持：
+Grok 图片和视频功能通过 `CliProxyMedia` 的本地 OpenAI-compatible 媒体网关生成，常用配置：
 
-- `sso`
-- `supersso`
-- `cf_clearance`
-- `x_statsig_id`
-- `temporary`
-- `dynamic_statsig`
+- `baseURL`
+- `apiKey`
+- `imageModel`
+- `videoModel`
+- `pollIntervalMs`
+- `timeoutMs`
+- `preferNativeVideo`
 
-Grok 图片和视频功能会读取这些配置。
+配置完成后可使用 `#gi` 和 `#gv` 生成 Grok 图片或视频。
 
 ### NovelAI
 
@@ -292,7 +293,7 @@ chmod +x plugins/sakura-plugin/github-mcp-server/github-mcp-server
 
 ### Grok 功能不可用
 
-检查 `Channels.grok` 是否配置 `sso` 或 `supersso`，并确认 `cf_clearance`、`x_statsig_id` 等网页访问参数仍有效。
+检查 `CliProxyMedia.baseURL`、`apiKey`、模型名称和本地媒体网关进程是否可用。
 
 ### 生图提示未配置渠道
 

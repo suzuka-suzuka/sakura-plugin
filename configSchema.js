@@ -11,7 +11,6 @@ import {
 } from './lib/AIUtils/tavilyConfig.js';
 
 const OPENAI_REASONING_EFFORT_OPTIONS = ['', 'none', 'minimal', 'low', 'medium', 'high', 'xhigh'];
-const GROK_MEDIA_ROUTE_OPTIONS = ['web', 'api'];
 
 function cronString(defaultValue = '0 * * * *') {
     return z.string().default(defaultValue).refine((val) => {
@@ -147,7 +146,6 @@ const ImageOpenAIChannelSchema = z.object({
 });
 
 export const CliProxyMediaSchema = z.object({
-    defaultRoute: z.enum(GROK_MEDIA_ROUTE_OPTIONS).default('web').describe('Grok媒体默认路由|web 使用网页逆向；api 使用本地 OpenAI-compatible 网关'),
     baseURL: z.string().default('http://127.0.0.1:8317/v1').describe('Grok 网关地址|本地 Grok OAuth 网关的 /v1 接口地址'),
     apiKey: z.string().default('').describe('Grok 网关密钥|#textarea|本地 Grok OAuth 网关的 Bearer API Key；网关未启用鉴权时可留空'),
     imageModel: z.string().default('grok-imagine-image-quality').describe('生图模型|用于 #gi 的 Grok 图片模型，例如 grok-imagine-image-quality'),
@@ -157,21 +155,9 @@ export const CliProxyMediaSchema = z.object({
     preferNativeVideo: z.boolean().default(true).describe('优先原生视频接口|开启后使用 /videos/generations，可透传 xAI 原生参数'),
 }).describe('Grok 媒体网关');
 
-const GrokChannelSchema = z.object({
-    name: z.string().default('grok').describe('渠道名称'),
-    model: z.string().default('auto').describe('模型名称'),
-    sso: z.string().default('').describe('SSO Token|#textarea'),
-    supersso: z.string().default('').describe('SuperSSO Token|#textarea|可填写包含 sso-rw 或 supersso-rw 的完整 Cookie'),
-    cf_clearance: z.string().default('').describe('CF Clearance|#textarea'),
-    x_statsig_id: z.string().default('').describe('Statsig ID|#textarea'),
-    temporary: z.boolean().default(true).describe('临时会话'),
-    dynamic_statsig: z.boolean().default(true).describe('动态Statsig'),
-});
-
 export const ChannelsSchema = z.object({
     gemini: z.array(GeminiChannelSchema).default([]).describe('Gemini 渠道列表|配置Google Gemini API渠道'),
     openai: z.array(OpenAIChannelSchema).default([]).describe('OpenAI 渠道列表|配置 OpenAI API 渠道'),
-    grok: z.array(GrokChannelSchema).default([]).describe('Grok 渠道列表|配置Grok网页渠道'),
 }).describe('AI 渠道管理');
 
 export const ImageChannelsSchema = z.object({
@@ -542,7 +528,6 @@ export const dynamicOptionsConfig = {
         sources: [
             { module: 'Channels', path: 'gemini', valueKey: 'name' },
             { module: 'Channels', path: 'openai', valueKey: 'name' },
-            { module: 'Channels', path: 'grok', valueKey: 'name' },
         ],
     },
     channelSelectArray: {
@@ -551,7 +536,6 @@ export const dynamicOptionsConfig = {
         sources: [
             { module: 'Channels', path: 'gemini', valueKey: 'name' },
             { module: 'Channels', path: 'openai', valueKey: 'name' },
-            { module: 'Channels', path: 'grok', valueKey: 'name' },
         ],
     },
     imageChannelSelect: {

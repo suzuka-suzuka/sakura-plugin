@@ -1,15 +1,5 @@
 import { generateGrokImage } from "../lib/AIUtils/cliProxyMediaClient.js";
 import { formatGrokUserError } from "../lib/AIUtils/grokErrorMessages.js";
-import { grokRequest } from "../lib/AIUtils/GrokClient.js";
-import {
-  buildGrokMediaMessages,
-  GROK_MEDIA_ROUTE_API,
-  GROK_MEDIA_ROUTE_AUTO,
-  GROK_MEDIA_ROUTE_WEB,
-  parseGrokMediaRouteToken,
-  resolveGrokMediaRoute,
-  resolveGrokWebConfig,
-} from "../lib/AIUtils/grokMediaRouting.js";
 import { getImg } from "../lib/utils.js";
 import Setting from "../lib/setting.js";
 
@@ -45,7 +35,6 @@ function parseImageCommand(rawText) {
     aspectRatio: null,
     resolution: null,
     n: 1,
-    route: GROK_MEDIA_ROUTE_AUTO,
   };
   const promptParts = [];
 
@@ -54,12 +43,6 @@ function parseImageCommand(rawText) {
     if (!token) continue;
 
     const lower = token.toLowerCase();
-    const route = parseGrokMediaRouteToken(lower);
-    if (route) {
-      options.route = route;
-      continue;
-    }
-
     const countMatch = lower.match(/^(?:--)?(?:n|count)=(\d+)$/);
     if (countMatch) {
       options.n = clampCount(countMatch[1]);
@@ -92,36 +75,6 @@ function toImageReferences(images = []) {
       base64: image.base64,
       mimeType: image.mimeType || "image/png",
     }));
-}
-
-async function generateViaWeb(prompt, options, images, e) {
-  const result = await grokRequest(
-    {
-      model: "grok-imagine-image",
-      messages: buildGrokMediaMessages(prompt, images),
-      imageOptions: {
-        prompt,
-        aspectRatio: options.aspectRatio,
-        count: options.n,
-        enablePro: options.resolution === "2k" ? true : undefined,
-      },
-    },
-    resolveGrokWebConfig(),
-    e
-  );
-
-  const imageSources = (result.images || [])
-    .map((image) => image.localPath || image.url)
-    .filter(Boolean);
-
-  if (imageSources.length === 0) {
-    throw new Error(
-      result.text ||
-        "Grok 网页没有返回图片，可能是提示词被拦截、额度不足，或页面状态异常。"
-    );
-  }
-
-  return imageSources;
 }
 
 async function generateViaOpenAICompatible(prompt, options, images) {
@@ -164,25 +117,13 @@ export class GrokImage extends plugin {
 
     try {
       const imgBase64List = (await getImg(e, true, true)) || [];
-      const route = resolveGrokMediaRoute(options.route);
-
-      if (route === GROK_MEDIA_ROUTE_WEB) {
-        const imageSources = await generateViaWeb(prompt, options, imgBase64List, e);
-        await e.reply(imageSources.map((source) => segment.image(source)));
-        return true;
-      }
-
-      if (route === GROK_MEDIA_ROUTE_API) {
-        const buffers = await generateViaOpenAICompatible(
-          prompt,
-          options,
-          imgBase64List
-        );
-        await e.reply(buffers.map((buffer) => segment.image(buffer)));
-        return true;
-      }
-
-      throw new Error(`Grok 媒体渠道不支持：${route}`);
+      const buffers = await generateViaOpenAICompatible(
+        prompt,
+        options,
+        imgBase64List
+      );
+      await e.reply(buffers.map((buffer) => segment.image(buffer)));
+      return true;
     } catch (error) {
       logger.error("[GrokImage] image request failed", error);
       await e.reply(
