@@ -79,6 +79,10 @@ export class Ludo extends plugin {
     return JSON.parse(raw)
   }
 
+  async deleteSave(e, slot) {
+    await fsp.unlink(this.getSavePath(e, slot))
+  }
+
   async listSaves(e) {
     const scope = `${this.sanitizeFilePart(this.getGameKey(e))}__`
 
@@ -168,8 +172,7 @@ export class Ludo extends plugin {
   saveLudoGame = Command(/^#?存档飞行棋(?:\s+(.+))?$/, async (e) => {
     const gameManager = activeGames.get(this.getGameKey(e))
     if (!gameManager?.game) {
-      await e.reply("本群当前没有可以存档的飞行棋游戏。")
-      return true
+      return false
     }
 
     if (!this.canSaveGame(e, gameManager)) {
@@ -184,15 +187,17 @@ export class Ludo extends plugin {
     }
 
     const slot = this.getSaveSlot(e)
+    const gameKey = this.getGameKey(e)
     await this.writeSave(e, slot, state)
-    await e.reply(`飞行棋已存档到「${slot}」。之后发送【复原飞行棋${slot === defaultSaveSlot ? "" : ` ${slot}`}】可以恢复。`)
+    activeGames.delete(gameKey)
+    logger.info(`[飞行棋] 群 ${e.group_id} 的游戏已存档到「${slot}」并结束当前局。`)
+    await e.reply(`飞行棋已存档到「${slot}」，当前局已结束。之后发送【复原飞行棋${slot === defaultSaveSlot ? "" : ` ${slot}`}】可以恢复。`)
     return true
   });
 
   restoreLudoGame = Command(/^#?(?:复原|恢复|读档)飞行棋(?:\s+(.+))?$/, async (e) => {
     if (!(e.isWhite || e.isAdmin)) {
-      await e.reply("只有管理员或白名单用户可以复原飞行棋存档。")
-      return true
+      return false
     }
 
     const gameKey = this.getGameKey(e)
@@ -256,6 +261,30 @@ export class Ludo extends plugin {
     })
 
     await e.reply(`飞行棋存档列表：\n${lines.join("\n")}`)
+    return true
+  });
+
+  deleteLudoSave = Command(/^#?(?:删除|移除)飞行棋存档(?:\s+(.+))?$/, async (e) => {
+    if (!(e.isWhite || e.isAdmin)) {
+      return false
+    }
+
+    const slot = this.getSaveSlot(e)
+
+    try {
+      await this.deleteSave(e, slot)
+    } catch (error) {
+      if (error.code === "ENOENT") {
+        await e.reply(`没有找到「${slot}」这个飞行棋存档。`)
+        return true
+      }
+
+      logger.error(`[飞行棋] 删除存档失败: ${error.stack || error}`)
+      await e.reply("删除飞行棋存档失败，请查看日志。")
+      return true
+    }
+
+    await e.reply(`已删除飞行棋存档「${slot}」。`)
     return true
   });
 
