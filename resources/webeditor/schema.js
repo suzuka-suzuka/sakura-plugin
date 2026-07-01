@@ -89,6 +89,17 @@ const configSchema = {
       schema: {
         name: { label: "人设名称", type: "text", required: true },
         prompt: { label: "设定内容", type: "textarea", required: true },
+        groupOverrides: {
+          label: "分群配置附加",
+          type: "array",
+          itemType: "object",
+          titleField: "groupId",
+          help: "为单独群组添加主人设的附属提示词",
+          schema: {
+            groupId: { label: "群号", type: "text", required: true },
+            prompt: { label: "补充提示词", type: "textarea", required: true }
+          }
+        }
       },
     },
 

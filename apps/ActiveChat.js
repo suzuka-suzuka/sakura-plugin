@@ -1,6 +1,7 @@
 import Setting from "../lib/setting.js"
 import { getAI } from "../lib/AIUtils/getAI.js"
 import { loadConversationHistory } from "../lib/AIUtils/ConversationHistory.js"
+import { getRolePrompt } from "../lib/RoleHelper.js"
 import { parseAtMessage } from "../lib/AIUtils/messaging.js"
 
 const LAST_INTERACTION_TIME_PREFIX = "AI_LastInteractionTime:"
@@ -131,12 +132,8 @@ export class ActiveChatScheduler extends plugin {
 
       let Prompt = profile.Prompt
       if (profile.name) {
-          const rolesConfig = Setting.getConfig("roles")
-          const roles = rolesConfig?.roles || []
-          const role = roles.find(r => r.name === profile.name)
-          if (role && role.prompt) {
-              Prompt = role.prompt
-          }
+          const rolePrompt = getRolePrompt(profile.name, mockE.group_id)
+          if (rolePrompt) Prompt = rolePrompt
       }
 
       const geminiResponse = await getAI(

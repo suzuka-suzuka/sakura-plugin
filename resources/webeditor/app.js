@@ -1229,6 +1229,52 @@ function renderObjectEditorForm() {
                     </div>
                 </div>
             `
+      } else if (Array.isArray(value) && fieldSchema.itemType === "object") {
+        // 嵌套对象数组（如 groupOverrides）—— 行内可编辑
+        const nestedSchema = fieldSchema.schema || {}
+        const nestedKeys = Object.keys(nestedSchema)
+        const titleField = fieldSchema.titleField || nestedKeys[0] || "name"
+
+        return `
+                <div class="form-group" style="flex-direction: column; align-items: stretch;">
+                    <label>${label}${fieldSchema.required ? ' <span style="color: #ff4d4f;">*</span>' : ""}</label>
+                    ${fieldSchema.help ? `<p style="color: #999; font-size: 12px; margin-bottom: 8px;">${fieldSchema.help}</p>` : ""}
+                    <div class="form-control-wrapper">
+                        <div class="object-array-container">
+                            <div class="object-array-header" style="margin-bottom: 8px;">
+                                <span class="object-array-count">已配置 ${value.length} 项</span>
+                                <button type="button" class="btn-add" onclick="addNestedObjectArrayItem('${key}')" style="margin: 0;">
+                                    ➕ 新增
+                                </button>
+                            </div>
+                            <div class="object-array-list">
+                                ${value.map((item, idx) => `
+                                    <div class="object-card" style="padding: 12px;">
+                                        <div class="object-card-header" style="margin-bottom: 8px;">
+                                            <span class="object-card-name" style="font-weight: 500;">📋 ${escapeHtml(String(item[titleField] || `项 ${idx + 1}`))}</span>
+                                            <button type="button" class="btn-remove-card" onclick="event.stopPropagation(); removeNestedObjectArrayItem('${key}', ${idx})" title="删除">🗑️</button>
+                                        </div>
+                                        ${nestedKeys.map(k => {
+                                          const ks = nestedSchema[k]
+                                          const val = item[k] != null ? item[k] : ''
+                                          if (ks.type === 'textarea') {
+                                            return `<div style="margin-top: 6px;"><label style="font-size: 12px; color: #888;">${ks.label || k}</label><textarea onchange="updateNestedObjectValue('${key}',${idx},'${k}',this.value)" rows="2" style="width:100%;font-size:13px;margin-top:2px;">${escapeHtml(String(val))}</textarea></div>`
+                                          } else if (ks.type === 'number') {
+                                            return `<div style="margin-top: 6px;"><label style="font-size: 12px; color: #888;">${ks.label || k}</label><input type="number" value="${escapeHtml(String(val))}" onchange="updateNestedObjectValue('${key}',${idx},'${k}',this.value)" style="width:100%;font-size:13px;margin-top:2px;"></div>`
+                                          } else if (ks.type === 'boolean') {
+                                            return `<div style="margin-top: 6px;"><label style="font-size: 12px; color: #888; display: flex; align-items: center; gap: 8px;">${ks.label || k}<input type="checkbox" ${val ? 'checked' : ''} onchange="updateNestedObjectValue('${key}',${idx},'${k}',this.checked)" style="margin: 0;"></label></div>`
+                                          } else {
+                                            return `<div style="margin-top: 6px;"><label style="font-size: 12px; color: #888;">${ks.label || k}</label><input type="text" value="${escapeHtml(String(val))}" onchange="updateNestedObjectValue('${key}',${idx},'${k}',this.value)" style="width:100%;font-size:13px;margin-top:2px;"></div>`
+                                          }
+                                        }).join('')}
+                                    </div>
+                                `).join('')}
+                                ${value.length === 0 ? '<div style="color: #999; font-size: 13px; padding: 15px; text-align: center; background: #fafafa; border-radius: 6px; border: 1px dashed #d9d9d9;">暂无配置项，点击"新增"添加</div>' : ""}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `
       } else if (Array.isArray(value)) {
         const arrayId = `obj-array-${key}`
         const itemType = fieldSchema.itemType || "text"
@@ -1301,6 +1347,42 @@ function addObjectFieldArrayItem(key) {
     }
     currentEditingObjectData[key].push(value.trim())
     renderObjectEditorForm()
+  }
+}
+
+function addNestedObjectArrayItem(key) {
+  if (!currentEditingObjectData) return
+  const parentSchema = getFieldSchema(currentEditingObjectPath)
+  const itemSchema = parentSchema?.schema?.[key]
+  if (!itemSchema?.schema) return
+
+  const template = {}
+  for (const [k, ks] of Object.entries(itemSchema.schema)) {
+    if (ks.type === "number") template[k] = 0
+    else if (ks.type === "boolean") template[k] = false
+    else if (ks.type === "array") template[k] = []
+    else template[k] = ""
+  }
+
+  if (!Array.isArray(currentEditingObjectData[key])) {
+    currentEditingObjectData[key] = []
+  }
+  currentEditingObjectData[key].push(template)
+  renderObjectEditorForm()
+}
+
+function removeNestedObjectArrayItem(key, index) {
+  if (!currentEditingObjectData || !Array.isArray(currentEditingObjectData[key])) return
+  currentEditingObjectData[key].splice(index, 1)
+  renderObjectEditorForm()
+}
+
+function updateNestedObjectValue(key, index, field, value) {
+  if (!currentEditingObjectData) return
+  const arr = currentEditingObjectData[key]
+  if (!arr || !arr[index]) return
+  if (typeof arr[index] === "object") {
+    arr[index][field] = value
   }
 }
 

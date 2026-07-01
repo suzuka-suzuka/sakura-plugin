@@ -1,5 +1,6 @@
 import Setting from "../lib/setting.js"
 import cfg from "../../../lib/config/config.js"
+import { getRolePrompt } from "../lib/RoleHelper.js"
 import { getAI } from "../lib/AIUtils/getAI.js"
 import {
   loadConversationHistory,
@@ -115,12 +116,8 @@ export class AIChat extends plugin {
 
     let Prompt = matchedProfile.Prompt
     if (matchedProfile.name) {
-      const rolesConfig = Setting.getConfig("roles")
-      const roles = rolesConfig?.roles || []
-      const role = roles.find(r => r.name === matchedProfile.name)
-      if (role && role.prompt) {
-        Prompt = role.prompt
-      }
+      const rolePrompt = getRolePrompt(matchedProfile.name, e.group_id)
+      if (rolePrompt) Prompt = rolePrompt
     }
 
     let query

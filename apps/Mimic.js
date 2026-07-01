@@ -4,6 +4,7 @@ import { _path } from "../lib/path.js"
 import { getAI } from "../lib/AIUtils/getAI.js"
 import { executeToolCalls } from "../lib/AIUtils/tools/tools.js"
 import { splitAndReplyMessages, parseAtMessage, getQuoteContent } from "../lib/AIUtils/messaging.js"
+import { getRolePrompt } from "../lib/RoleHelper.js"
 import Setting from "../lib/setting.js"
 import cfg from "../../../lib/config/config.js"
 import { randomEmojiLike, getImg } from "../lib/utils.js"
@@ -174,24 +175,18 @@ export class Mimic extends plugin {
       }
     }
 
+    const roles = Setting.getConfig("roles")?.roles || []
+
     let Prompt = config.Prompt
     if (config.name) {
-      const rolesConfig = Setting.getConfig("roles")
-      const roles = rolesConfig?.roles || []
-      const role = roles.find(r => r.name === config.name)
-      if (role && role.prompt) {
-        Prompt = role.prompt
-      }
+      const rolePrompt = getRolePrompt(config.name, e.group_id, roles)
+      if (rolePrompt) Prompt = rolePrompt
     }
 
     let alternatePrompt = config.alternatePrompt
     if (config.alternateName) {
-      const rolesConfig = Setting.getConfig("roles")
-      const roles = rolesConfig?.roles || []
-      const role = roles.find(r => r.name === config.alternateName)
-      if (role && role.prompt) {
-        alternatePrompt = role.prompt
-      }
+      const rolePrompt = getRolePrompt(config.alternateName, e.group_id, roles)
+      if (rolePrompt) alternatePrompt = rolePrompt
     }
 
     let selectedPresetPrompt = Prompt

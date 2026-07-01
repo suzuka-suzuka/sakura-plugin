@@ -6,6 +6,7 @@ import { pluginresources, plugindata } from "../lib/path.js"
 import { yandeimage, buildStickerMsg } from "../lib/ImageUtils/ImageUtils.js"
 import Setting from "../lib/setting.js"
 import _ from "lodash"
+import { getRolePrompt } from "../lib/RoleHelper.js"
 import { getAI } from "../lib/AIUtils/getAI.js"
 import adapter from "../lib/adapter.js"
 import fsp from "fs/promises"
@@ -110,13 +111,8 @@ export class poke extends plugin {
     if (personas && personas.length > 0) {
       const personaName = _.sample(personas)
 
-      const rolesConfig = Setting.getConfig("roles")
-      const roles = rolesConfig?.roles || []
-      const role = roles.find(r => r.name === personaName)
-
-      if (role && role.prompt) {
-        systemInstruction = role.prompt
-      }
+      const rolePrompt = getRolePrompt(personaName, e.group_id)
+      if (rolePrompt) systemInstruction = rolePrompt
     } else {
       logger.warn("[戳一戳] 人设配置文件中未找到或其为空，将使用无设定的默认回复。")
     }
