@@ -1,4 +1,5 @@
 import Setting from "../lib/setting.js"
+import { getBot, getCurrentBotSelfId } from "../../../src/api/client.js"
 import { getRankingOverview, buildRankingForwardParams } from "../lib/pixiv/ranking.js"
 import {
   searchTagSubscription,
@@ -9,6 +10,11 @@ import {
   buildIllustInfoText
 } from "../lib/pixiv/subscription.js"
 import { FlipImage } from "../lib/ImageUtils/ImageUtils.js"
+
+function getTaskBot() {
+  const selfId = getCurrentBotSelfId()
+  return selfId == null ? null : getBot(selfId)
+}
 
 export class PixivTask extends plugin {
   constructor() {
@@ -208,7 +214,8 @@ export class PixivTask extends plugin {
 
 
   tagSubscriptionTask = Cron("*/30 * * * *", async () => {
-    if (!bot) return
+    const taskBot = getTaskBot()
+    if (!taskBot) return
 
     const config = this.appconfig
     if (!config.cookie || !config.refresh_token) {
@@ -262,7 +269,7 @@ export class PixivTask extends plugin {
               const sent = await isAlreadySent(groupId, illust.id, 'tag')
               if (sent) continue
 
-              await this.sendSubscriptionIllust(groupId, illust, tag, 'tag')
+              await this.sendSubscriptionIllust(taskBot, groupId, illust, tag, 'tag')
               await markAsSent(groupId, illust.id, 'tag', subConfig.freshnessPeriod)
               sentToAny = true
             } catch (err) {
@@ -285,7 +292,8 @@ export class PixivTask extends plugin {
 
 
   artistSubscriptionTask = Cron("10 * * * *", async () => {
-    if (!bot) return
+    const taskBot = getTaskBot()
+    if (!taskBot) return
 
     const config = this.appconfig
     if (!config.cookie || !config.refresh_token) {
@@ -333,7 +341,7 @@ export class PixivTask extends plugin {
               const sent = await isAlreadySent(groupId, illust.id, 'artist')
               if (sent) continue
 
-              await this.sendSubscriptionIllust(groupId, illust, artistId, 'artist')
+              await this.sendSubscriptionIllust(taskBot, groupId, illust, artistId, 'artist')
               await markAsSent(groupId, illust.id, 'artist', 86400)
               sentToAny = true
             } catch (err) {
@@ -355,7 +363,7 @@ export class PixivTask extends plugin {
     logger.info("[画师订阅定时] 检查完成")
   });
 
-  async sendSubscriptionIllust(groupId, illust, subscriptionName, type) {
+  async sendSubscriptionIllust(taskBot, groupId, illust, subscriptionName, type) {
     const config = this.appconfig
     const isR18 = illust.x_restrict !== 0
 
@@ -380,14 +388,14 @@ export class PixivTask extends plugin {
       {
         type: "node",
         data: {
-          user_id: bot.self_id,
-          nickname: bot.nickname || "Pixiv小助手",
+          user_id: taskBot.self_id,
+          nickname: taskBot.nickname || "Pixiv小助手",
           content: infoText,
         },
       }
     ]
 
-    await bot.sendForwardMsg({
+    await taskBot.sendForwardMsg({
       messages: msgNodes,
       group_id: Number(groupId),
       prompt: `🔔 有新作品更新`,
@@ -396,7 +404,7 @@ export class PixivTask extends plugin {
     })
 
 
-    const sendImages = async (imgs) => bot.sendGroupMsg(groupId, imgs)
+    const sendImages = async (imgs) => taskBot.sendGroupMsg(groupId, imgs)
 
     const initialRecallTime = isR18 ? (config.recallTime ?? 10) : 0
     let imgSendResult = await sendImages(imageUrls.map(url => segment.image(url)))
@@ -415,14 +423,14 @@ export class PixivTask extends plugin {
       }
 
       if (!imgSendResult?.message_id) {
-        imgSendResult = await bot.sendGroupMsg(groupId, "图片发送失败，请点击链接查看：\n" + imageUrls.join("\n"))
+        imgSendResult = await taskBot.sendGroupMsg(groupId, "图片发送失败，请点击链接查看：\n" + imageUrls.join("\n"))
         recallTimeToUse = 60
       }
     }
 
     if (recallTimeToUse > 0 && imgSendResult?.message_id) {
       setTimeout(() => {
-        bot.deleteMsg(imgSendResult.message_id).catch(() => { })
+        taskBot.deleteMsg(imgSendResult.message_id).catch(() => { })
       }, recallTimeToUse * 1000)
     }
   }
@@ -430,7 +438,8 @@ export class PixivTask extends plugin {
 
 
   weeklyRankingTask = Cron("5 11 * * 0", async () => {
-    if (!bot) return
+    const taskBot = getTaskBot()
+    if (!taskBot) return
 
     const config = this.appconfig
     if (!config.cookie || !config.refresh_token) {
@@ -456,12 +465,12 @@ export class PixivTask extends plugin {
       for (const groupId of pushGroups) {
 
         try {
-          const { nodes, prompt, news, source } = buildRankingForwardParams(result, "周榜", bot.self_id)
-          await bot.sendGroupMsg(groupId, "周末愉快！来点P站周榜精选")
+          const { nodes, prompt, news, source } = buildRankingForwardParams(result, "周榜", taskBot.self_id)
+          await taskBot.sendGroupMsg(groupId, "周末愉快！来点P站周榜精选")
           const msgNodes = nodes.map(n => ({
             type: "node",
             data: {
-              user_id: n.user_id ?? bot.self_id,
+              user_id: n.user_id ?? taskBot.self_id,
               nickname: n.nickname ?? "P站排行榜",
               content: Array.isArray(n.content)
                 ? n.content
@@ -471,7 +480,7 @@ export class PixivTask extends plugin {
             },
           }))
 
-          await bot.sendForwardMsg({
+          await taskBot.sendForwardMsg({
             messages: msgNodes,
             group_id: Number(groupId),
             prompt,
