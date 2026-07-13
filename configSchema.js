@@ -115,7 +115,6 @@ export const AISchema = z.object({
     enableUserLock: z.boolean().default(false).describe('用户锁定|同一用户同时只能进行一个对话'),
     toolsRoute: z.string().default('default').describe('工具路由|#routeSelect'),
     appsRoute: z.string().default('default').describe('应用路由|#routeSelect'),
-    defaultRoute: z.string().default('default').describe('默认路由|#routeSelect'),
     gcsBucket: z.string().default('').describe('GCS Bucket|Vertex 视频分析上传的 Cloud Storage bucket'),
     gcsPrefix: z.string().default('sakura-message-videos').describe('GCS Prefix|Vertex 视频分析临时文件目录'),
     maxToolCalls: z.number().default(20).describe('最大工具调用次数|每次对话允许AI连续调用工具的最大次数，超过后将强制结束'),
