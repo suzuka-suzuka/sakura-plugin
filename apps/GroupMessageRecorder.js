@@ -3,36 +3,29 @@ import {
   removeGroupMessage,
   searchGroupMessages,
 } from "../lib/AIUtils/groupMessageStore.js";
+import { refreshGroupMessageImages } from "../lib/AIUtils/groupMessageMedia.js";
 
 const SEARCH_COMMAND = /^#?(?:搜群消息|搜索群消息|查群消息|搜索聊天记录)(?:\s*([\s\S]*))?$/i;
 const SEARCH_COMMAND_PREFIX = /^#?(?:搜群消息|搜索群消息|查群消息|搜索聊天记录)/i;
 const QQ_PREFIX_PATTERN = /^(?:(?:qq|用户)\s*[:：=]?\s*)?(\d{5,12})(?:\s+([\s\S]*))?$/i;
 const RECORD_PRIORITY = -Infinity;
-const SEARCH_RESULT_LIMIT = 20;
+const SEARCH_RESULT_LIMIT = 50;
 
 export function getAtTarget(e) {
   if (!Array.isArray(e?.message)) return null;
 
-  let textBeforeAt = "";
   for (const segment of e.message) {
-    if (segment?.type === "text") {
-      textBeforeAt += segment.data?.text || "";
-      continue;
-    }
     if (segment?.type !== "at") continue;
 
     const target = segment.data?.qq ?? segment.data?.user_id;
-    if (target == null || target === "all") continue;
-
-    const commandAppearsBeforeAt = SEARCH_COMMAND_PREFIX.test(
-      textBeforeAt.trimStart()
-    );
-    const isLeadingBotMention = String(target) === String(e.self_id)
-      && !commandAppearsBeforeAt;
-
-    // “@Bot 搜群消息 ...”里的开头艾特只是唤醒方式；
-    // “搜群消息 @Bot”里的艾特则是在搜索 Bot 自己的消息。
-    if (!isLeadingBotMention) return String(target);
+    if (
+      target != null
+      && target !== "all"
+      && target !== 0
+      && target !== "0"
+    ) {
+      return String(target);
+    }
   }
 
   return null;
@@ -151,20 +144,15 @@ export class GroupMessageRecorder extends plugin {
       }
 
       const orderedResults = [...results].reverse();
-      const nodes = orderedResults.map((record) => {
-        const seq = record.realSeq || record.messageSeq || record.messageId;
-        return {
-          user_id: toForwardUserId(record.userId),
-          nickname: record.senderName || record.userId,
-          content: [{
-            type: "text",
-            data: {
-              text: `[${formatTime(record.time)} | QQ:${record.userId} | seq:${seq}]\n`
-                + shortenContent(record.content),
-            },
-          }],
-        };
-      });
+      const forwardMessages = await refreshGroupMessageImages(
+        e.bot,
+        orderedResults.map((record) => record.message)
+      );
+      const nodes = orderedResults.map((record, index) => ({
+        user_id: toForwardUserId(record.userId),
+        nickname: record.senderName || record.userId,
+        content: forwardMessages[index],
+      }));
 
       try {
         await e.sendForwardMsg(nodes, {
