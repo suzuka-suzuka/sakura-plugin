@@ -6,7 +6,7 @@
   "dependencies": {
     "@book000/pixivts": "^0.45.69",
     "@google-cloud/storage": "^7.19.0",
-    "@google/genai": "^1.50.1",
+    "@google/genai": "^2.11.0",
     "@mapbox/node-pre-gyp": "^2.0.3",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@modelcontextprotocol/server-github": "^2025.4.8",
@@ -21,7 +21,7 @@
     "https-proxy-agent": "^7.0.6",
     "marked": "^17.0.1",
     "muhammara": "^6.0.2",
-    "openai": "^6.9.1",
+    "openai": "^6.46.0",
     "pdf-lib": "^1.17.1",
     "puppeteer-real-browser": "^1.4.4",
     "remark": "^15.0.1",

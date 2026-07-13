@@ -4,6 +4,7 @@ import { loadConversationHistory, ConversationHistoryUtils } from "../lib/AIUtil
 import { parseAtMessage } from "../lib/AIUtils/messaging.js";
 import fs from "fs";
 import path from "path";
+import { getPrimaryPrefix } from "../lib/AIUtils/profileTriggers.js";
 
 const INACTIVITY_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 
@@ -77,7 +78,7 @@ export class ActiveChatScheduler extends plugin {
               );
 
               const profile = config.profiles.find(
-                (p) => p.prefix === profilePrefix
+                (item) => getPrimaryPrefix(item) === profilePrefix
               );
 
               if (!profile) {
@@ -159,11 +160,11 @@ export class ActiveChatScheduler extends plugin {
       }
 
       const geminiResponse = await getAI(
-        profile.Channel,
+        profile.route,
         mockE,
         queryParts,
         Prompt,
-        profile.GroupContext,
+        profile.groupContext,
         false,
         history
       );

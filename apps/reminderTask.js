@@ -2,7 +2,6 @@ import schedule from 'node-schedule'
 import { CronExpressionParser } from 'cron-parser'
 import Setting from '../lib/setting.js'
 import { renderReminderContentWithAI } from '../lib/AIUtils/reminder.js'
-import pluginConfigManager from '../../../src/core/pluginConfig.js'
 import { getBots, withBotContext } from '../../../src/api/client.js'
 
 export class reminderTask extends plugin {
@@ -22,11 +21,9 @@ export class reminderTask extends plugin {
   }
 
   getScopeIds() {
-    const configuredIds = pluginConfigManager.getConfiguredSelfIds('sakura-plugin')
-    const onlineIds = getBots()
+    return getBots()
       .map((currentBot) => Number(currentBot.self_id))
       .filter((selfId) => Number.isFinite(selfId))
-    return [...new Set([...configuredIds, ...onlineIds])]
   }
 
   getJobKey(selfId, taskId) {

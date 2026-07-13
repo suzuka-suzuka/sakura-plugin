@@ -2,7 +2,6 @@ import { connect } from "puppeteer-real-browser"
 import schedule from "node-schedule"
 import Setting from "../lib/setting.js"
 import _ from "lodash"
-import pluginConfigManager from "../../../src/core/pluginConfig.js"
 import { getBots } from "../../../src/api/client.js"
 
 export class teatime extends plugin {
@@ -15,11 +14,9 @@ export class teatime extends plugin {
   }
 
   getScopeIds() {
-    const configuredIds = pluginConfigManager.getConfiguredSelfIds("sakura-plugin")
-    const onlineIds = getBots()
+    return getBots()
       .map((currentBot) => Number(currentBot.self_id))
       .filter((selfId) => Number.isFinite(selfId))
-    return [...new Set([...configuredIds, ...onlineIds])]
   }
 
   async init() {

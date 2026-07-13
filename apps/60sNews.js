@@ -1,6 +1,5 @@
 import Setting from "../lib/setting.js";
 import schedule from "node-schedule";
-import pluginConfigManager from "../../../src/core/pluginConfig.js";
 import { getBots } from "../../../src/api/client.js";
 
 export class News60s extends plugin {
@@ -17,11 +16,9 @@ export class News60s extends plugin {
   }
 
   getScopeIds() {
-    const configuredIds = pluginConfigManager.getConfiguredSelfIds("sakura-plugin");
-    const onlineIds = getBots()
+    return getBots()
       .map((currentBot) => Number(currentBot.self_id))
       .filter((selfId) => Number.isFinite(selfId));
-    return [...new Set([...configuredIds, ...onlineIds])];
   }
 
   async init() {

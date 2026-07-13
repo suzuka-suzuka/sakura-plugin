@@ -3,9 +3,7 @@ import { marked } from "marked";
 import puppeteer from "puppeteer";
 
 import Setting from "../lib/setting.js";
-
-const HISTORY_PAGE_SIZE = 30;
-const MAX_SCAN_LIMIT = 2000;
+import { getUserGroupTextMessages } from "../lib/AIUtils/groupMessageStore.js";
 
 export class UserProfilePlugin extends plugin {
   constructor() {
@@ -31,31 +29,19 @@ export class UserProfilePlugin extends plugin {
       return true;
     }
 
-    const formattedLines = (
-      await Promise.all(
-        messages.map(async (chat) => {
-          const time = new Date((chat.time || 0) * 1000).toLocaleString(
-            "zh-CN",
-            {
-              month: "2-digit",
-              day: "2-digit",
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: false,
-            }
-          );
-
-          const contentParts = await Promise.all(
-            chat.message.map((part) => formatMessagePart(e, part))
-          );
-
-          const textContent = contentParts.join("").trim();
-          if (!textContent || textContent === "#画像") return "";
-
-          return `[${time}] ${textContent}`;
-        })
-      )
-    ).filter(Boolean);
+    const formattedLines = messages.map((message) => {
+      const time = new Date((message.time || 0) * 1000).toLocaleString(
+        "zh-CN",
+        {
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }
+      );
+      return `[${time}] ${message.textContent}`;
+    });
 
     const rawChatHistory = formattedLines.join("\n");
 
@@ -74,9 +60,9 @@ ${rawChatHistory}`;
 
     try {
       const queryParts = [{ text: aiPrompt }];
-      const Channel = Setting.getConfig("AI").appschannel;
+      const route = Setting.getConfig("AI").appsRoute;
       const result = await getAI(
-        Channel,
+        route,
         e,
         queryParts,
         null,
@@ -145,156 +131,18 @@ ${rawChatHistory}`;
 
 async function getUserTextHistory(e, userId, num) {
   try {
-    const userChats = [];
-    const seenMessages = new Set();
-    const targetUserId = String(userId);
-    let seq = getMessageSeq(e) || 0;
-    let previousSeq = null;
-    let totalScanned = 0;
-    let retriedFromLatest = false;
-
-    while (userChats.length < num && totalScanned < MAX_SCAN_LIMIT) {
-      const { messages: chatHistory, nextSeq } = await getHistoryPage(
-        e,
-        seq,
-        HISTORY_PAGE_SIZE
-      );
-
-      if (chatHistory.length === 0) {
-        if (seq && !retriedFromLatest) {
-          seq = 0;
-          previousSeq = null;
-          retriedFromLatest = true;
-          continue;
-        }
-        break;
-      }
-
-      totalScanned += chatHistory.length;
-
-      const filteredChats = chatHistory.filter((chat) => {
-        const messageSeq = getMessageSeq(chat);
-        const messageKey =
-          messageSeq || `${chat.time || 0}:${chat.raw_message || ""}`;
-        if (seenMessages.has(String(messageKey))) return false;
-        seenMessages.add(String(messageKey));
-
-        const senderId = chat.sender?.user_id ?? chat.user_id;
-        if (String(senderId) !== targetUserId) return false;
-        if (!Array.isArray(chat.message) || chat.message.length === 0) {
-          return false;
-        }
-
-        const plainText = getPlainText(chat.message).trim();
-        if (!plainText || plainText === "#画像") return false;
-
-        const hasTextOrAt = chat.message.some(
-          (msgPart) => msgPart?.type === "text" || msgPart?.type === "at"
-        );
-
-        return hasTextOrAt;
-      });
-
-      if (filteredChats.length > 0) {
-        userChats.push(...filteredChats);
-      }
-
-      const fallbackNextSeq = getMessageSeq(chatHistory[0]);
-      const nextMessageSeq = nextSeq || fallbackNextSeq;
-      if (
-        !nextMessageSeq ||
-        String(nextMessageSeq) === String(seq) ||
-        String(nextMessageSeq) === String(previousSeq)
-      ) {
-        break;
-      }
-
-      previousSeq = seq;
-      seq = nextMessageSeq;
-    }
-
-    userChats.sort((a, b) => {
-      const seqA = Number(getMessageSeq(a) || 0);
-      const seqB = Number(getMessageSeq(b) || 0);
-      if (seqA !== seqB) return seqA - seqB;
-      return Number(a.time || 0) - Number(b.time || 0);
+    return await getUserGroupTextMessages({
+      selfId: e.self_id,
+      groupId: e.group_id,
+      userId,
+      limit: num,
+      excludeMessageId: e.message_id ?? e.message_seq,
+      excludedTexts: ["#画像"],
     });
-
-    return userChats.slice(-num);
   } catch (err) {
-    logger.error("获取用户聊天记录时出错:", err);
+    logger.error("从 Redis 获取用户聊天记录时出错:", err);
     return [];
   }
-}
-
-async function getHistoryPage(e, messageSeq, count) {
-  if (e.group?.getMsgHistory) {
-    const res = await e.group.getMsgHistory(messageSeq || undefined, count);
-    return {
-      messages: normalizeHistoryMessages(res),
-      nextSeq: res?.next_message_seq,
-    };
-  }
-
-  const res = await e.getMsgHistory(count, messageSeq || null);
-  return {
-    messages: normalizeHistoryMessages(res),
-    nextSeq: res?.next_message_seq,
-  };
-}
-
-function normalizeHistoryMessages(res) {
-  if (Array.isArray(res)) return res;
-  if (Array.isArray(res?.messages)) return res.messages;
-  return [];
-}
-
-function getMessageSeq(message) {
-  return message?.seq || message?.message_seq || message?.message_id;
-}
-
-function getSegmentData(part) {
-  if (part?.data && typeof part.data === "object") return part.data;
-  return part || {};
-}
-
-function getPlainText(message = []) {
-  return message
-    .map((part) => {
-      const data = getSegmentData(part);
-      if (part?.type === "text") return data.text || "";
-      if (part?.type === "at") return `@${data.qq ?? data.user_id ?? ""}`;
-      return "";
-    })
-    .join("");
-}
-
-async function formatMessagePart(e, part) {
-  const data = getSegmentData(part);
-
-  if (part?.type === "text") {
-    return data.text || "";
-  }
-
-  if (part?.type === "at") {
-    const qq = data.qq ?? data.user_id;
-    if (qq === "all" || qq === 0 || qq === "0") {
-      return "@全体成员";
-    }
-
-    if (!qq) return "";
-
-    try {
-      const info = await e.getInfo(qq);
-      const atNickname = info?.card || info?.nickname || qq;
-      return `@${atNickname}`;
-    } catch (err) {
-      logger.error(`获取用户 ${qq} 的信息失败:`, err);
-      return `@${qq}`;
-    }
-  }
-
-  return "";
 }
 
 function escapeHtml(value) {

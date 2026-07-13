@@ -1,9 +1,9 @@
-import fs from "fs";
 import { runAgentLoop } from "../lib/AIUtils/AgentRunner.js";
 import {
-  findExistingMemoryFile,
-  getMemoryPathsFromEvent,
-} from "../lib/AIUtils/memoryStore.js";
+  loadConversationHistory,
+  saveConversationHistory,
+  trimConversationHistoryByRounds,
+} from "../lib/AIUtils/ConversationHistory.js";
 import { resolveToolConfirmation } from "../lib/AIUtils/tools/tools.js";
 import {
   splitAndReplyMessages,
@@ -11,7 +11,19 @@ import {
   getQuoteContent,
 } from "../lib/AIUtils/messaging.js";
 import Setting from "../lib/setting.js";
-import { randomReact, smartReplyMsg } from "../lib/utils.js";
+import { buildMultimodalQueryParts } from "../lib/AIUtils/messageParts.js";
+import { getMessageIdentifier } from "../lib/AIUtils/messageIdentifiers.js";
+import { getImg, randomReact, smartReplyMsg } from "../lib/utils.js";
+
+const MIMIC_HISTORY_PREFIX = "Mimic";
+const MIMIC_HISTORY_MAX_ROUNDS = 10;
+
+function trimMimicHistory(history) {
+  return trimConversationHistoryByRounds(
+    history,
+    MIMIC_HISTORY_MAX_ROUNDS
+  );
+}
 
 export class Mimic extends plugin {
   constructor() {
@@ -91,17 +103,12 @@ export class Mimic extends plugin {
     this.activeLocks.delete(lockKey);
   }
 
-  getMemoryFile(e) {
-    const { scopedFile } = getMemoryPathsFromEvent(e);
-    return scopedFile;
-  }
-
   buildMessageText(e) {
     const contentParts = [];
     if (e.message && Array.isArray(e.message) && e.message.length > 0) {
       e.message.forEach((msgPart) => {
         if (msgPart.type === "file") {
-          const seq = e.seq || e.message_seq;
+          const seq = getMessageIdentifier(e.message_seq, e.message_id, e.seq);
           const fileName = msgPart.data?.name || "未命名文件";
           contentParts.push(`[文件:${fileName}]${seq ? `(seq:${seq})` : ""}`);
           return;
@@ -115,7 +122,7 @@ export class Mimic extends plugin {
             contentParts.push(`@${msgPart.data?.qq}`);
             break;
           case "image": {
-            const seq = e.seq || e.message_seq;
+            const seq = getMessageIdentifier(e.message_seq, e.message_id, e.seq);
             contentParts.push(`[图片]${seq ? `(seq:${seq})` : ""}`);
             break;
           }
@@ -215,7 +222,8 @@ export class Mimic extends plugin {
       }
     }
 
-    const { config, query } = e._mimicPreflight;
+    const { config, query, mustReply } = e._mimicPreflight;
+    const shouldUseHistory = Boolean(mustReply);
 
     if (!query?.trim()) {
       return false;
@@ -270,34 +278,24 @@ export class Mimic extends plugin {
       shouldRecall = true;
     }
 
-    const userId = e.user_id;
-    const userName = e.sender.card || e.sender.nickname || "";
-    const memoryFile = findExistingMemoryFile(getMemoryPathsFromEvent(e));
-
-    if (memoryFile) {
-      try {
-        const memories = JSON.parse(fs.readFileSync(memoryFile, "utf8"));
-        if (memories && memories.length > 0) {
-          selectedPresetPrompt +=
-            `\n\n【关于当前用户的记忆】\n当前对话用户：${userName} (${userId})\n该用户曾让你记住以下信息（请将其视为关于该用户的设定或事实）：\n` +
-            memories.map((m) => `- ${m}`).join("\n");
-        }
-      } catch (err) {
-        logger.error(`读取记忆文件失败: ${err}`);
-      }
-    }
-
     logger.info(`mimic触发`);
     await randomReact(e);
-    const currentFullHistory = [];
-    const Channel = config.Channel;
-    const toolGroup = config.Tool || '';
+    let currentFullHistory = [];
+    const route = config.route;
+    const toolGroup = config.toolGroup || '';
     try {
-      const queryParts = [{ text: query }];
+      if (shouldUseHistory) {
+        currentFullHistory = trimMimicHistory(
+          await loadConversationHistory(e, MIMIC_HISTORY_PREFIX)
+        );
+      }
+
+      const imgBase64List = (await getImg(e, false, true)) || [];
+      const queryParts = buildMultimodalQueryParts(query, imgBase64List);
       const agentResult = await runAgentLoop({
         label: "Mimic",
         e,
-        channel: Channel,
+        route,
         queryParts,
         prompt: selectedPresetPrompt,
         groupContext: true,
@@ -309,8 +307,24 @@ export class Mimic extends plugin {
         },
       });
 
+      currentFullHistory = agentResult.history;
+
       if (agentResult.status === "model_error") {
         return true;
+      }
+
+      if (shouldUseHistory) {
+        const trimmedHistory = trimMimicHistory(currentFullHistory);
+        currentFullHistory.splice(
+          0,
+          currentFullHistory.length,
+          ...trimmedHistory
+        );
+        await saveConversationHistory(
+          e,
+          currentFullHistory,
+          MIMIC_HISTORY_PREFIX
+        );
       }
 
       if (agentResult.status === "tool_limit") {

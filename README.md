@@ -80,7 +80,8 @@ config/sakura-plugin/
 常用配置文件：
 
 - `bot.yaml`：机器人名称等基础信息。
-- `Channels.yaml`：AI 文本/多模态渠道，包括 Gemini、OpenAI。
+- `Providers.yaml`：AI 供应商、接口协议、端点和 Key 池。
+- `Routes.yaml`：逻辑模型路由、供应商目标和调度策略。
 - `ImageChannels.yaml`：生图渠道，包括 Gemini 图片和 OpenAI 图片。
 - `AI.yaml`：AI 对话、工具组、上下文、Markdown 处理等设置。
 - `roles.yaml`：AI 角色和人设。
@@ -100,10 +101,22 @@ config/sakura-plugin/
 
 ### AI 对话
 
-1. 在 `Channels` 中配置至少一个 Gemini 或 OpenAI 渠道。
-2. 在 `roles` 中配置角色。
-3. 在 `AI.profiles` 中配置角色触发前缀、角色名和渠道。
-4. 群内发送角色前缀加内容即可触发对话。
+1. 在 `Providers` 中配置供应商端点和至少一个凭据。
+2. 在 `Routes` 中配置逻辑模型路由和供应商目标。
+3. 在 `roles` 中配置角色。
+4. 在 `AI.profiles` 中配置角色触发前缀列表、角色名和模型路由。
+5. 群内发送任一角色前缀加内容即可触发对话；多个前缀同时匹配时使用最长前缀。
+
+路由和凭据均支持 `round_robin`、`weighted_round_robin`、`priority`、`priority_weighted`。同一个逻辑路由可以配置多个使用相同模型名的供应商目标。
+
+生成参数放在路由和目标层：路由的 `temperature`、`topP`、`reasoningLevel` 是统一默认值；目标可通过 `temperatureOverride`、`topPOverride` 覆盖采样参数，并使用 `openaiReasoningEffort` 或 `geminiThinkingLevel` / `geminiThinkingBudget` 设置供应商原生思考参数。Provider 只管理连接和凭据，不承载生成参数。
+
+- `temperature` / `topP` 为 `-1` 时不发送，使用模型默认值。
+- `reasoningLevel: off` 会映射为 OpenAI `none`、Gemini `thinkingBudget: 0`。
+- Gemini `geminiThinkingBudget: -2` 表示使用思考等级，`-1` 表示自动预算，`0` 表示关闭。
+- 一般只调整 temperature 或 Top-P 其中一个。
+
+编辑路由目标时，先选择供应商，模型字段会从该供应商的远程模型端点动态加载。模型列表默认缓存 300 秒，可在供应商配置中调整缓存时间、请求超时和列表上限；“刷新”按钮会绕过缓存。远程列表不可用时仍可手动输入模型名称。
 
 ### 图片生成和图片编辑
 
@@ -168,8 +181,7 @@ AI 对话与记忆：
 - 角色前缀 + 内容：AI 聊天。
 - `#停止` / `#强制停止`：停止当前生成。
 - `#清空对话 <角色>`、`#撤销对话 <角色>`、`#篡改对话 <内容>`、`#列出对话 <角色>`。
-- `#添加记忆`、`#删除记忆`、`#导出记忆`。
-- `#人设增加`、`#人设删除`、`#列出人设`、`#列出渠道`。
+- `#人设增加`、`#人设删除`、`#列出人设`、`#列出路由`。
 
 AI 创作：
 
@@ -216,6 +228,7 @@ AI 创作：
 工具与自动功能：
 
 - `#画像`。
+- `#群聊洞见 [今天/昨天/前天/YYYY-MM-DD] [刷新]`：生成关系图谱、行为标签、热门话题和群聊金句；默认每天 23:59 向活跃群推送无缓存日报。
 - `#提醒列表`、`#删除提醒`、`#开启提醒`、`#关闭提醒`。
 - `晚安`、`早安`、`睡眠信息`、`睡眠分析`。
 - B站链接解析、消息转发、入退群通知、冷群发图、表情包学习、主动聊天、Pixiv 订阅推送、60 秒新闻、自动清理。

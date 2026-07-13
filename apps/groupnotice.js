@@ -46,7 +46,7 @@ export class GroupNotice extends plugin {
 
     try {
       const aiResponse = await getAI(
-        Setting.getConfig("AI").appschannel,
+        Setting.getConfig("AI").appsRoute,
         e,
         [{ text: query }],
         AI_PROMPT,
@@ -87,7 +87,7 @@ export class GroupNotice extends plugin {
       const query = `成员${name}(QQ:${e.user_id}) 刚刚离开了群聊。请根据聊天上下文，直接写一句简短的告别。注意：直接输出内容，不要带任何格式或前缀，不要模仿聊天记录的格式。`;
 
       const aiResponse = await getAI(
-        Setting.getConfig("AI").appschannel,
+        Setting.getConfig("AI").appsRoute,
         e,
         [{ text: query }],
         AI_PROMPT,
