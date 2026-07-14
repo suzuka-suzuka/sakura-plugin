@@ -4,6 +4,12 @@ import puppeteer from "puppeteer";
 
 import Setting from "../lib/setting.js";
 import { getUserGroupTextMessages } from "../lib/AIUtils/groupMessageStore.js";
+import {
+  buildGroupMemberNameMap,
+  buildGroupMessageRecordMap,
+  replaceGroupMemberReferences,
+  resolveGroupMemberNameMap,
+} from "../lib/AIUtils/groupMemberNames.js";
 
 export class UserProfilePlugin extends plugin {
   constructor() {
@@ -29,6 +35,13 @@ export class UserProfilePlugin extends plugin {
       return true;
     }
 
+    let memberNames = buildGroupMemberNameMap(messages);
+    try {
+      memberNames = await resolveGroupMemberNameMap(e, messages);
+    } catch (error) {
+      logger.warn(`画像获取群名片失败，使用历史昵称: ${error.message}`);
+    }
+    const messageRecords = buildGroupMessageRecordMap(messages);
     const formattedLines = messages.map((message) => {
       const time = new Date((message.time || 0) * 1000).toLocaleString(
         "zh-CN",
@@ -40,7 +53,12 @@ export class UserProfilePlugin extends plugin {
           hour12: false,
         }
       );
-      return `[${time}] ${message.textContent}`;
+      const content = replaceGroupMemberReferences(
+        message.textContent,
+        message,
+        { memberNames, messageRecords }
+      );
+      return `[${time}] ${content}`;
     });
 
     const rawChatHistory = formattedLines.join("\n");
@@ -55,6 +73,7 @@ export class UserProfilePlugin extends plugin {
 2. **语言风格**：用户的说话风格是怎样的？（例如：正式、口语化、幽默、简洁等）
 3. **活跃时段**：根据发言时间，分析用户的活跃时间段，推测其作息习惯。
 4. **社交关系**：用户与哪些群成员互动最频繁？（根据'@'记录）
+提及群成员时请使用发言记录中提供的群名片，不要输出 QQ 号。
 以下是用户【${senderNickname}】的发言记录：
 ${rawChatHistory}`;
 

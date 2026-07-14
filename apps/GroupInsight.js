@@ -7,6 +7,10 @@ import {
   getGroupMessagesByTimeRange,
 } from "../lib/AIUtils/groupMessageStore.js";
 import {
+  applyGroupMemberNames,
+  resolveGroupMemberNameMap,
+} from "../lib/AIUtils/groupMemberNames.js";
+import {
   GROUP_INSIGHT_MIN_MESSAGE_COUNT,
   buildGroupInsightAIInput,
   buildGroupInsightPrompt,
@@ -141,8 +145,18 @@ async function createGroupInsightReport({
     throw createInsufficientMessagesError(messages.length);
   }
 
-  const stats = buildGroupInsightStats(messages);
-  const aiInput = buildGroupInsightAIInput(messages);
+  let memberNames = null;
+  try {
+    memberNames = await resolveGroupMemberNameMap(e, messages);
+  } catch (error) {
+    logger.warn(`[GroupInsight] 获取群名片失败，使用历史昵称: ${error.message}`);
+  }
+
+  const namedMessages = memberNames instanceof Map
+    ? applyGroupMemberNames(messages, memberNames)
+    : messages;
+  const stats = buildGroupInsightStats(namedMessages);
+  const aiInput = buildGroupInsightAIInput(namedMessages, { memberNames });
   let analysis;
   try {
     analysis = await buildAIAnalysis(e, date, stats, aiInput);
