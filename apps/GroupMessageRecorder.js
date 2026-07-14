@@ -114,14 +114,7 @@ export class GroupMessageRecorder extends plugin {
   searchMessages = Command(SEARCH_COMMAND, "message.group", 1135, async (e) => {
     const { userId, keyword } = parseSearchCriteria(e);
     if (!userId && !keyword) {
-      await e.reply(
-        "用法：\n"
-          + "#搜群消息 关键词\n"
-          + "#搜群消息 QQ号\n"
-          + "#搜群消息 QQ号 关键词\n"
-          + "也可以艾特群友后输入关键词。"
-      );
-      return true;
+      return false;
     }
 
     try {
