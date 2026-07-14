@@ -1,53 +1,11 @@
 import path from "node:path";
-import fs from "node:fs";
 import _ from "lodash";
 import { plugindata } from "../lib/path.js";
 import ImageGenerator from "../lib/sign/ImageGenerator.js";
+import SignData from "../lib/sign/SignData.js";
 import EconomyManager from "../lib/economy/EconomyManager.js";
-const dataPath = path.join(plugindata, "sign");
-if (!fs.existsSync(dataPath)) {
-  fs.mkdirSync(dataPath, { recursive: true });
-}
 
-class SignData {
-  constructor() {
-    this.file = path.join(dataPath, "sign.json");
-    if (!fs.existsSync(this.file)) {
-      fs.writeFileSync(this.file, "{}");
-    }
-    this.data = JSON.parse(fs.readFileSync(this.file, "utf8"));
-  }
-
-  save() {
-    fs.writeFileSync(this.file, JSON.stringify(this.data, null, 2));
-  }
-
-  getUserData(groupId, userId) {
-    if (!this.data[groupId]) {
-      this.data[groupId] = {};
-    }
-    if (!this.data[groupId][userId]) {
-      this.data[groupId][userId] = {
-        lastSign: "",
-        lastingTimes: 0,
-      };
-    }
-    return this.data[groupId][userId];
-  }
-
-  getTodaySignCount(groupId) {
-    const today = new Date().toLocaleDateString();
-    let count = 0;
-    if (this.data[groupId]) {
-      for (const userId in this.data[groupId]) {
-        if (this.data[groupId][userId].lastSign === today) {
-          count++;
-        }
-      }
-    }
-    return count;
-  }
-}
+const signData = new SignData(path.join(plugindata, "sign", "sign.json"));
 
 export default class DailySign extends plugin {
   constructor() {
@@ -61,31 +19,12 @@ export default class DailySign extends plugin {
   signIn = Command(/^#?签到$/, async (e) => {
     const groupId = e.group_id;
     const userId = e.user_id;
-    const today = new Date().toLocaleDateString();
+    const signDate = new Date();
 
-    const signData = new SignData();
-    const userData = signData.getUserData(groupId, userId);
-
-    if (userData.lastSign === today) {
+    if (signData.hasSigned(groupId, userId, signDate)) {
       await e.reply("你今天已经签到过了哦~", 10);
       return true;
     }
-
-    const signedInCount = signData.getTodaySignCount(groupId);
-    const signRanking = signedInCount + 1;
-
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (userData.lastSign === yesterday.toLocaleDateString()) {
-      userData.lastingTimes++;
-    } else {
-      userData.lastingTimes = 1;
-    }
-
-    userData.lastSign = today;
-
-    const economyManager = new EconomyManager(e);
 
     let newCoins = 0;
     try {
@@ -99,9 +38,19 @@ export default class DailySign extends plugin {
       newCoins = _.random(5, 15);
     }
 
+    // 正式写入前会重新加载磁盘数据并再次检查，整个读改写过程同步完成。
+    const signResult = signData.recordSign(groupId, userId, signDate);
+    if (!signResult.accepted) {
+      await e.reply("你今天已经签到过了哦~", 10);
+      return true;
+    }
+
+    const { signRanking, lastingTimes } = signResult;
+    const economyManager = new EconomyManager(e);
+
     let continuousBonus = 0;
-    if (userData.lastingTimes >= 2) {
-      continuousBonus = Math.min(userData.lastingTimes - 1, 10);
+    if (lastingTimes >= 2) {
+      continuousBonus = Math.min(lastingTimes - 1, 10);
     }
 
     let rankingBonus = 0;
@@ -132,7 +81,7 @@ export default class DailySign extends plugin {
 
     const displayData = {
       signRanking: signRanking,
-      lastingTimes: userData.lastingTimes,
+      lastingTimes: lastingTimes,
       newCoins: newCoins,
       totalCoins: totalCoins,
       currentLevel: currentLevel,
@@ -146,8 +95,6 @@ export default class DailySign extends plugin {
       rankingBonus: rankingBonus,
       totalBonus: totalBonus,
     };
-
-    signData.save();
 
     try {
       const imageGenerator = new ImageGenerator();

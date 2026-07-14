@@ -143,3 +143,6 @@ config/
 data/
 readmeresource/
 
+# Local-only tests
+test/
+
