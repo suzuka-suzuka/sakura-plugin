@@ -407,7 +407,7 @@ export const EditImageSchema = z.object({
     imageChannel: z.string().default('').describe('生图渠道|#imageChannelSelect|从生图渠道管理中选择'),
     videoChannel: z.string().default('grok-video').describe('视频渠道|#videoChannelSelect|从视频渠道管理中选择'),
     tasks: z.array(EditTaskSchema).default([]).describe('编辑指令列表|配置自定义的图片编辑指令'),
-}).describe('图片生成与编辑');
+}).describe('图片与视频生成与编辑');
 
 export const EmojiThiefSchema = z.object({
     Groups: z.array(z.number()).default([]).describe('启用群号|#groupSelect|在这些群中启用表情包学习'),
