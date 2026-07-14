@@ -4,6 +4,9 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 
+const ADD_KEYWORD_COMMAND = "添加词条";
+const DELETE_KEYWORD_COMMAND = "删除词条";
+
 export class KeywordReply extends plugin {
   constructor() {
     super({
@@ -128,10 +131,10 @@ export class KeywordReply extends plugin {
     }
   }
 
-  parseKeyword(e) {
+  parseKeyword(e, commandName = ADD_KEYWORD_COMMAND) {
     const keywordParts = [];
-
-    let foundAddCommand = false;
+    let foundCommand = false;
+    const commandPrefixes = [`#${commandName}`, commandName];
 
     for (const seg of e.message) {
       if (seg.type === "reply") continue;
@@ -141,13 +144,13 @@ export class KeywordReply extends plugin {
       } else if (seg.type === "text" && seg.data?.text) {
         let text = seg.data.text.trim();
 
-        if (!foundAddCommand) {
-          if (text.startsWith("#添加")) {
-            text = text.substring(3).trim();
-            foundAddCommand = true;
-          } else if (text.startsWith("添加")) {
-            text = text.substring(2).trim();
-            foundAddCommand = true;
+        if (!foundCommand) {
+          const commandPrefix = commandPrefixes.find((prefix) =>
+            text.startsWith(prefix)
+          );
+          if (commandPrefix) {
+            text = text.substring(commandPrefix.length).trim();
+            foundCommand = true;
           }
         }
 
@@ -192,7 +195,30 @@ export class KeywordReply extends plugin {
       .join(" ");
   }
 
-  添加词条 = Command(/^#?添加/, async (e) => {
+  normalizeKeywordDisplay(keywordParts) {
+    return this.formatKeywordDisplay(keywordParts)
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  findKeywordKey(groupData, keywordParts, keywordKey) {
+    if (groupData[keywordKey]) return keywordKey;
+
+    // 兼容历史数据：纯文本“@QQ”和真正的 at 消息段在列表中的显示相同，
+    // 但序列化后的 key 不同。直接 key 未命中时，按列表显示内容再匹配一次。
+    const targetDisplay = this.normalizeKeywordDisplay(keywordParts);
+    if (!targetDisplay) return null;
+
+    return Object.keys(groupData).find((key) => {
+      const storedParts = groupData[key]?.keywordParts;
+      return (
+        Array.isArray(storedParts) &&
+        this.normalizeKeywordDisplay(storedParts) === targetDisplay
+      );
+    }) || null;
+  }
+
+  添加词条 = Command(/^#?添加词条/, async (e) => {
     if (!e.group_id) return false;
     if (!e.reply_id) {
       return false;
@@ -258,37 +284,13 @@ export class KeywordReply extends plugin {
     return true;
   });
 
-  删除词条 = Command(/^#?删除/, async (e) => {
+  删除词条 = Command(/^#?删除词条/, async (e) => {
     if (!e.group_id) return false;
 
-    const keywordParts = [];
-    let foundCommand = false;
-
-    for (const seg of e.message) {
-      if (seg.type === "reply") continue;
-
-      if (seg.type === "at" && seg.data?.qq) {
-        keywordParts.push({ type: "at", data: String(seg.data.qq) });
-      } else if (seg.type === "text" && seg.data?.text) {
-        let text = seg.data.text.trim();
-
-        if (!foundCommand) {
-          if (text.startsWith("#删除")) {
-            text = text.substring(3).trim();
-            foundCommand = true;
-          } else if (text.startsWith("删除")) {
-            text = text.substring(2).trim();
-            foundCommand = true;
-          }
-        }
-
-        if (text) {
-          keywordParts.push({ type: "text", data: text });
-        }
-      }
-    }
-
-    const keywordKey = keywordParts.map((p) => `${p.type}:${p.data}`).join("|");
+    const { keywordParts, keywordKey } = this.parseKeyword(
+      e,
+      DELETE_KEYWORD_COMMAND
+    );
 
     if (!keywordKey) {
       return false;
@@ -296,15 +298,17 @@ export class KeywordReply extends plugin {
 
     const groupData = await this.loadGroupData(e.group_id);
 
-    if (!groupData[keywordKey]) {
+    const matchedKey = this.findKeywordKey(groupData, keywordParts, keywordKey);
+
+    if (!matchedKey) {
       const keywordDesc = this.formatKeywordDisplay(keywordParts);
       await e.reply(`词条「${keywordDesc}」不存在`, 10, true);
       return true;
     }
 
-    await this.deleteAllRepliesImages(groupData[keywordKey], e.group_id);
+    await this.deleteAllRepliesImages(groupData[matchedKey], e.group_id);
 
-    delete groupData[keywordKey];
+    delete groupData[matchedKey];
     await this.saveGroupData(e.group_id, groupData);
 
     const keywordDesc = this.formatKeywordDisplay(keywordParts);
