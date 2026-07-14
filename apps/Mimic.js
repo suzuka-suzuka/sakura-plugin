@@ -32,7 +32,7 @@ export class Mimic extends plugin {
       event: "message.group",
       priority: Infinity,
     });
-    this.activeLocks = new Map();
+    this.userLocks = new Map();
   }
 
   LOCK_TTL_MS = 120 * 1000;
@@ -63,13 +63,14 @@ export class Mimic extends plugin {
     return mergedConfig;
   }
 
-  getLockKey(e) {
-    return this.getScopeKey(e.group_id || "private");
+  getUserLockKey(e) {
+    const scope = e.group_id ? `${e.group_id}:${e.user_id}` : `private:${e.user_id}`;
+    return scope;
   }
 
-  acquireLock(lockKey) {
+  acquireUserLock(lockKey) {
     const now = Date.now();
-    const currentLock = this.activeLocks.get(lockKey);
+    const currentLock = this.userLocks.get(lockKey);
     if (currentLock && now - currentLock.startedAt < this.LOCK_TTL_MS) {
       return null;
     }
@@ -83,24 +84,24 @@ export class Mimic extends plugin {
       timeout: null,
     };
     lock.timeout = setTimeout(() => {
-      if (this.activeLocks.get(lockKey) === lock) {
-        this.activeLocks.delete(lockKey);
+      if (this.userLocks.get(lockKey) === lock) {
+        this.userLocks.delete(lockKey);
       }
     }, this.LOCK_TTL_MS);
 
-    this.activeLocks.set(lockKey, lock);
+    this.userLocks.set(lockKey, lock);
     return lock;
   }
 
-  releaseLock(lockKey, lock) {
-    if (!lock || this.activeLocks.get(lockKey) !== lock) {
+  releaseUserLock(lockKey, lock) {
+    if (!lock || this.userLocks.get(lockKey) !== lock) {
       return;
     }
 
     if (lock.timeout) {
       clearTimeout(lock.timeout);
     }
-    this.activeLocks.delete(lockKey);
+    this.userLocks.delete(lockKey);
   }
 
   buildMessageText(e) {
@@ -194,13 +195,17 @@ export class Mimic extends plugin {
       refundOnFalse: true,
     },
   }, async (e) => {
-    const config = this.getGroupConfig(e.group_id);
-    const groupLockKey = this.getLockKey(e);
-    let groupLock = null;
+    const lockConfig = Setting.getConfig("AI", { selfId: e?.self_id });
+    let lockKey = null;
+    let userLock = null;
 
-    if (config.enableGroupLock && e.group_id) {
-      groupLock = this.acquireLock(groupLockKey);
-      if (!groupLock) {
+    if (lockConfig.enableUserLock) {
+      lockKey = this.getUserLockKey(e);
+      userLock = this.acquireUserLock(lockKey);
+      if (!userLock) {
+        logger.info(
+          `[Mimic] 用户 ${e.user_id} 的上一条消息仍在处理中，本次触发已忽略。`
+        );
         return false;
       }
     }
@@ -208,9 +213,7 @@ export class Mimic extends plugin {
     try {
       return await this.doMimic(e);
     } finally {
-      if (config.enableGroupLock && e.group_id) {
-        this.releaseLock(groupLockKey, groupLock);
-      }
+      this.releaseUserLock(lockKey, userLock);
     }
   });
 

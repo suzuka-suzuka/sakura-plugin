@@ -111,7 +111,7 @@ export const AISchema = z.object({
     toolGroups: z.array(ToolGroupSchema).default([]).describe('工具组|#nameField:name|自定义工具组合，每个角色可绑定一个工具组'),
     groupContextLength: z.number().default(20).describe('群上下文长度|群聊上下文记忆的消息条数'),
     chatHistoryLength: z.number().default(20).describe('对话历史长度|保留的对话历史消息条数'),
-    enableUserLock: z.boolean().default(false).describe('用户锁定|同一用户同时只能进行一个对话'),
+    enableUserLock: z.boolean().default(false).describe('单人锁|统一控制 AI 聊天与拟态回复；每个功能同一用户在同一群内只处理一条消息'),
     toolsRoute: z.string().default('default').describe('工具路由|#routeSelect'),
     appsRoute: z.string().default('default').describe('应用路由|#routeSelect'),
     gcsBucket: z.string().default('').describe('GCS Bucket|Vertex 视频分析上传的 Cloud Storage bucket'),
@@ -548,7 +548,6 @@ const GroupConfigSchema = z.object({
     recalltime: z.number().default(10).describe('撤回时间(秒)|自动撤回消息的秒数'),
     route: z.string().default('default').describe('模型路由|#routeSelect'),
     toolGroup: z.string().default('').describe('工具组|#toolGroupSelect|选择此群使用的工具组'),
-    enableGroupLock: z.boolean().default(false).describe('群锁定|是否开启群流程锁'),
     splitMessage: z.boolean().default(true).describe('拆分消息|是否拆分长消息'),
 });
 
@@ -562,7 +561,6 @@ export const MimicSchema = z.object({
     recalltime: z.number().default(10).describe('撤回时间(秒)'),
     route: z.string().default('default').describe('模型路由|#routeSelect'),
     toolGroup: z.string().default('').describe('工具组|#toolGroupSelect|选择伪人使用的工具组'),
-    enableGroupLock: z.boolean().default(false).describe('群锁定'),
     splitMessage: z.boolean().default(true).describe('拆分消息'),
     Groups: z.array(z.number()).default([]).describe('启用群号|#groupSelect'),
     GroupConfigs: z.array(GroupConfigSchema).default([]).describe('群独立配置|为每个群设置不同的模拟人参数'),
