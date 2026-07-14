@@ -120,9 +120,9 @@ config/sakura-plugin/
 
 ### 图片生成和图片编辑
 
-1. 在 `ImageChannels` 中配置生图渠道。
+1. 在 `ImageChannels` 中配置 OpenAI、Grok、Gemini 或 Vertex 生图渠道；Vertex 渠道选择网页中已导入并验证的服务账号凭证。
 2. 在 `EditImage.imageChannel` 中选择一个生图渠道。
-3. 使用 `#i 提示词` 生图，或引用图片后使用 `#i 提示词` 改图。
+3. 使用 `#i 提示词` 生图，或引用图片后使用 `#i 提示词` 改图；可在提示词前使用 `grok`、`gpt`、`gemini`、`vertex` 临时切换渠道类型。当前渠道不支持某个参数时，机器人会先提示忽略或调整的内容，再继续生成。
 4. 可在 `EditImage.tasks` 中配置自定义图片编辑触发词。
 
 ### 经济系统
@@ -140,19 +140,15 @@ config/sakura-plugin/
 2. 配置 `r18` 控制 R18 功能可用群。
 3. 使用 `#pid`、`#来张插画`、`#日榜` 等指令。
 
-### Grok
+### AI 视频
 
-Grok 图片和视频功能通过 `CliProxyMedia` 的本地 OpenAI-compatible 媒体网关生成，常用配置：
+视频渠道在“图片功能 > 视频渠道管理”中配置：
 
-- `baseURL`
-- `apiKey`
-- `imageModel`
-- `videoModel`
-- `pollIntervalMs`
-- `timeoutMs`
-- `preferNativeVideo`
+- `CliProxyMedia.grok`：Grok OpenAI-compatible 媒体网关，可配置多个渠道。
+- `CliProxyMedia.gemini`：Gemini Omni Flash Vertex 渠道，凭据从已导入的 Vertex 服务账号中选择。
+- `EditImage.videoChannel`：不显式指定渠道时使用的默认视频渠道。
 
-配置完成后可使用 `#gi` 和 `#gv` 生成 Grok 图片或视频。
+使用 `#v grok <提示词>` 或 `#v gemini <提示词>` 选择渠道；省略渠道参数时使用默认视频渠道。Gemini Omni 当前仅支持 `16:9`/`9:16`、720p 和 3–10 秒视频。不兼容的参数会先提示并自动省略或调整，不会中断生成。
 
 ### NovelAI
 
@@ -185,10 +181,9 @@ AI 对话与记忆：
 
 AI 创作：
 
-- `#i <提示词>`：生图或改图。
+- `#i [grok|gpt|gemini|vertex] [比例] [1K/2K/4K] [n=1-6] <提示词>`：统一生图或改图。
 - `#绘图 <提示词>`：NovelAI 绘图。
-- `#gi <提示词>`：Grok 图片。
-- `#gv <提示词>`：Grok 视频。
+- `#v [grok|gemini] [比例] [分辨率] [时长] <提示词>`：Grok 或 Gemini Omni 视频。
 - `说 <内容>` / `<角色名>说 <内容>`：语音生成。
 
 图片与 Pixiv：
@@ -306,7 +301,7 @@ chmod +x plugins/sakura-plugin/github-mcp-server/github-mcp-server
 
 ### Grok 功能不可用
 
-检查 `CliProxyMedia.baseURL`、`apiKey`、模型名称和本地媒体网关进程是否可用。
+检查 `CliProxyMedia.grok` 渠道中的 `baseURL`、API Key、模型名称和本地媒体网关进程是否可用。
 
 ### 生图提示未配置渠道
 

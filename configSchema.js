@@ -60,8 +60,7 @@ function cronString(defaultValue = '0 * * * *') {
 export const commandNames = {
     "setuPlugin.handleApiRequest": "来张涩图",
     "GetImagePlugin.handleImage": "来张萝莉图",
-    "GrokImage.editImage": "gi（Grok图片编辑）",
-    "GrokVideo.generateVideo": "gv（Grok视频生成）",
+    "VideoGeneration.generateVideo": "视频生成",
     "BiliUidAnalyzer.queryUid": "B站UID分析",
     "KeywordReply.添加词条": "添加词条",
     "KeywordReply.删除词条": "删除词条",
@@ -139,7 +138,7 @@ export const AISchema = z.object({
 }).describe('AI 对话设定');
 
 export const TavilyMCPSchema = z.object({
-    apiKey: z.string().default('').describe('API Key|#textarea|Tavily Remote MCP API Key'),
+    apiKey: z.string().default('').describe('API Key|Tavily Remote MCP API Key'),
     baseURL: z.string().default(DEFAULT_TAVILY_MCP_URL).describe('Remote MCP URL|通常保持默认即可'),
     includeFavicon: z.boolean().default(true).describe('默认返回图标|作为 Tavily MCP 的默认参数'),
     includeImages: z.boolean().default(false).describe('默认返回图片|作为 Tavily MCP 的默认参数'),
@@ -162,28 +161,135 @@ export const AutoCleanupSchema = z.object({
 const ImageGeminiChannelSchema = z.object({
     name: z.string().default('gemini-image').describe('渠道名称'),
     model: z.string().default('gemini-3-pro-image-preview').describe('生图模型'),
-    api: z.string().default('').describe('API Key|#textarea'),
+    api: z.string().default('').describe('API Key'),
     baseURL: z.string().default('').describe('自定义URL|留空使用默认地址'),
-    vertex: z.boolean().default(false).describe('Vertex AI'),
-    vertexApi: z.string().default('').describe('备用 Vertex API Key|#textarea|普通 Gemini 请求失败后可回退到 Vertex'),
 });
 
 const ImageOpenAIChannelSchema = z.object({
     name: z.string().default('openai-image').describe('渠道名称'),
     baseURL: z.string().default('https://api.openai.com/v1').describe('API地址'),
-    api: z.string().default('').describe('API Key|#textarea'),
+    api: z.string().default('').describe('API Key'),
     model: z.string().default('gpt-image-2').describe('生图模型'),
 });
 
-export const CliProxyMediaSchema = z.object({
+const ImageGrokChannelSchema = z.object({
+    name: z.string().default('grok-image').describe('渠道名称'),
+    baseURL: z.string().default('http://127.0.0.1:8317/v1').describe('API地址|Grok OpenAI 兼容媒体接口地址'),
+    api: z.string().default('').describe('API Key|接口未启用鉴权时可留空'),
+    model: z.string().default('grok-imagine-image-quality').describe('生图模型'),
+});
+
+const ImageVertexChannelSchema = z.object({
+    name: z.string().default('vertex-image').describe('渠道名称'),
+    model: z.string().default('gemini-3-pro-image-preview').describe('生图模型'),
+    serviceAccountRef: z.string().trim().default('').describe('服务账号|#vertexCredentialSelect|选择已导入并验证的 Vertex 服务账号 JSON'),
+    baseURL: z.string().default('').describe('自定义URL|留空使用 Vertex 默认地址'),
+});
+
+function migrateImageChannelsConfig(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+
+    const config = { ...value };
+    const hasGeminiChannels = Array.isArray(config.gemini);
+    const geminiChannels = hasGeminiChannels ? config.gemini : [];
+    const legacyVertexChannels = geminiChannels.filter((channel) => channel?.vertex === true);
+
+    if (hasGeminiChannels) {
+        config.gemini = geminiChannels.filter((channel) => channel?.vertex !== true);
+    }
+    if (!Array.isArray(config.vertex) && legacyVertexChannels.length > 0) {
+        config.vertex = legacyVertexChannels.map((channel) => ({
+            name: channel.name,
+            model: channel.model,
+            serviceAccountRef: channel.serviceAccountRef || channel.credentialRef || '',
+            baseURL: channel.baseURL || '',
+        }));
+    }
+
+    return config;
+}
+
+const VideoGrokChannelSchema = z.object({
+    name: z.string().default('grok-video').describe('渠道名称'),
     baseURL: z.string().default('http://127.0.0.1:8317/v1').describe('Grok 网关地址|本地 Grok OAuth 网关的 /v1 接口地址'),
-    apiKey: z.string().default('').describe('Grok 网关密钥|#textarea|本地 Grok OAuth 网关的 Bearer API Key；网关未启用鉴权时可留空'),
-    imageModel: z.string().default('grok-imagine-image-quality').describe('生图模型|用于 #gi 的 Grok 图片模型，例如 grok-imagine-image-quality'),
-    videoModel: z.string().default('grok-imagine-video').describe('视频生成模型|用于 #gv 的 Grok 视频模型；grok-imagine-video-1.5-preview 无参考图时会自动改用 grok-imagine-video'),
-    pollIntervalMs: z.number().int().min(1000).default(5000).describe('视频轮询间隔|单位毫秒，用于查询 Grok 视频生成结果'),
-    timeoutMs: z.number().int().min(30000).default(900000).describe('视频等待超时|单位毫秒，超过后停止等待视频生成'),
-    preferNativeVideo: z.boolean().default(true).describe('优先原生视频接口|开启后使用 /videos/generations，可透传 xAI 原生参数'),
-}).describe('Grok 媒体网关');
+    api: z.string().default('').describe('Grok 网关密钥|本地 Grok OAuth 网关的 Bearer API Key；网关未启用鉴权时可留空'),
+    model: z.string().default('grok-imagine-video').describe('视频生成模型|grok-imagine-video-1.5-preview 无参考图时会自动改用 grok-imagine-video'),
+    pollIntervalMs: z.number().int().min(1000).default(5000).describe('轮询间隔|单位毫秒，用于查询 Grok 视频生成结果'),
+    timeoutMs: z.number().int().min(30000).default(900000).describe('等待超时|单位毫秒，超过后停止等待视频生成'),
+    preferNativeVideo: z.boolean().default(true).describe('优先原生接口|开启后使用 /videos/generations，可透传 xAI 原生参数'),
+});
+
+const VideoGeminiChannelSchema = z.object({
+    name: z.string().default('gemini-video').describe('渠道名称'),
+    model: z.string().default('gemini-omni-flash-preview').describe('视频生成模型'),
+    serviceAccountRef: z.string().trim().default('').describe('服务账号|#vertexCredentialSelect|选择已导入并验证的 Vertex 服务账号 JSON'),
+    baseURL: z.string().default('').describe('自定义URL|留空使用 Vertex global 默认地址'),
+    timeoutMs: z.number().int().min(30000).default(900000).describe('等待超时|单位毫秒，超过后停止等待视频生成'),
+});
+
+function migrateVideoChannelsConfig(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+    if (Array.isArray(value.grok) || Array.isArray(value.gemini)) return value;
+
+    const hasLegacyGrokConfig = [
+        'baseURL',
+        'baseUrl',
+        'apiKey',
+        'api',
+        'videoModel',
+        'pollIntervalMs',
+        'timeoutMs',
+        'preferNativeVideo',
+    ].some((key) => Object.hasOwn(value, key));
+
+    if (!hasLegacyGrokConfig) return value;
+    return {
+        grok: [{
+            name: 'grok-video',
+            baseURL: value.baseURL || value.baseUrl,
+            api: value.apiKey || value.api,
+            model: value.videoModel,
+            pollIntervalMs: value.pollIntervalMs,
+            timeoutMs: value.timeoutMs,
+            preferNativeVideo: value.preferNativeVideo,
+        }],
+        gemini: [],
+    };
+}
+
+const VideoChannelsObjectSchema = z.object({
+    grok: z.array(VideoGrokChannelSchema).default([VideoGrokChannelSchema.parse({})]).describe('Grok 视频渠道|配置 Grok OpenAI 兼容视频生成渠道'),
+    gemini: z.array(VideoGeminiChannelSchema).default([]).describe('Gemini Omni 视频渠道|使用 Vertex 服务账号凭证'),
+}).superRefine((config, ctx) => {
+    const seen = new Map();
+    for (const type of ['grok', 'gemini']) {
+        config[type].forEach((channel, index) => {
+            const name = channel?.name?.trim();
+            if (!name) {
+                ctx.addIssue({
+                    code: 'custom',
+                    path: [type, index, 'name'],
+                    message: '渠道名称不能为空',
+                });
+                return;
+            }
+            if (seen.has(name)) {
+                ctx.addIssue({
+                    code: 'custom',
+                    path: [type, index, 'name'],
+                    message: `渠道名称“${name}”与 ${seen.get(name)} 重复`,
+                });
+                return;
+            }
+            seen.set(name, `${type} 渠道`);
+        });
+    }
+}).describe('视频渠道管理');
+
+export const CliProxyMediaSchema = z.preprocess(
+    migrateVideoChannelsConfig,
+    VideoChannelsObjectSchema
+);
 
 const CredentialSchema = z.object({
     id: nonEmptyString('凭据 ID').describe('凭据 ID|供应商内唯一'),
@@ -263,10 +369,41 @@ export const RoutesSchema = z.object({
     addUniqueFieldIssues(config.routes, 'id', ctx, ['routes']);
 }).describe('AI 路由管理');
 
-export const ImageChannelsSchema = z.object({
-    gemini: z.array(ImageGeminiChannelSchema).default([ImageGeminiChannelSchema.parse({})]).describe('Gemini 生图渠道|配置 Google Gemini 图片生成渠道'),
+const ImageChannelsObjectSchema = z.object({
     openai: z.array(ImageOpenAIChannelSchema).default([ImageOpenAIChannelSchema.parse({})]).describe('OpenAI 生图渠道|配置 OpenAI 图片生成渠道'),
+    grok: z.array(ImageGrokChannelSchema).default([ImageGrokChannelSchema.parse({})]).describe('Grok 生图渠道|配置 Grok OpenAI 兼容图片生成渠道'),
+    gemini: z.array(ImageGeminiChannelSchema).default([ImageGeminiChannelSchema.parse({})]).describe('Gemini 生图渠道|使用 Gemini Developer API Key'),
+    vertex: z.array(ImageVertexChannelSchema).default([]).describe('Vertex 生图渠道|使用已导入的 Vertex 服务账号凭证'),
+}).superRefine((config, ctx) => {
+    const seen = new Map();
+    for (const type of ['openai', 'grok', 'gemini', 'vertex']) {
+        config[type].forEach((channel, index) => {
+            const name = channel?.name?.trim();
+            if (!name) {
+                ctx.addIssue({
+                    code: 'custom',
+                    path: [type, index, 'name'],
+                    message: '渠道名称不能为空',
+                });
+                return;
+            }
+            if (seen.has(name)) {
+                ctx.addIssue({
+                    code: 'custom',
+                    path: [type, index, 'name'],
+                    message: `渠道名称“${name}”与 ${seen.get(name)} 重复`,
+                });
+                return;
+            }
+            seen.set(name, `${type} 渠道`);
+        });
+    }
 }).describe('生图渠道管理');
+
+export const ImageChannelsSchema = z.preprocess(
+    migrateImageChannelsConfig,
+    ImageChannelsObjectSchema
+);
 
 const EditTaskSchema = z.object({
     trigger: z.string().default('').describe('触发词|图片编辑触发词'),
@@ -275,8 +412,9 @@ const EditTaskSchema = z.object({
 
 export const EditImageSchema = z.object({
     imageChannel: z.string().default('').describe('生图渠道|#imageChannelSelect|从生图渠道管理中选择'),
+    videoChannel: z.string().default('grok-video').describe('视频渠道|#videoChannelSelect|从视频渠道管理中选择'),
     tasks: z.array(EditTaskSchema).default([]).describe('编辑指令列表|配置自定义的图片编辑指令'),
-}).describe('图片编辑');
+}).describe('图片生成与编辑');
 
 export const EmojiThiefSchema = z.object({
     Groups: z.array(z.number()).default([]).describe('启用群号|#groupSelect|在这些群中启用表情包学习'),
@@ -342,8 +480,7 @@ const CommandCostSchema = z.object({
 const defaultCommandCosts = [
     { command: "来张涩图", cost: 5 },
     { command: "来张萝莉图", cost: 5 },
-    { command: "gi（Grok图片编辑）", cost: 10 },
-    { command: "gv（Grok视频生成）", cost: 20 },
+    { command: "视频生成", cost: 20 },
     { command: "B站UID分析", cost: 5 },
     { command: "添加词条", cost: 50 },
     { command: "删除词条", cost: 50 },
@@ -361,12 +498,25 @@ const defaultCommandCosts = [
     { command: "搜图", cost: 5 },
 ];
 
-export const EconomySchema = z.object({
+function migrateEconomyConfig(value) {
+    if (!value || typeof value !== 'object' || !Array.isArray(value.commandCosts)) return value;
+    const hasCurrentVideoCost = value.commandCosts.some((item) => item?.command === '视频生成');
+    const commandCosts = value.commandCosts
+        .filter((item) => !(hasCurrentVideoCost && item?.command === 'gv（Grok视频生成）'))
+        .map((item) => item?.command === 'gv（Grok视频生成）'
+            ? { ...item, command: '视频生成' }
+            : item);
+    return { ...value, commandCosts };
+}
+
+const EconomyObjectSchema = z.object({
     enable: z.boolean().default(true).describe('启用经济系统'),
     Groups: z.array(z.number()).default([]).describe('经济群号|#groupSelect|启用后指令将消耗樱花币'),
     gamegroups: z.array(z.number()).default([]).describe('游戏群号|#groupSelect|启用经济游戏功能的群'),
     commandCosts: z.array(CommandCostSchema).default(defaultCommandCosts).describe('指令消耗配置|#commandCost|配置各指令消耗的樱花币数量'),
 }).describe('经济系统');
+
+export const EconomySchema = z.preprocess(migrateEconomyConfig, EconomyObjectSchema);
 
 const ForwardRuleSchema = z.object({
     sourceGroupIds: z.array(z.number()).default([]).describe('来源群号|#groupSelect|转发消息来源的群号列表'),
@@ -588,9 +738,9 @@ export const schemaCategories = {
     '基础设定': ['bot'],
     'AI路由': ['Providers', 'Routes'],
     'AI角色': ['roles'],
-    'AI设定': ['AI', 'TavilyMCP', 'CliProxyMedia', 'mimic', 'ActiveChat'],
+    'AI设定': ['AI', 'TavilyMCP', 'mimic', 'ActiveChat'],
     '戳一戳': ['poke'],
-    '图片功能': ['ImageChannels', 'EditImage', 'nai', 'pixiv', 'r18', 'summary', 'SearchImage', 'cool', 'teatime', 'EmojiThief'],
+    '图片功能': ['ImageChannels', 'CliProxyMedia', 'EditImage', 'nai', 'pixiv', 'r18', 'summary', 'SearchImage', 'cool', 'teatime', 'EmojiThief'],
     '经济系统': ['economy'],
     '其他功能': ['60sNews', 'GroupInsight', 'AutoCleanup', 'forwardMessage', 'groupnotice', 'repeat', 'recall', 'bilicookie', 'VoxCPMVoice', 'reminderTask'],
 };
@@ -605,9 +755,9 @@ export const schemaLabels = {
     'AutoCleanup': '自动清理',
     'Providers': 'AI 供应商管理',
     'Routes': 'AI 路由管理',
-    'CliProxyMedia': 'Grok 媒体网关',
+    'CliProxyMedia': '视频渠道管理',
     'ImageChannels': '生图渠道管理',
-    'EditImage': '图片编辑',
+    'EditImage': '图片生成与编辑',
     'EmojiThief': '表情偷取',
     'VoxCPMVoice': 'VoxCPM 语音生成',
     'bilicookie': 'B站解析',
@@ -658,8 +808,17 @@ export const dynamicOptionsConfig = {
     imageChannelSelect: {
         label: '生图渠道',
         sources: [
-            { module: 'ImageChannels', path: 'gemini', valueKey: 'name' },
             { module: 'ImageChannels', path: 'openai', valueKey: 'name' },
+            { module: 'ImageChannels', path: 'grok', valueKey: 'name' },
+            { module: 'ImageChannels', path: 'gemini', valueKey: 'name' },
+            { module: 'ImageChannels', path: 'vertex', valueKey: 'name' },
+        ],
+    },
+    videoChannelSelect: {
+        label: '视频渠道',
+        sources: [
+            { module: 'CliProxyMedia', path: 'grok', valueKey: 'name' },
+            { module: 'CliProxyMedia', path: 'gemini', valueKey: 'name' },
         ],
     },
     toolGroupSelect: {
