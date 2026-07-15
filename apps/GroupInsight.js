@@ -1,5 +1,4 @@
-import schedule from "node-schedule";
-import { Segment, getBot, getBots } from "../../../src/api/client.js";
+import { Segment, getBot, getCurrentBotSelfId } from "../../../src/api/client.js";
 import Setting from "../lib/setting.js";
 import { getAI } from "../lib/AIUtils/getAI.js";
 import {
@@ -203,16 +202,15 @@ export class GroupInsight extends plugin {
     });
   }
 
-  async init() {
-    for (const currentBot of getBots()) {
-      const selfId = Number(currentBot.self_id);
-      if (!Number.isFinite(selfId)) continue;
-      const job = schedule.scheduleJob(DAILY_REPORT_CRON, async (fireDate) => {
-        await this.sendDailyReports(selfId, fireDate);
-      });
-      if (job) this.jobs.push(job);
+  dailyReportTask = Cron(DAILY_REPORT_CRON, async (fireDate) => {
+    const selfId = getCurrentBotSelfId();
+    if (selfId == null) {
+      logger.warn("[GroupInsight] 触发自动日报时没有在线账号，已跳过本次推送");
+      return;
     }
-  }
+
+    await this.sendDailyReports(selfId, fireDate);
+  });
 
   async sendDailyReports(selfId, fireDate = new Date()) {
     const currentBot = getBot(selfId);

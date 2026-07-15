@@ -1,47 +1,25 @@
 import Setting from "../lib/setting.js";
-import schedule from "node-schedule";
-import { getBots } from "../../../src/api/client.js";
+import { getCurrentBotSelfId } from "../../../src/api/client.js";
+
+const DEFAULT_CRON_EXPRESSION = "0 8 * * *";
 
 export class News60s extends plugin {
   constructor() {
     super({
       name: "60sNews",
       priority: 1135,
-      configWatch: "60sNews",
     });
   }
 
-  get appconfig() {
-    return Setting.getConfig("60sNews");
-  }
-
-  getScopeIds() {
-    return getBots()
-      .map((currentBot) => Number(currentBot.self_id))
-      .filter((selfId) => Number.isFinite(selfId));
-  }
-
-  async init() {
-    for (const selfId of this.getScopeIds()) {
-      const config = Setting.getConfig("60sNews", { selfId });
-      const groups = Array.isArray(config?.Groups) ? config.Groups : [];
-      if (!groups.length) {
-        continue;
-      }
-
-      const cronExpression = String(config?.cron || "0 8 * * *").trim();
-      try {
-        const job = schedule.scheduleJob(cronExpression, async () => {
-          await this.runForSelf(selfId);
-        });
-        if (job) {
-          this.jobs.push(job);
-        }
-      } catch (error) {
-        logger.warn(`[60sNews] 跳过无效 cron 配置: ${selfId} -> ${cronExpression} (${error.message})`);
-      }
+  newsTask = Cron(DEFAULT_CRON_EXPRESSION, async () => {
+    const selfId = getCurrentBotSelfId();
+    if (selfId == null) {
+      logger.warn("[60sNews] 触发定时任务时没有在线账号，已跳过本次推送");
+      return;
     }
-  }
+
+    await this.runForSelf(selfId);
+  });
 
   async runForSelf(selfId) {
     const currentBot = this.getBot(selfId);

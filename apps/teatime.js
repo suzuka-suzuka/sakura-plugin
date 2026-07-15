@@ -1,45 +1,32 @@
 import { connect } from "puppeteer-real-browser"
-import schedule from "node-schedule"
 import Setting from "../lib/setting.js"
+import { isCronDue } from "../lib/cron.js"
 import _ from "lodash"
-import { getBots } from "../../../src/api/client.js"
+import { getCurrentBotSelfId } from "../../../src/api/client.js"
 
 export class teatime extends plugin {
   constructor() {
     super({
       name: "teatime",
       priority: 1135,
-      configWatch: "teatime",
     })
   }
 
-  getScopeIds() {
-    return getBots()
-      .map((currentBot) => Number(currentBot.self_id))
-      .filter((selfId) => Number.isFinite(selfId))
-  }
-
-  async init() {
-    for (const selfId of this.getScopeIds()) {
-      const config = Setting.getConfig("teatime", { selfId })
-      const groups = Array.isArray(config?.Groups) ? config.Groups : []
-      if (!groups.length) {
-        continue
-      }
-
-      const cronExpression = String(config?.cron || "0 15 * * *").trim()
-      try {
-        const job = schedule.scheduleJob(cronExpression, async () => {
-          await this.runForSelf(selfId)
-        })
-        if (job) {
-          this.jobs.push(job)
-        }
-      } catch (error) {
-        logger.warn(`[teatime] 跳过无效 cron 配置: ${selfId} -> ${cronExpression} (${error.message})`)
-      }
+  teatimeTask = Cron("* * * * *", async (fireDate) => {
+    const config = Setting.getConfig("teatime")
+    const cronExpression = String(config?.cron || "0 15 * * *").trim()
+    if (!isCronDue(cronExpression, fireDate)) {
+      return
     }
-  }
+
+    const selfId = getCurrentBotSelfId()
+    if (selfId == null) {
+      logger.warn("[teatime] 触发定时任务时没有在线账号，已跳过本次推送")
+      return
+    }
+
+    await this.runForSelf(selfId)
+  })
 
   async runForSelf(selfId) {
     const config = Setting.getConfig("teatime", { selfId })

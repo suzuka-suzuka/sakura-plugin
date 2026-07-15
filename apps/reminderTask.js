@@ -1,8 +1,11 @@
-import schedule from 'node-schedule'
 import { CronExpressionParser } from 'cron-parser'
 import Setting from '../lib/setting.js'
-import { renderReminderContentWithAI } from '../lib/AIUtils/reminder.js'
-import { getBots, withBotContext } from '../../../src/api/client.js'
+import { isCronDue } from '../lib/cron.js'
+import {
+  initializeOnceReminderListener,
+  renderReminderContentWithAI,
+} from '../lib/AIUtils/reminder.js'
+import { getCurrentBotSelfId } from '../../../src/api/client.js'
 
 export class reminderTask extends plugin {
   constructor() {
@@ -10,54 +13,55 @@ export class reminderTask extends plugin {
       name: '重复提醒任务',
       event: 'message',
       priority: 1135,
-      configWatch: 'reminderTask',
     })
-
-    this.jobMap = new Map()
   }
 
   get appconfig() {
     return Setting.getConfig('reminderTask')
   }
 
-  getScopeIds() {
-    return getBots()
-      .map((currentBot) => Number(currentBot.self_id))
-      .filter((selfId) => Number.isFinite(selfId))
-  }
-
-  getJobKey(selfId, taskId) {
-    return `${selfId}:${taskId}`
-  }
-
   async init() {
-    const scopeIds = this.getScopeIds()
+    try {
+      this.removeOnceReminderListener = await initializeOnceReminderListener()
+    } catch (error) {
+      logger.error(`[reminderTask] 初始化一次性提醒监听失败: ${error.message}`)
+    }
+  }
 
-    for (const selfId of scopeIds) {
-      const config = Setting.getConfig('reminderTask', { selfId })
-      const tasks = Array.isArray(config?.tasks) ? config.tasks : []
+  destroy() {
+    this.removeOnceReminderListener?.()
+    this.removeOnceReminderListener = null
+    super.destroy()
+  }
 
-      for (const task of tasks) {
-        if (!task?.enable) continue
-
-        const cronExpression = String(task.cron || '').trim()
-        if (!this.isValidCron(cronExpression)) {
-          logger.warn(`[reminderTask] 跳过无效 cron 任务: ${task.id || 'unknown'} -> ${cronExpression}`)
-          continue
-        }
-
-        const content = String(task.content || '').trim()
-        if (!content) {
-          logger.warn(`[reminderTask] 跳过空内容任务: ${task.id || 'unknown'}`)
-          continue
-        }
-
-        this.scheduleTaskJob(task, selfId)
-      }
+  reminderTaskDispatcher = Cron('* * * * *', async (fireDate) => {
+    const selfId = getCurrentBotSelfId()
+    if (selfId == null) {
+      return
     }
 
-    logger.info(`[reminderTask] 已加载 ${this.jobs.length} 个重复提醒任务`)
-  }
+    const config = Setting.getConfig('reminderTask')
+    const tasks = Array.isArray(config?.tasks) ? config.tasks : []
+
+    for (const task of tasks) {
+      if (!task?.enable) continue
+
+      const cronExpression = String(task.cron || '').trim()
+      const content = String(task.content || '').trim()
+      if (!this.isValidCron(cronExpression) || !content) {
+        continue
+      }
+      if (!isCronDue(cronExpression, fireDate)) {
+        continue
+      }
+
+      try {
+        await this.sendTaskMessage(task, selfId)
+      } catch (error) {
+        logger.error(`[reminderTask] 任务执行失败 ${task.id || 'unknown'}: ${error}`)
+      }
+    }
+  })
 
   查询提醒 = Command(/^#?(?:提醒列表|查询提醒)(?:\s*(\d+))?$/, async (e) => {
     if (!(e.isMaster || e.isAdmin)) {
@@ -129,12 +133,6 @@ export class reminderTask extends plugin {
       return e.reply('删除失败：写入 reminderTask 配置失败。', 10)
     }
 
-    const job = this.jobMap.get(this.getJobKey(e.self_id, serial))
-    if (job) {
-      job.cancel()
-      this.jobMap.delete(this.getJobKey(e.self_id, serial))
-    }
-
     return e.reply(`已删除提醒序号 ${serial}。`, 10)
   })
 
@@ -183,36 +181,8 @@ export class reminderTask extends plugin {
       return e.reply(`${enable ? '开启' : '关闭'}失败：写入 reminderTask 配置失败。`, 10)
     }
 
-    const job = this.jobMap.get(this.getJobKey(e.self_id, serial))
-    if (job) {
-      job.cancel()
-      this.jobMap.delete(this.getJobKey(e.self_id, serial))
-    }
-
     return e.reply(`已${enable ? '开启' : '关闭'}提醒序号 ${serial}。`, 10)
   })
-
-  scheduleTaskJob(task, selfId) {
-    const cronExpression = String(task?.cron || '').trim()
-    const content = String(task?.content || '').trim()
-    const id = String(task?.id || '')
-
-    if (!id || !this.isValidCron(cronExpression) || !content) {
-      return false
-    }
-
-    const job = schedule.scheduleJob(cronExpression, async () => {
-      try {
-        await withBotContext(selfId, () => this.sendTaskMessage(task, selfId))
-      } catch (error) {
-        logger.error(`[reminderTask] 任务执行失败 ${task.id || 'unknown'}: ${error}`)
-      }
-    })
-
-    this.jobs.push(job)
-    this.jobMap.set(this.getJobKey(selfId, id), job)
-    return true
-  }
 
   isValidCron(expression) {
     if (!expression) return false
