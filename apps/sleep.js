@@ -28,7 +28,7 @@ export class Sleep extends plugin {
   });
 
   goodNight = Command(
-    /^(晚安|睡了|睡觉|去睡了|我睡了|我要睡了)$/,
+    /^晚安$/,
     async (e) => {
       const groupId = e.group_id;
 
@@ -39,11 +39,11 @@ export class Sleep extends plugin {
       }
 
       await e.reply(`晚安！你是本群第 ${order} 个睡觉的`, 0, true);
-      return false;
+      return true;
     }
   );
 
-  goodMorning = Command(/^(早安|早|起床|醒了|我醒了|早上好)$/, async (e) => {
+  goodMorning = Command(/^早安$/, async (e) => {
     const groupId = e.group_id;
 
     const result = sleepData.wakeUp(groupId, e.user_id);
@@ -52,17 +52,23 @@ export class Sleep extends plugin {
       return false;
     }
 
-    const { duration, order } = result;
+    const { duration, order, status } = result;
 
-    let msg = `早安！你是本群第 ${order} 个起床的`;
+    let msg = order
+      ? `早安！你是本群第 ${order} 个起床的`
+      : "早安！本次睡眠已记录";
 
-    if (duration) {
-      const hours = Math.floor(duration / (1000 * 60 * 60));
-      const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60));
-      msg += `\n你的睡眠时间为 ${hours} 小时 ${minutes} 分钟`;
+    const hours = Math.floor(duration / (1000 * 60 * 60));
+    const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60));
+    msg += `\n你的睡眠时间为 ${hours} 小时 ${minutes} 分钟`;
+
+    if (status === "short") {
+      msg += "\n本次不足 4 小时，已按短睡眠记录";
+    } else if (status === "long") {
+      msg += "\n本次超过 24 小时，已标记为偏长记录";
     }
 
     await e.reply(msg, 0, true);
-    return false;
+    return true;
   });
 }
