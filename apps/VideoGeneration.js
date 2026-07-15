@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import { formatMediaUserError } from "../lib/AIUtils/mediaErrorMessages.js";
 import { parseVideoCommandArgs } from "../lib/AIUtils/videoCommandParser.js";
 import { generateVideoWithProvider } from "../lib/AIUtils/videoProvider.js";
@@ -14,6 +15,7 @@ async function replyVideoSource(e, result) {
   }
 
   await e.reply(segment.video(result.source));
+  fs.unlink(result.source).catch(() => {});
 }
 
 async function replyParameterWarnings(e, warnings) {
