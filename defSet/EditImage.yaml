@@ -1,10 +1,14 @@
-format: gemini # 可选：gemini / openai
-model: gemini-3-pro-image-preview
-api: "请在这里填写你的 Gemini API Key，支持多个"
-baseURL: "" # OpenAI 格式可填 https://api.openai.com/v1；Gemini 可填反代地址
-openaiSize: "" # OpenAI 可选：1024x1024 / 1536x1024 / 1024x1536 / 1792x1024 / 1024x1792 / auto
+format: gemini # 可选：gemini / openai / dashscope
+model: gemini-3-pro-image-preview # dashscope 格式可填 qwen-image-2.0-pro
+api: "请在这里填写你的 API Key，支持多个"
+baseURL: "" # OpenAI 格式可填 https://api.openai.com/v1；Gemini 可填反代地址；dashscope 留空用默认接口
+openaiSize: "" # OpenAI 可选：1024x1024 / 1536x1024 / 1024x1536 / 1792x1024 / 1024x1792 / auto；dashscope 可填 1024*1536 等
 quality: "" # OpenAI 可选：auto / low / medium / high / standard / hd
 outputFormat: "" # OpenAI gpt-image-1 可选：png / jpeg / webp
+n: 1 # dashscope 可选：输出图片数量 1-6
+watermark: false # dashscope 可选：是否添加 Qwen-Image 水印
+negativePrompt: "" # dashscope 可选：反向提示词
+promptExtend: true # dashscope 可选：是否开启提示词智能改写
 vertex: false
 vertexApi: "" # Vertex API Key，填写后如果默认渠道失败将尝试使用 Vertex 重试
 requirePermission: false

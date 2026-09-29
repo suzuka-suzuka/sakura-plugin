@@ -214,7 +214,9 @@ export class EditImage extends plugin {
       }
     } catch (error) {
       logger.error(`调用图片生成 API 失败:`, error)
-      await this.reply("创作失败，可能是网络问题或请求超额", true, { recallMsg: 10 })
+      await this.reply(`创作失败：${error.message || "可能是网络问题或请求超额"}`, true, {
+        recallMsg: 10,
+      })
     }
 
     return true
